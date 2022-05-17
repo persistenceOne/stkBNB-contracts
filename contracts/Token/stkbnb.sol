@@ -1,11 +1,12 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
 
 
 import "../Interfaces/Istkbnb.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 /**
  * @dev {ERC777} token, including:
@@ -26,15 +27,16 @@ import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
  * - Update `@custom:security-contact`
  */
 /// @custom:security-contact support@xtake.finance
-contract StakedAVAXToken is ERC777, AccessControlEnumerable {
+contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    bytes32 public constant GOVERN_ROLE = keccak256("GOVERN_ROLE");
 
     constructor() ERC777("Staked BNB", "stkBNB", new address[](0)) {
-        // Grant the appropriate roles
-        _grantRole(GOVERN_ROLE, msg.sender);
+        // Make the deployer the default admin, deployer will later transfer this role to a multi-sig.
+        // Once we are sure the system is stable and there are no issues, the multi-sig can choose to renounce this role.
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
+
 
     /**
      * @dev Destroys `amount` tokens from the caller.
@@ -84,5 +86,30 @@ contract StakedAVAXToken is ERC777, AccessControlEnumerable {
         bytes memory operatorData
     ) public onlyRole(MINTER_ROLE) {
         ERC777._mint(account, amount, userData, operatorData);
+    }
+
+
+    /**
+     * @dev pause: Used by admin to pause the contract.
+     *             Supposed to be used in case of a prod disaster.
+     *
+     * Requirements:
+     *
+     * - The caller must have the DEFAULT_ADMIN_ROLE.
+     */
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    /**
+     * @dev unpause: Used by admin to resume the contract.
+     *               Supposed to be used after the prod disaster has been mitigated successfully.
+     *
+     * Requirements:
+     *
+     * - The caller must have the DEFAULT_ADMIN_ROLE.
+     */
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 }
