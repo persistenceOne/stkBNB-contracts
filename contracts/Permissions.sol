@@ -85,10 +85,10 @@ abstract contract Permissions is AccessControl {
  
 
 
-    /// @notice revokes governor role from address
-    /// @param governor ex governor
-    // function revokeGovernor(address governor) public override onlyGovernor {
-    //     revokeRole(GOVERN_ROLE, governor);
+    /// @notice revokes admin role from address
+    /// @param admin ex admin
+    // function revokeAdmin(address admin) public onlyAdmin {
+    //     revokeRole(DEFAULT_ADMIN_ROLE, admin);
     // }
 
     /// @notice checks if address is a minter
@@ -118,8 +118,8 @@ abstract contract Permissions is AccessControl {
         return hasRole(DEFAULT_ADMIN_ROLE, _address);
     }
 
-    // function _setupGovernor(address governor) internal {
-    //     _setupRole(GOVERN_ROLE, governor);
+    // function _setupAdmin(address admin) internal {
+    //     _setupRole(DEFAULT_ADMIN_ROLE, admin);
     // }
 
 }
