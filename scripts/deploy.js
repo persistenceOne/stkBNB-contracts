@@ -15,7 +15,7 @@ async function main() {
 
   // We get the contract to deploy
   const Permissions = await hre.ethers.getContractFactory("Permissions");
-  const permissions = await Greeter.deploy("Hello, Hardhat!");
+  const permissions = await Permissions.deploy();
   const StkBNB = await hre.ethers.getContractFactory("stkbnb");
   const stkbnb = await StkBNB.deploy("Hello, Hardhat!");
 
