@@ -9,4 +9,4 @@ cache
 artifacts
 yarn.lock
 package-lock.json
-.env*
+.env.json
