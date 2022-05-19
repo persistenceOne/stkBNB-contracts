@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "../Interfaces/Istkbnb.sol";
+import "../interfaces/Istkbnb.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -19,7 +19,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
  * roles, as well as the default admin role, which will let it grant minter and
  * burner roles to other accounts.
  *
- /// support@persistence.one
+/**/
 
 contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
