@@ -19,12 +19,8 @@ import "@openzeppelin/contracts/security/Pausable.sol";
  * roles, as well as the default admin role, which will let it grant minter and
  * burner roles to other accounts.
  *
- * TODO:
- * - Maybe make it pausable using ERC20Pausable. Will be helpful in case of prod disaster.
- * - Check if we really need AccessControlEnumerable or we can do away with AccessControl.
- * - Update `@custom:security-contact`
- */
-/// @custom:security-contact support@xtake.finance
+ /// support@persistence.one
+
 contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
