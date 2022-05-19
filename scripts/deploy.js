@@ -14,15 +14,15 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const Permissions = await hre.ethers.getContractFactory("Permissions");
-  const permissions = await Permissions.deploy();
+  // const Permissions = await hre.ethers.getContractFactory("Permissions");
+  // const permissions = await Permissions.deploy();
   const StkBNB = await hre.ethers.getContractFactory("stkbnb");
-  const stkbnb = await StkBNB.deploy("Hello, Hardhat!");
+  const stkbnb = await StkBNB.deploy();
 
-  await permissions.deployed();
+  // await permissions.deployed();
   await stkbnb.deployed();
 
-  console.log("Permissions deployed to:", permissions.address);
+  // console.log("Permissions deployed to:", permissions.address);
   console.log("Token contract deployed to:", stkbnb.address);
 }
 
