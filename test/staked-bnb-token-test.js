@@ -13,7 +13,7 @@ describe('StakedBNBToken', function() {
         const StakedBNBToken = await ethers.getContractFactory('StakedBNBToken');
         stakedBNBToken = await StakedBNBToken.deploy();
         await stakedBNBToken.deployed();
-        expect(await stakedBNBToken.signer.getAddress()).to.equal(adminAddress);
+        expect(await stakedBNBToken.signer.getAddress()).to.equal(await (await ethers.getSigners())[0].getAddress());
     });
 
 });
