@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-
-
 import "../Interfaces/Istkbnb.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
@@ -36,7 +34,6 @@ contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
         // Once we are sure the system is stable and there are no issues, the multi-sig can choose to renounce this role.
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
-
 
     /**
      * @dev Destroys `amount` tokens from the caller.
@@ -87,7 +84,6 @@ contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
     ) public onlyRole(MINTER_ROLE) {
         ERC777._mint(account, amount, userData, operatorData);
     }
-
 
     /**
      * @dev pause: Used by admin to pause the contract.
