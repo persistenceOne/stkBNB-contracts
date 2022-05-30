@@ -9,6 +9,7 @@ contract AddressStore is IAddressStore, Ownable {
     // Keys for standard contracts in the system
     string public constant STK_BNB = "stkBNB";
     string public constant STAKE_POOL = "StakePool";
+    string public constant UNDELEGATION_HOLDER= "UndelegationHolder";
 
     // the address store
     mapping(string => address) private _store;

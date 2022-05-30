@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.7;
 
-import "./interfaces/ITokenHub.sol"; 
 import "./interfaces/IUndelegationHolder.sol"; 
 
 contract UndelegationHolder is IUndelegationHolder {
