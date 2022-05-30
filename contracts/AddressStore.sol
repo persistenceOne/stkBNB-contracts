@@ -33,6 +33,12 @@ contract AddressStore is IAddressStore, Ownable {
         setAddr(STAKE_POOL, addr);
     }
 
+    function setUndelegationHolder(address addr) external override {
+        setAddr(UNDELEGATION_HOLDER, addr);
+    }
+
+
+
     function getAddr(string calldata key) external view override returns (address) {
         return _store[key];
     }
@@ -44,5 +50,10 @@ contract AddressStore is IAddressStore, Ownable {
 
     function getStakePool() external view override returns (address) {
         return _store[STAKE_POOL];
+    }
+
+
+    function getUndelegationHolder() external view override returns (address) {
+        return _store[UNDELEGATION_HOLDER];
     }
 }

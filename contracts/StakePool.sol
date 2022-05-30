@@ -6,8 +6,6 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgradeable.sol";
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/ITokenHub.sol"; 
@@ -16,8 +14,8 @@ import "./interfaces/StakePoolBot.sol";
 import "./interfaces/IUndelegationHolder.sol"; 
 
 contract StakePool is StakePoolBot, Initializable {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+   
+
 
     address constant public ZERO_ADDR = 0x0000000000000000000000000000000000000000;
     address constant public TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
@@ -109,6 +107,8 @@ contract StakePool is StakePoolBot, Initializable {
         require(msg.sender == _owner, "unknown sender");
         selfdestruct(payable (_owner));
     }
+
+    
 }
 
 

@@ -3,14 +3,15 @@
 pragma solidity ^0.8.7;
 
 import "./interfaces/IUndelegationHolder.sol"; 
+import "./interfaces/AddressStore.sol"
 
 contract UndelegationHolder is IUndelegationHolder {
 
-    address private _owner;
+    
     address public stakePool;
 
     constructor() {
-        _owner = msg.sender;
+        
     }
 
     receive() external override payable {
@@ -23,13 +24,12 @@ contract UndelegationHolder is IUndelegationHolder {
         (payable (stakePool)).transfer(address(this).balance);
     }
 
+
+    //query from address store
     function setStakePool(address sp) external {
         require(msg.sender == _owner, "unknown sender");
         stakePool = sp;
     }
 
-    function selfDestruct() external {
-        require(msg.sender == _owner, "unknown sender");
-        selfdestruct(payable (_owner));
-    }
+
 }

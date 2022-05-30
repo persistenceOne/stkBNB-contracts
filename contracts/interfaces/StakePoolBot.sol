@@ -28,6 +28,13 @@ abstract contract StakePoolBot {
     uint256 public claimReserve;
 
     /**
+     * @return The amount of BNB that can be staked. This would be same as the amount that would
+     * reach BC, if initiateDelegation() were called.
+     */
+    function getStakableBNB() external virtual view returns (uint256);
+
+
+    /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
      * staking address on BC.
      * Call frequency: Daily
@@ -63,4 +70,3 @@ abstract contract StakePoolBot {
     function unbondingFinished() external virtual;
 }
 
-// ["0x94cC0Aa9dB467a6C0445502a1728cCf974049Da4", "0x11284a1FB9d602E6cd335840c13b2d73464CF66B"]
