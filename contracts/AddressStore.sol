@@ -9,7 +9,9 @@ contract AddressStore is IAddressStore, Ownable {
     // Keys for standard contracts in the system
     string public constant STK_BNB = "stkBNB";
     string public constant STAKE_POOL = "StakePool";
-    string public constant UNDELEGATION_HOLDER= "UndelegationHolder";
+    string public constant UNDELEGATION_HOLDER = "UndelegationHolder";
+    string public constant FEE_VAULT = "FeeVault";
+    //need to add feevault
 
     // the address store
     mapping(string => address) private _store;
@@ -39,6 +41,7 @@ contract AddressStore is IAddressStore, Ownable {
 
 
 
+
     function getAddr(string calldata key) external view override returns (address) {
         return _store[key];
     }
@@ -56,4 +59,9 @@ contract AddressStore is IAddressStore, Ownable {
     function getUndelegationHolder() external view override returns (address) {
         return _store[UNDELEGATION_HOLDER];
     }
+
+    function getFeeVault() external view override returns (address) {
+        return _store[FEE_VAULT];
+    }
 }
+

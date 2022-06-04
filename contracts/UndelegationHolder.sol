@@ -3,7 +3,7 @@
 pragma solidity ^0.8.7;
 
 import "./interfaces/IUndelegationHolder.sol"; 
-import "./interfaces/AddressStore.sol"
+import "./interfaces/IAddressStore.sol";
 
 contract UndelegationHolder is IUndelegationHolder {
 
@@ -25,11 +25,7 @@ contract UndelegationHolder is IUndelegationHolder {
     }
 
 
-    //query from address store
-    function setStakePool(address sp) external {
-        require(msg.sender == _owner, "unknown sender");
-        stakePool = sp;
-    }
+
 
 
 }

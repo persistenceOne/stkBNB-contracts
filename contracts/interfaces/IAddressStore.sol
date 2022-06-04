@@ -9,9 +9,16 @@ interface IAddressStore {
 
     function setStakePool(address addr) external;
 
+    function setUndelegationHolder(address addr) external;
+
     function getAddr(string calldata key) external view returns (address);
 
     function getStkBNB() external view returns (address);
 
     function getStakePool() external view returns (address);
+    
+    function getUndelegationHolder() external view returns (address);
+
+    function getFeeVault() external view returns (address);
+    
 }
