@@ -68,5 +68,14 @@ abstract contract StakePoolBot {
      * Call frequency: Weekly
      */
     function unbondingFinished() external virtual;
+
+    function tokensReceived(
+        address, /*operator*/
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata, /*userData*/
+        bytes calldata /*operatorData*/
+    ) external virtual;
 }
 

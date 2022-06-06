@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820Registry
 import "./interfaces/ITokenHub.sol"; 
 import "./interfaces/StakePoolBot.sol"; 
 import "./interfaces/IUndelegationHolder.sol"; 
-import "./interfaces/Istkbnb.sol"; 
+import "./interfaces/IStakedBNBToken.sol"; 
 import "./interfaces/IAddressStore.sol"; 
 import "./embedded-libs/Config.sol";
 import "./embedded-libs/ExchangeRate.sol";
@@ -34,6 +34,10 @@ contract StakePool is StakePoolBot, Initializable {
         address undelegationHolder;
         address bcStakingAddress;
     }
+    struct ClaimRequest {
+        uint256 weiToReturn; // amount of wei that should be returned to user on claim
+        uint256 createdAt; // block timestamp when this request was created
+    }
 
 
     /*********************
@@ -56,6 +60,8 @@ contract StakePool is StakePoolBot, Initializable {
     IAddressStore public addressStore;
     Config.Data public config;
     BCConfig public bcconfig;
+    mapping(address => ClaimRequest[]) public claimReqs; // maps userAddress -> a list of claim requests for that user
+    uint256 public activeClaimAmount;
 
     /*********************
      * EVENTS
@@ -66,22 +72,32 @@ contract StakePool is StakePoolBot, Initializable {
         uint256 poolTokenAmount,
         uint256 timestamp
     );
+    event Withdraw(
+        address indexed user,
+        uint256 poolTokenAmount,
+        uint256 bnbAmount,
+        uint256 timestamp
+    );
 
 
     /*********************
      * ERRORS
      ********************/
-     
+    error UnknownSender(); 
     error LessThanMinimum(string tag, uint256 expected, uint256 got);
+    error TokenMintingToSelfNotAllowed();
+    error TokenTransferToSelfNotAllowed();
+    error UnexpectedlyReceivedTokensForSomeoneElse(address to);
 
     address constant public ZERO_ADDR = 0x0000000000000000000000000000000000000000;
     address constant public TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
 
 
 
-    uint256 constant public MIN_BNB_DEPOSIT= 1 * 1e18; // 1:BNB
+    uint256 constant public MIN_BNB_DEPOSIT= 0.1 * 1e18; // 1:BNB
     uint256 constant public MINIMUM_UNSTAKE_AMOUNT = 8 * 1e17; // 0.8:BNB
     uint256 constant public EXCHANGE_RATE_PRECISION = 1e9;
+    uint256 constant public MIN_TOKEN_WITHDRAWAL = 0.1 * 1e18;
    
 
 
@@ -108,6 +124,17 @@ contract StakePool is StakePoolBot, Initializable {
         _checkMin(tag, minVal, gotVal);
         _;
     }
+
+     /**
+     * @dev Checks that the msg sender is the expected sender address.
+     */
+
+    modifier onlySender(address expectedSender) {
+        _onlySender(expectedSender);
+        _;
+    }
+
+
     function _checkMin(
         string memory tag,
         uint256 minVal,
@@ -121,6 +148,13 @@ contract StakePool is StakePoolBot, Initializable {
     function _whenNotPaused() private view {
         require(!_paused, "Pausable: paused");
     }
+
+    function _onlySender(address expectedSender) private view {
+        if (msg.sender != expectedSender) {
+            revert UnknownSender();
+        }
+    }
+
 
 
     
@@ -165,7 +199,93 @@ contract StakePool is StakePoolBot, Initializable {
         emit Deposit(msg.sender, msg.value, poolTokensUser, block.timestamp);
     }
 
+    /**
+     * @dev Called by an {IERC777} token contract whenever tokens are being
+     * moved or created into a registered account (`to`). The type of operation
+     * is conveyed by `from` being the zero address or not.
+     *
+     * This call occurs _after_ the token contract's state is updated, so
+     * {IERC777-balanceOf}, etc., can be used to query the post-operation state.
+     *
+     * This function may revert to prevent the operation from being executed.
+     *
+     * We use this to receive stkBNB tokens from users for the purpose of withdrawal.
+     * So:
+     * 1. `msg.sender` must be the address of pool token. Only the token contract should be the caller for this.
+     * 2. `from` should be the address of some user. It should never be the zero address or the address of this contract.
+     * 3. `to` should always be the address of this contract.
+     * 4. `amount` should always be at least _MIN_TOKEN_WITHDRAWAL.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    function tokensReceived(
+        address, /*operator*/
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata, /*userData*/
+        bytes calldata /*operatorData*/
+    )
+        external
+        override
+        whenNotPaused
+        onlySender(addressStore.getStkBNB())
+        checkMin("Withdrawal", MIN_TOKEN_WITHDRAWAL, amount)
+    {
+        // checks
+        if (from == address(0)) {
+            revert TokenMintingToSelfNotAllowed();
+        }
+        if (from == address(this)) {
+            revert TokenTransferToSelfNotAllowed();
+        }
+        if (to != address(this)) {
+            revert UnexpectedlyReceivedTokensForSomeoneElse(to);
+        }
 
+        _withdraw(from, amount);
+    }
+        function _withdraw(address from, uint256 amount) internal {
+        uint256 poolTokensFee = config.fee.delayedUnstake._apply(amount);
+        uint256 poolTokensToBurn = amount - poolTokensFee;
+
+        // calculate the bnb needed to be sent to the user
+        uint256 weiToReturn = exchangeRate._calcWeiWithdrawAmount(poolTokensToBurn);
+
+        // create a claim request for this withdrawal
+        claimReqs[from].push(ClaimRequest(weiToReturn, block.timestamp));
+
+        // update the total claim amount
+        activeClaimAmount += weiToReturn;
+
+        // update the exchange rate to reflect the balance changes
+        exchangeRate._update(
+            ExchangeRate.Data(weiToReturn, poolTokensToBurn),
+            ExchangeRate.UpdateOp.Subtract
+        );
+
+        // burn the non-fee tokens
+        IStakedBNBToken(addressStore.getStkBNB()).burn(poolTokensToBurn, "");
+        // transfer the fee to FeeVault
+        IStakedBNBToken(addressStore.getStkBNB()).send(
+            addressStore.getFeeVault(),
+            poolTokensFee,
+            ""
+        );
+
+        emit Withdraw(from, amount, weiToReturn, block.timestamp);
+    }
+
+
+
+
+
+
+    /*********************
+     * BOT FUNCTIONS
+     ********************/
 
     function getStakableBNB() external override view returns (uint256){
 
@@ -230,7 +350,9 @@ contract StakePool is StakePoolBot, Initializable {
         selfdestruct(payable (_owner));
     }
 
-    
+
+
+
 }
 
 

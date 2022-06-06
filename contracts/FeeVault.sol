@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgrade
 import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820RegistryUpgradeable.sol";
 import "./interfaces/IFeeVault.sol";
 import "./interfaces/IAddressStore.sol";
-import "./interfaces/Istkbnb.sol";
+import "./interfaces/IStakedBNBToken.sol";
 
 contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, OwnableUpgradeable {
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
