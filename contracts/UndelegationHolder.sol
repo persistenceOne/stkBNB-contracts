@@ -10,7 +10,7 @@ contract UndelegationHolder is IUndelegationHolder {
     
     error UnknownSender();
     IAddressStore public addressStore;
-    address stakePool;
+    
 
 
      /**
