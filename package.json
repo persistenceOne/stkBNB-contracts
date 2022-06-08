@@ -14,7 +14,7 @@
     "contract:deploy": "npx hardhat run scripts/deploy.ts",
     "lint:check:ts": "npx prettier --check *.ts {scripts,test}/**/*.ts",
     "lint:check:solidity": "npx prettier --check contracts/**/*.sol && npx prettier --check contracts/*.sol",
-    "lint:check": "yarn lint:check:ts && yarn lint:check:solidity",
+    "lint:check": "yarn lint:check:ts && yarn lint:check:solidity && yarn solhint",
     "lint:fix:ts": "npx prettier --write *.ts {scripts,test}/**/*.ts",
     "lint:fix:solidity": "npx prettier --write contracts/**/*.sol && npx prettier --write contracts/*.sol",
     "lint": "yarn lint:fix:ts && yarn lint:fix:solidity"

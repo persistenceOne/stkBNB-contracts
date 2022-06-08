@@ -3,7 +3,7 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { ethers, network, web3 } from 'hardhat';
+import { ethers, network, upgrades, web3 } from 'hardhat';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -16,18 +16,34 @@ async function main() {
     // manually to make sure everything is compiled
     // await hre.run('compile');
 
-    // We get the contract to deploy
-
+    // deploy ERC1820 registry for local networks
     if (network.name.startsWith('local') || network.name.startsWith('hardhat')) {
         await singletons.ERC1820Registry(await (await ethers.getSigners())[0].getAddress());
     }
-    const StkBNB = await ethers.getContractFactory('StakedBNBToken');
-    const stkbnb = await StkBNB.deploy();
 
-    // await permissions.deployed();
-    await stkbnb.deployed();
+    // deploy AddressStore
+    const addressStoreFactory = await ethers.getContractFactory('AddressStore');
+    const addressStore = await addressStoreFactory.deploy();
+    await addressStore.deployed();
+    console.log('AddressStore deployed to:', addressStore.address);
 
-    console.log('Token contract deployed to:', stkbnb.address);
+    // deploy FeeVault
+    const feeVaultFactory = await ethers.getContractFactory('FeeVault');
+    const feeVault = await upgrades.deployProxy(feeVaultFactory, [addressStore.address]);
+    await feeVault.deployed();
+    console.log('feeVault deployed to:', feeVault.address);
+
+    // deploy stkBNB
+    const stkBNBTokenFactory = await ethers.getContractFactory('StakedBNBToken');
+    const stkBNB = await stkBNBTokenFactory.deploy();
+    await stkBNB.deployed();
+    console.log('stkBNB deployed to:', stkBNB.address);
+
+    // deploy UndelegationHolder
+    const undelegationHolderFactory = await ethers.getContractFactory('UndelegationHolder');
+    const undelegationHolder = await undelegationHolderFactory.deploy(addressStore.address);
+    await undelegationHolder.deployed();
+    console.log('UndelegationHolder deployed to:', undelegationHolder.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
