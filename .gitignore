@@ -1,12 +1,33 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
 node_modules
-.env
+.pnp
+.pnp.js
+
+# testing
 coverage
 coverage.json
 typechain
 
+# production
+build
+
+# misc
+.idea
+.DS_Store
+.env*
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
 #Hardhat files
 cache
 artifacts
-yarn.lock
-package-lock.json
-.env.json
+
+# OpenZeppelin
+.openzeppelin/unknown-*.json
+.openzeppelin/.session
