@@ -11,6 +11,7 @@ on:
       - main
 
 jobs:
+
   generate-abis:
     name: Generate ABIs
     runs-on: ubuntu-latest
@@ -45,8 +46,8 @@ jobs:
 
       - name: Generate Go ABIs
         run: |
-        chmod 755 .github/workflows/abigen
-        ./.github/workflows/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
+        chmod 755 tools/abigen
+        ./tools/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
         rm -rf temp
 
       - name: Commit
