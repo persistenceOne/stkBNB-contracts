@@ -1,4 +1,4 @@
-name: Abi
+name: ABI
 
 on:
   # Trigger the workflow on push or pull request,
@@ -12,7 +12,7 @@ on:
 
 jobs:
   generate-abis:
-    name: Generate Abis
+    name: Generate ABIs
     runs-on: ubuntu-latest
 
     steps:
@@ -33,20 +33,21 @@ jobs:
           yarn compile
           npm install -g fx
 
-      - name: Generate ABIs
+      - name: Copy UI ABIs
         run: |
-#         Create a temp dir for extracting abi info in separate files
+        cp artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json abis/ui/
+
+      - name: Extract info for Go ABIs
+        run: |
           mkdir temp
-#         Extract the abi info to separate abi and bin files
           fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .abi > temp/StakedBNBToken.json
           fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .bytecode > temp/StakedBNBToken.bin
-#         Copy UI ABIs
-          cp artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json abis/ui/
-#         Generate Go ABIs
-          chmod 755 .github/workflows/abigen
-          ./.github/workflows/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
-#         cleanup
-          rm -rf temp
+
+      - name: Generate Go ABIs
+        run: |
+        chmod 755 .github/workflows/abigen
+        ./.github/workflows/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
+        rm -rf temp
 
       - name: Commit
         uses: EndBug/add-and-commit@v9
