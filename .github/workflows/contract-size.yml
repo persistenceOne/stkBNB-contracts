@@ -1,0 +1,34 @@
+name: Contract Size
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  contract-size:
+    name: Contract Size
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: 16
+      
+      - name: Setup Environment
+        run: |
+          yarn install
+          cp .env.example.json .env.json
+      
+      - name: Run Contract-sizer
+        run: |
+          yarn contract:size

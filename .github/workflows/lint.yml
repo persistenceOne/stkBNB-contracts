@@ -1,0 +1,61 @@
+name: Linter
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+      
+  linter:
+    name: Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: 16
+
+      - name: Setup Environment
+        run: |
+          yarn install
+      
+      - name: Run Linter Fix
+        run: |
+          yarn lint
+
+      - name: Commit
+        uses: EndBug/add-and-commit@v9
+        with:
+          default_author: github_actions
+          message: 'CI: Fix Lint'
+
+  solhint:
+    needs: linter
+    name: Solhint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: 16
+
+      - name: Setup Environment
+        run: |
+          yarn install
+
+      - name: Run Solhint
+        run: |
+          yarn solhint   

@@ -1,0 +1,54 @@
+name: Abi
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  generate-abis:
+    name: Generate Abis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: 16
+
+      - name: Setup environment
+        run: |
+          yarn install
+          cp .env.example.json .env.json
+          yarn compile
+          npm install -g fx
+
+      - name: Generate ABIs
+        run: |
+#         Create a temp dir for extracting abi info in separate files
+          mkdir temp
+#         Extract the abi info to separate abi and bin files
+          fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .abi > temp/StakedBNBToken.json
+          fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .bytecode > temp/StakedBNBToken.bin
+#         Copy UI ABIs
+          cp artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json abis/ui/
+#         Generate Go ABIs
+          chmod 755 .github/workflows/abigen
+          ./.github/workflows/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
+#         cleanup
+          rm -rf temp
+
+      - name: Commit
+        uses: EndBug/add-and-commit@v9
+        with:
+          default_author: github_actions
+          message: 'CI: Generated ABIs'
+          add: 'abis/*'  
