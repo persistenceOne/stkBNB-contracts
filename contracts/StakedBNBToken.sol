@@ -82,8 +82,32 @@ contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
         uint256 amount,
         bytes memory userData,
         bytes memory operatorData
-    ) public onlyRole(MINTER_ROLE) whenNotPaused {
+    ) external onlyRole(MINTER_ROLE) whenNotPaused {
         ERC777._mint(account, amount, userData, operatorData);
+    }
+
+    /**
+     * @dev pause: Used by admin to pause the contract.
+     *             Supposed to be used in case of a prod disaster.
+     *
+     * Requirements:
+     *
+     * - The caller must have the DEFAULT_ADMIN_ROLE.
+     */
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    /**
+     * @dev unpause: Used by admin to resume the contract.
+     *               Supposed to be used after the prod disaster has been mitigated successfully.
+     *
+     * Requirements:
+     *
+     * - The caller must have the DEFAULT_ADMIN_ROLE.
+     */
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 
     /**
@@ -96,31 +120,7 @@ contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
      * - the caller must have the `DEFAULT_ADMIN_ROLE`.
      *
      */
-    function selfDestruct(address _address) public onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
-        selfdestruct(payable(_address));
-    }
-
-    /**
-     * @dev pause: Used by admin to pause the contract.
-     *             Supposed to be used in case of a prod disaster.
-     *
-     * Requirements:
-     *
-     * - The caller must have the DEFAULT_ADMIN_ROLE.
-     */
-    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    /**
-     * @dev unpause: Used by admin to resume the contract.
-     *               Supposed to be used after the prod disaster has been mitigated successfully.
-     *
-     * Requirements:
-     *
-     * - The caller must have the DEFAULT_ADMIN_ROLE.
-     */
-    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
+    function selfDestruct(address addr) external onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
+        selfdestruct(payable(addr));
     }
 }

@@ -11,7 +11,7 @@ on:
       - main
 
 jobs:
-      
+
   linter:
     name: Linter
     runs-on: ubuntu-latest
@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v2.5.1
@@ -28,7 +30,7 @@ jobs:
       - name: Setup Environment
         run: |
           yarn install
-      
+
       - name: Run Linter Fix
         run: |
           yarn lint

@@ -11,4 +11,10 @@ interface IStakedBNBToken is IERC777 {
         bytes memory userData,
         bytes memory operatorData
     ) external;
+
+    function pause() external;
+
+    function unpause() external;
+
+    function selfDestruct(address addr) external;
 }
