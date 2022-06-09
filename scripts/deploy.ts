@@ -44,6 +44,25 @@ async function main() {
     const undelegationHolder = await undelegationHolderFactory.deploy(addressStore.address);
     await undelegationHolder.deployed();
     console.log('UndelegationHolder deployed to:', undelegationHolder.address);
+
+    // deploy FeeVault
+    const stakePoolFactory = await ethers.getContractFactory('StakePool');
+    const stakePool = await upgrades.deployProxy(stakePoolFactory, [
+        addressStore.address,
+        {
+            bcStakingWallet: '0x0000000000000000000000000000000000000000',
+            minBNBDeposit: 1e12,
+            minTokenWithdrawal: 1e12,
+            cooldownPeriod: 86400,
+            fee: {
+                reward: 2000000000,
+                deposit: 0,
+                withdraw: 0,
+            },
+        },
+    ]);
+    await stakePool.deployed();
+    console.log('stakePool deployed to:', stakePool.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
