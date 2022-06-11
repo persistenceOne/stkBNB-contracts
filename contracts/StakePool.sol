@@ -14,12 +14,13 @@ import "./interfaces/ITokenHub.sol";
 import "./interfaces/IUndelegationHolder.sol";
 
 // TODO:
-// * Deposit/withdrawal precision check
-// * Check Roles
-// * Verify calculations
-// * ExchangeRate tests
-// * ReentrancyGuard
 // * Scripts
+// * Deposit/withdrawal precision check
+// * Verify calculations
+// * Tests
+// * Optimize Storage layout (both contract size and gas wise)
+//      * Changing something from public to private optimizes contract size, even after adding a public view.
+//      * Changing the location of _paused affects the contract size as well. If kept before assressStore, it increases.
 contract StakePool is
     Initializable,
     IERC777RecipientUpgradeable,
@@ -54,8 +55,23 @@ contract StakePool is
 
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
         IERC1820RegistryUpgradeable(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
-    address public constant ZERO_ADDR = 0x0000000000000000000000000000000000000000;
-    address public constant TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
+
+    address private constant _ZERO_ADDR = 0x0000000000000000000000000000000000000000;
+    ITokenHub private constant _TOKEN_HUB = ITokenHub(0x0000000000000000000000000000000000001004);
+
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
 
     /*********************
      * STATE VARIABLES
@@ -64,10 +80,8 @@ contract StakePool is
     IAddressStore public addressStore;
     Config.Data public config;
 
-    /**
-     * @dev indicates whether this contract is paused or not
-     */
-    bool public paused;
+    bool private _paused; // indicates whether this contract is paused or not
+    uint256 private _status; // used for reentrancy protection
 
     /**
      * @dev The amount that needs to be unbonded in the next unstaking epoch.
@@ -134,6 +148,7 @@ contract StakePool is
     error ToIndexMustBeGreaterThanFromIndex(uint256 from, uint256 to);
     error PausablePaused();
     error PausableNotPaused();
+    error ReentrancyGuardReentrantCall();
 
     /*********************
      * MODIFIERS
@@ -175,6 +190,19 @@ contract StakePool is
         _;
     }
 
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        _nonReentrantPre();
+        _;
+        _nonReentrantPost();
+    }
+
     /*********************
      * MODIFIERS FUNCTIONS
      ********************/
@@ -196,15 +224,31 @@ contract StakePool is
     }
 
     function _whenNotPaused() private view {
-        if (paused) {
+        if (_paused) {
             revert PausablePaused();
         }
     }
 
     function _whenPaused() private view {
-        if (!paused) {
+        if (!_paused) {
             revert PausableNotPaused();
         }
+    }
+
+    function _nonReentrantPre() private {
+        // On the first call to nonReentrant, _notEntered will be true
+        if (_status == _ENTERED) {
+            revert ReentrancyGuardReentrantCall();
+        }
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+    }
+
+    function _nonReentrantPost() private {
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
     }
 
     /*********************
@@ -242,7 +286,8 @@ contract StakePool is
         // set contract state variables
         addressStore = addressStore_;
         config._init(config_);
-        paused = true;
+        _paused = true;
+        _status = _NOT_ENTERED;
         // to ensure that nothing happens until the whole system is setup
         bnbToUnbond = 0;
         bnbUnbonding = 0;
@@ -273,7 +318,7 @@ contract StakePool is
      * - The caller must have the DEFAULT_ADMIN_ROLE.
      */
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
-        paused = true;
+        _paused = true;
         emit Paused(msg.sender);
     }
 
@@ -286,7 +331,7 @@ contract StakePool is
      * - The caller must have the DEFAULT_ADMIN_ROLE.
      */
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
-        paused = false;
+        _paused = false;
         emit Unpaused(msg.sender);
     }
 
@@ -318,6 +363,7 @@ contract StakePool is
         external
         payable
         whenNotPaused
+        nonReentrant
         checkMin("Deposit", config.minBNBDeposit, msg.value)
     {
         uint256 userWei = msg.value;
@@ -369,7 +415,13 @@ contract StakePool is
         uint256 amount,
         bytes calldata, /*userData*/
         bytes calldata /*operatorData*/
-    ) external override whenNotPaused checkMin("Withdrawal", config.minTokenWithdrawal, amount) {
+    )
+        external
+        override
+        whenNotPaused
+        nonReentrant
+        checkMin("Withdrawal", config.minTokenWithdrawal, amount)
+    {
         // checks
         if (msg.sender != addressStore.getStkBNB()) {
             revert UnknownSender();
@@ -394,7 +446,7 @@ contract StakePool is
      *
      * - The contract must not be paused.
      */
-    function claimAll() external whenNotPaused {
+    function claimAll() external whenNotPaused nonReentrant {
         uint256 claimRequestCount = claimReqs[msg.sender].length;
         uint256 i = 0;
 
@@ -416,7 +468,7 @@ contract StakePool is
      *
      * @param index: The index of the ClaimRequest which is to be claimed.
      */
-    function claim(uint256 index) external whenNotPaused {
+    function claim(uint256 index) external whenNotPaused nonReentrant {
         if (!_claim(index)) {
             revert CantClaimBeforeDeadline();
         }
@@ -434,13 +486,13 @@ contract StakePool is
      * @return The amount of stakable BNB that were transferred to the staking address on BC.
      */
     function initiateDelegation() external whenNotPaused onlyRole(BOT_ROLE) returns (uint256) {
-        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
+        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee();
         uint256 stakableBNB = getStakableBNB();
 
         if (stakableBNB > 0) {
             // TODO: should we charge the relay fee from the bot?
-            ITokenHub(TOKENHUB_ADDR).transferOut{ value: stakableBNB + miniRelayFee }(
-                ZERO_ADDR,
+            _TOKEN_HUB.transferOut{ value: stakableBNB + miniRelayFee }(
+                _ZERO_ADDR,
                 config.bcStakingWallet,
                 stakableBNB,
                 uint64(block.timestamp + 3600)
@@ -509,12 +561,19 @@ contract StakePool is
      ********************/
 
     /**
+     * @dev paused: Returns true if the contract is paused, and false otherwise.
+     */
+    function paused() public view returns (bool) {
+        return _paused;
+    }
+
+    /**
      * @return The amount of BNB that can be staked. This would be same as the amount that would
      * reach BC, if initiateDelegation() were called.
      * This view is used by the bot.
      */
     function getStakableBNB() public view returns (uint256) {
-        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
+        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee();
 
         // if we have enough balance to send to BC, return that as the stakable amount.
         // TODO: should we put a MIN check as well? send only if the diff is greater than a min + claim + relayFee
