@@ -16,7 +16,7 @@ library Config {
         uint256 minBNBDeposit;
         // @dev The minimum amount of tokens required to make a withdrawal from the contract.
         uint256 minTokenWithdrawal;
-        // @dev The minimum number of seconds a user has to wait after unstake to claim their BNB.
+        // @dev The minimum amount of time (in seconds) a user has to wait after unstake to claim their BNB.
         // It would be 15 days on mainnet.
         uint256 cooldownPeriod;
         // @dev The fee distribution to represent different kinds of fee.

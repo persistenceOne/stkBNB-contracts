@@ -15,6 +15,7 @@ import "./interfaces/IUndelegationHolder.sol";
 
 // TODO:
 // * Deposit/withdrawal precision check
+// * Check Roles
 // * Verify calculations
 // * ExchangeRate tests
 // * ReentrancyGuard
@@ -426,23 +427,6 @@ contract StakePool is
      ********************/
 
     /**
-     * @return The amount of BNB that can be staked. This would be same as the amount that would
-     * reach BC, if initiateDelegation() were called.
-     */
-    function getStakableBNB() public view returns (uint256) {
-        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-
-        // if we have enough balance to send to BC, return that as the stakable amount.
-        // TODO: should we put a MIN check as well? send only if the diff is greater than a min + claim + relayFee
-        if (address(this).balance > claimReserve + miniRelayFee) {
-            return address(this).balance - claimReserve - miniRelayFee;
-        }
-
-        // we don't have enough balance to send to BC
-        return 0;
-    }
-
-    /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
      * staking address on BC.
      * Call frequency: Daily
@@ -523,6 +507,24 @@ contract StakePool is
     /*********************
      * VIEWS
      ********************/
+
+    /**
+     * @return The amount of BNB that can be staked. This would be same as the amount that would
+     * reach BC, if initiateDelegation() were called.
+     * This view is used by the bot.
+     */
+    function getStakableBNB() public view returns (uint256) {
+        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
+
+        // if we have enough balance to send to BC, return that as the stakable amount.
+        // TODO: should we put a MIN check as well? send only if the diff is greater than a min + claim + relayFee
+        if (address(this).balance > claimReserve + miniRelayFee) {
+            return address(this).balance - claimReserve - miniRelayFee;
+        }
+
+        // we don't have enough balance to send to BC
+        return 0;
+    }
 
     /**
      * @dev getClaimRequestCount: Get the number of active claim requests by user

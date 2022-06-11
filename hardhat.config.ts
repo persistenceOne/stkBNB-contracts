@@ -45,7 +45,9 @@ export default {
     },
     defaultNetwork: 'hardhat',
     networks: {
-        hardhat: {},
+        hardhat: {
+            blockGasLimit: 40000000,
+        },
         // This is the network created by `hardhat node`.
         localhost: {
             url: 'http://127.0.0.1:8545',
