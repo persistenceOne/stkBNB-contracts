@@ -18,10 +18,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Environment
-        run: |
-          cp .env.example.json .env.json
-
       - name: Run Slither
         uses: crytic/slither-action@v0.1.1
         continue-on-error: true
