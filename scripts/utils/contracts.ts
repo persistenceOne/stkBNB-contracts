@@ -66,6 +66,7 @@ export class Contracts {
         // deploy ERC1820Registry for local setup
         if (isLocalNetwork(getNetwork())) {
             await singletons.ERC1820Registry(deployerAddr);
+            console.log('ERC1820 Registry deployed');
         }
 
         const initialDeployerBalance = await ethers.provider.getBalance(deployerAddr);
@@ -139,30 +140,37 @@ export class Contracts {
             await executeTx(contracts.addressStore, 'setStkBNB', [
                 contracts.stakedBNBToken.address,
             ]);
+            console.log('AddressStore updated with stkBNB');
         }
 
         if (config.undelegationHolder.deploy) {
             await executeTx(contracts.addressStore, 'setUndelegationHolder', [
                 contracts.undelegationHolder.address,
             ]);
+            console.log('AddressStore updated with UndelegationHolder');
         }
 
         if (config.feeVault.deploy) {
             await executeTx(contracts.addressStore, 'setFeeVault', [contracts.feeVault.address]);
+            console.log('AddressStore updated with FeeVault');
         }
 
         // setup StakePool
         if (config.stakePool.deploy) {
             await executeTx(contracts.addressStore, 'setStakePool', [contracts.stakePool.address]);
+            console.log('AddressStore updated with StakePool');
             await executeTx(contracts.stakedBNBToken, 'grantRole', [
                 await contracts.stakedBNBToken.MINTER_ROLE(),
                 contracts.stakePool.address,
             ]);
+            console.log('stkBNB MINTER set to StakePool');
             await executeTx(contracts.stakedBNBToken, 'grantRole', [
                 await contracts.stakedBNBToken.BURNER_ROLE(),
                 contracts.stakePool.address,
             ]);
+            console.log('stkBNB BURNER set to StakePool');
             await executeTx(contracts.stakePool, 'unpause', []);
+            console.log('StakePool unpaused');
         }
 
         const balanceUsed = initialDeployerBalance.sub(
@@ -225,24 +233,31 @@ export class Contracts {
             await contracts.stakedBNBToken.DEFAULT_ADMIN_ROLE(),
             config.gnosisSafeAddr,
         ]);
+        console.log('Granted stkBNB DEFAULT_ADMIN to Gnosis');
+
         await executeTx(contracts.stakedBNBToken, 'revokeRole', [
             await contracts.stakedBNBToken.DEFAULT_ADMIN_ROLE(),
             deployerAddr,
         ]);
+        console.log('Revoked stkBNB DEFAULT_ADMIN from deployer');
 
         await executeTx(contracts.stakePool, 'grantRole', [
             await contracts.stakePool.DEFAULT_ADMIN_ROLE(),
             config.gnosisSafeAddr,
         ]);
+        console.log('Granted StakePool DEFAULT_ADMIN to Gnosis');
 
         await executeTx(contracts.stakePool, 'revokeRole', [
             await contracts.stakePool.DEFAULT_ADMIN_ROLE(),
             deployerAddr,
         ]);
+        console.log('Revoked StakePool DEFAULT_ADMIN from deployer');
 
         // Transfer ownership to multisig account
         await executeTx(contracts.feeVault, 'transferOwnership', [config.gnosisSafeAddr]);
+        console.log('Transferred FeeVault ownership from deployer to Gnosis');
         await executeTx(contracts.addressStore, 'transferOwnership', [config.gnosisSafeAddr]);
+        console.log('Transferred AddressStore ownership from deployer to Gnosis');
     }
 
     public static async updateStakePoolConfig(config: Config) {
@@ -267,8 +282,8 @@ export class Contracts {
         console.log('=== AddressStore ===');
         console.log('Address: ', addressStore.address);
         console.log(`getStkBNB: ${await addressStore.getStkBNB()}`);
-        console.log(`getFeeVault: ${await addressStore.getFeeVault()}`);
         console.log(`getUndelegationHolder: ${await addressStore.getUndelegationHolder()}`);
+        console.log(`getFeeVault: ${await addressStore.getFeeVault()}`);
         console.log(`getStakePool: ${await addressStore.getStakePool()}`);
 
         console.log('\n\n');
@@ -278,7 +293,7 @@ export class Contracts {
         console.log('Address: ', stkBNB.address);
         console.log('Name: ', await stkBNB.name());
         console.log('Symbol: ', await stkBNB.symbol());
-        console.log(`totalSupply: ${formatEther(await stkBNB.totalSupply())} BNB`);
+        console.log(`totalSupply: ${formatEther(await stkBNB.totalSupply())} stkBNB`);
         console.log(
             'DEFAULT_ADMIN_ROLE: ',
             await RoleInfo.get(stkBNB, await stkBNB.DEFAULT_ADMIN_ROLE()),

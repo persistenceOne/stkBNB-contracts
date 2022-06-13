@@ -14,13 +14,10 @@ import "./interfaces/ITokenHub.sol";
 import "./interfaces/IUndelegationHolder.sol";
 
 // TODO:
-// * Scripts
-// * Deposit/withdrawal precision check
-// * Verify calculations
 // * Tests
 // * Optimize Storage layout (both contract size and gas wise)
 //      * Changing something from public to private optimizes contract size, even after adding a public view.
-//      * Changing the location of _paused affects the contract size as well. If kept before assressStore, it increases.
+//      * Changing the location of _paused affects the contract size as well. If kept before addressStore, it increases.
 contract StakePool is
     Initializable,
     IERC777RecipientUpgradeable,
@@ -139,6 +136,7 @@ contract StakePool is
 
     error UnknownSender();
     error LessThanMinimum(string tag, uint256 expected, uint256 got);
+    error DustNotAllowed(uint256 dust);
     error TokenMintingToSelfNotAllowed();
     error TokenTransferToSelfNotAllowed();
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
@@ -155,14 +153,15 @@ contract StakePool is
      ********************/
 
     /**
-     * @dev Checks that golVal is at least minVal. Otherwise, reverts with the given tag.
+     * @dev Checks that gotVal is at least minVal. Otherwise, reverts with the given tag.
+     * Also ensures that the gotVal doesn't have token dust based on minVal.
      */
-    modifier checkMin(
+    modifier checkMinAndDust(
         string memory tag,
         uint256 minVal,
         uint256 gotVal
     ) {
-        _checkMin(tag, minVal, gotVal);
+        _checkMinAndDust(tag, minVal, gotVal);
         _;
     }
 
@@ -213,13 +212,17 @@ contract StakePool is
      * replaced by just the function call, instead of all the lines in these functions.
      */
 
-    function _checkMin(
+    function _checkMinAndDust(
         string memory tag,
         uint256 minVal,
         uint256 gotVal
     ) private pure {
         if (gotVal < minVal) {
             revert LessThanMinimum(tag, minVal, gotVal);
+        }
+        uint256 dust = gotVal % minVal;
+        if (dust != 0) {
+            revert DustNotAllowed(dust);
         }
     }
 
@@ -364,7 +367,7 @@ contract StakePool is
         payable
         whenNotPaused
         nonReentrant
-        checkMin("Deposit", config.minBNBDeposit, msg.value)
+        checkMinAndDust("Deposit", config.minBNBDeposit, msg.value)
     {
         uint256 userWei = msg.value;
         uint256 poolTokensToReturn = exchangeRate._calcPoolTokensForDeposit(userWei);
@@ -420,7 +423,7 @@ contract StakePool is
         override
         whenNotPaused
         nonReentrant
-        checkMin("Withdrawal", config.minTokenWithdrawal, amount)
+        checkMinAndDust("Withdrawal", config.minTokenWithdrawal, amount)
     {
         // checks
         if (msg.sender != addressStore.getStkBNB()) {
@@ -509,8 +512,7 @@ contract StakePool is
      *
      * @param bnbRewards: The amount of BNB which were received as staking rewards.
      */
-    // TODO: maybe call it epochUpdate() ??
-    function notifyRewards(uint256 bnbRewards) external whenNotPaused onlyRole(BOT_ROLE) {
+    function epochUpdate(uint256 bnbRewards) external whenNotPaused onlyRole(BOT_ROLE) {
         // calculate fee
         uint256 feeWei = config.fee.reward._apply(bnbRewards);
         uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) /
