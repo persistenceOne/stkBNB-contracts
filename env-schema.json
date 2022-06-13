@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "mnemonic": {
+      "type": "string"
+    },
+    "numConfirmBlocks": {
+      "type": "number"
+    },
+    "gnosisSafeAddr": {
+      "type": "string"
+    },
+    "addressStore": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "address",
+        "deploy"
+      ]
+    },
+    "stkBNB": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "address",
+        "deploy"
+      ]
+    },
+    "undelegationHolder": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "address",
+        "deploy"
+      ]
+    },
+    "feeVault": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        },
+        "upgrade": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "address",
+        "deploy",
+        "upgrade"
+      ]
+    },
+    "stakePool": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        },
+        "upgrade": {
+          "type": "boolean"
+        },
+        "init": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "type": "object",
+              "properties": {
+                "bcStakingWallet": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minBNBDeposit": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minTokenWithdrawal": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "cooldownPeriod": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fee": {
+                  "type": "object",
+                  "properties": {
+                    "reward": {
+                      "type": "number"
+                    },
+                    "deposit": {
+                      "type": "number"
+                    },
+                    "withdraw": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "reward",
+                    "deposit",
+                    "withdraw"
+                  ]
+                }
+              },
+              "required": [
+                "bcStakingWallet",
+                "minBNBDeposit",
+                "minTokenWithdrawal",
+                "cooldownPeriod",
+                "fee"
+              ]
+            }
+          },
+          "required": [
+            "config"
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "deploy",
+        "upgrade",
+        "init"
+      ]
+    }
+  },
+  "required": [
+    "mnemonic",
+    "numConfirmBlocks",
+    "gnosisSafeAddr",
+    "addressStore",
+    "stkBNB",
+    "undelegationHolder",
+    "feeVault",
+    "stakePool"
+  ]
+}

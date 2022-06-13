@@ -5,6 +5,8 @@ import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-contract-sizer';
+import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
+import { CONFIG } from './scripts/types/config';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -45,7 +47,9 @@ export default {
     },
     defaultNetwork: 'hardhat',
     networks: {
-        hardhat: {},
+        hardhat: {
+            blockGasLimit: 40000000,
+        },
         // This is the network created by `hardhat node`.
         localhost: {
             url: 'http://127.0.0.1:8545',
@@ -56,14 +60,14 @@ export default {
             chainId: 97,
             gasPrice: 20000000000,
             blockGasLimit: 40000000,
-            accounts: { mnemonic: '' }, // TODO: fixme
+            accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
         mainnet: {
             url: 'https://bsc-dataseed.binance.org/',
             chainId: 56,
             gasPrice: 20000000000,
             blockGasLimit: 40000000,
-            accounts: { mnemonic: '' }, // TODO: fixme
+            accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
     },
 };
