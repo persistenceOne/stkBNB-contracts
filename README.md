@@ -37,5 +37,4 @@ npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 ```
 
 ## TODOs
-* ABI workflow isn't working. Debug that.
-* Fix todos in hardhat config
+* Fix todos in code

@@ -252,16 +252,28 @@ export class Contracts {
     }
 
     public static async query(config: Config) {
-        // TODO: complete this & make it an instance function instead of static
         const contracts = await Contracts.attach(config);
-        const stkBNB: Contract = contracts.stakedBNBToken;
-        const stakePool: Contract = contracts.stakePool;
+        await contracts.query();
+    }
 
-        console.log('Start time: ', new Date());
+    public async query() {
+        const startTime: Date = new Date();
+        console.log('Start time: ', startTime);
 
         // print deployer info
         const deployerAddr = await logDeployerInfo();
 
+        const addressStore: Contract = this.addressStore;
+        console.log('=== AddressStore ===');
+        console.log('Address: ', addressStore.address);
+        console.log(`getStkBNB: ${await addressStore.getStkBNB()}`);
+        console.log(`getFeeVault: ${await addressStore.getFeeVault()}`);
+        console.log(`getUndelegationHolder: ${await addressStore.getUndelegationHolder()}`);
+        console.log(`getStakePool: ${await addressStore.getStakePool()}`);
+
+        console.log('\n\n');
+
+        const stkBNB: Contract = this.stakedBNBToken;
         console.log('=== stkBNB ===');
         console.log('Address: ', stkBNB.address);
         console.log('Name: ', await stkBNB.name());
@@ -276,9 +288,29 @@ export class Contracts {
 
         console.log('\n\n');
 
-        console.log('=== StakePool ===');
+        const uh: Contract = this.undelegationHolder;
+        console.log('=== UndelegationHolder ===');
+        console.log('Address: ', uh.address);
+        console.log(`Balance: ${formatEther(await ethers.provider.getBalance(uh.address))} BNB`);
+
+        console.log('\n\n');
+
+        const feeVault: Contract = this.feeVault;
+        console.log('=== FeeVault ===');
+        console.log('Address: ', feeVault.address);
+        console.log(
+            `Balance: ${formatEther(await ethers.provider.getBalance(feeVault.address))} BNB`,
+        );
+        console.log(
+            `Balance (stkBNB): ${formatEther(await stkBNB.balanceOf(feeVault.address))} stkBNB`,
+        );
+
+        console.log('\n\n');
+
+        const stakePool: Contract = this.stakePool;
         const balance: BigNumber = await ethers.provider.getBalance(stakePool.address);
         const claimReserve: BigNumber = await stakePool.claimReserve();
+        console.log('=== StakePool ===');
         console.log('Address: ', stakePool.address);
         console.log(`Balance: ${formatEther(balance)} BNB`);
         console.log(
@@ -299,6 +331,7 @@ export class Contracts {
         console.log('\n\n');
 
         console.log('End time: ', new Date());
+        console.log(`Total time spent: ${(new Date().getTime() - startTime.getTime()) / 1000}s`);
     }
 
     public logAddress() {
@@ -316,7 +349,7 @@ export class Contracts {
     }
 }
 
-// TODO: we shouldn't need this function, the Contracts class should be able to handle any deployment usecase
+// TODO: this should be removed, the Contracts class should be able to handle any deployment usecase
 export async function deployContract(name: string): Promise<Contract> {
     const factory: ContractFactory = await ethers.getContractFactory(name);
     const contract: Contract = await factory.deploy();
