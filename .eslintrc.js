@@ -19,5 +19,6 @@ module.exports = {
                 ignores: ['modules'],
             },
         ],
+        'no-process-exit': ['off'],
     },
 };

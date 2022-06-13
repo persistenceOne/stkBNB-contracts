@@ -336,7 +336,7 @@ contract StakePool is
     }
 
     /**
-     * @dev updateConfig: Used by admin to update the contract configuration.
+     * @dev updateConfig: Used by admin to set/update the contract configuration.
      *                    It is allowed to update config even when the contract is paused.
      *
      * Requirements:

@@ -46,12 +46,13 @@ contract UndelegationHolder is IUndelegationHolder {
      * @return The current balance, all of which it will be sending to the StakePool.
      */
     function withdrawUnbondedBNB() external override returns (uint256) {
-        if (msg.sender != addressStore.getStakePool()) {
+        address stakePool = addressStore.getStakePool();
+        if (msg.sender != stakePool) {
             revert UnauthorizedSender();
         }
 
         uint256 balance = address(this).balance;
-        payable(addressStore.getStakePool()).transfer(balance);
+        payable(stakePool).transfer(balance);
 
         return balance;
     }

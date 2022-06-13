@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers, network, web3 } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import * as utils from '../scripts/utils';
+import { deployContract } from '../scripts/utils/contracts';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -25,7 +25,7 @@ describe('StakedBNBToken', function () {
 
     let stakedBNBToken: Contract;
     it('Should deploy StakedBNBToken', async function () {
-        stakedBNBToken = await utils.deployContract('StakedBNBToken');
+        stakedBNBToken = await deployContract('StakedBNBToken');
         expect(await stakedBNBToken.signer.getAddress()).to.equal(adminAddress);
     });
 });
