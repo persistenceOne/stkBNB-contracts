@@ -20,7 +20,7 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v2.5.1
@@ -54,7 +54,7 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v2.5.1
@@ -106,7 +106,7 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v2.5.1
@@ -122,19 +122,26 @@ jobs:
 
       - name: Copy UI ABIs
         run: |
-        cp artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json abis/ui/
+          cp artifacts/contracts/AddressStore.sol/AddressStore.json abis/ui/
+          cp artifacts/contracts/FeeVault.sol/FeeVault.json abis/ui/
+          cp artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json abis/ui/
+          cp artifacts/contracts/StakePool.sol/StakePool.json abis/ui/
+          cp artifacts/contracts/UndelegationHolder.sol/UndelegationHolder.json abis/ui/
 
       - name: Extract info for Go ABIs
         run: |
           mkdir temp
           fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .abi > temp/StakedBNBToken.json
           fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .bytecode > temp/StakedBNBToken.bin
+          fx artifacts/contracts/StakePool.sol/StakePool.json .abi > temp/StakePool.json
+          fx artifacts/contracts/StakePool.sol/StakePool.json .bytecode > temp/StakePool.bin
 
       - name: Generate Go ABIs
         run: |
-        chmod 755 tools/abigen
-        ./tools/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
-        rm -rf temp
+          chmod 755 tools/abigen
+          ./tools/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
+          ./tools/abigen --abi=temp/StakePool.json --bin=temp/StakePool.bin --pkg=contracts --type=StakePool --out=abis/go/stake_pool.go
+          rm -rf temp
 
       - name: Commit
         uses: EndBug/add-and-commit@v9
