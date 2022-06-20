@@ -5,6 +5,7 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./abstract/BEP20.sol";
 
 /**
  * @dev {ERC777} token, including:
@@ -21,13 +22,14 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 /**/
 
 /// @custom:security-contact support@persistence.one
-contract StakedBNBToken is ERC777, AccessControlEnumerable, Pausable {
+contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
-    constructor() ERC777("Staked BNB", "stkBNB", new address[](0)) {
-        // Make the deployer the default admin, deployer will later transfer this role to a multi-sig.
-        // Once we are sure the system is stable and there are no issues, the multi-sig can choose to renounce this role.
+    constructor() ERC777("Staked BNB", "stkBNB", new address[](0)) BEP20(msg.sender) {
+        // Make the deployer the DEFAULT_ADMIN and BEP20 owner, deployer will later transfer these roles to a multi-sig.
+        // Once we are sure the system is stable and there are no issues, the multi-sig can choose to renounce the
+        // DEFAULT_ADMIN_ROLE, but not the BEP20 owner.
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 

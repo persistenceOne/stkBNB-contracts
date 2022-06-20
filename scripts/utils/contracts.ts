@@ -7,6 +7,7 @@ import { logDeployerInfo } from './deployer';
 import { formatEther } from 'ethers/lib/utils';
 import { RoleInfo } from '../types/role-info';
 import { Claims } from '../types/claim';
+import { SysContracts } from './sys-contracts';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -26,13 +27,22 @@ export class Contracts {
     public undelegationHolder: Contract;
     public feeVault: Contract;
     public stakePool: Contract;
+    public sys: SysContracts;
 
-    private constructor(contracts: Contract[]) {
+    // The constructor should not be used anywhere in the code, except the `new` function.
+    private constructor(contracts: Contract[], sys: SysContracts) {
         this.addressStore = contracts[0];
         this.stakedBNBToken = contracts[1];
         this.undelegationHolder = contracts[2];
         this.feeVault = contracts[3];
         this.stakePool = contracts[4];
+        this.sys = sys;
+    }
+
+    // A wrapper around the constructor to pass in the system contracts.
+    // Always this should be used to construct a new instance of this class.
+    private static async new(contracts: Contract[]): Promise<Contracts> {
+        return new Contracts(contracts, await SysContracts.new());
     }
 
     public static async factories(): Promise<ContractFactories> {
@@ -46,9 +56,9 @@ export class Contracts {
     }
 
     public static async attach(config: Config): Promise<Contracts> {
-        const factories: ContractFactories = await this.factories();
+        const factories: ContractFactories = await Contracts.factories();
 
-        return new Contracts([
+        return Contracts.new([
             factories.AddressStore.attach(config.addressStore.address),
             factories.StakedBNBToken.attach(config.stkBNB.address),
             factories.UndelegationHolder.attach(config.undelegationHolder.address),
@@ -59,7 +69,7 @@ export class Contracts {
 
     public static async deploy(config: Config): Promise<Contracts> {
         const factories: ContractFactories = await Contracts.factories();
-        const contracts = new Contracts(new Array<Contract>(Contracts.NUM_CONTRACTS));
+        const contracts = await Contracts.new(new Array<Contract>(Contracts.NUM_CONTRACTS));
 
         const deployerAddr = await logDeployerInfo();
 
@@ -135,42 +145,55 @@ export class Contracts {
             console.log(`StakePool attached: ${contracts.stakePool.address}`);
         }
 
-        // setup stkBNB
-        if (config.stkBNB.deploy) {
-            await executeTx(contracts.addressStore, 'setStkBNB', [
-                contracts.stakedBNBToken.address,
-            ]);
-            console.log('AddressStore updated with stkBNB');
-        }
+        // setup the whole system
+        if (config.postDeploySetup) {
+            console.log('Starting post-deploy setup...');
 
-        if (config.undelegationHolder.deploy) {
-            await executeTx(contracts.addressStore, 'setUndelegationHolder', [
-                contracts.undelegationHolder.address,
-            ]);
-            console.log('AddressStore updated with UndelegationHolder');
-        }
+            // setup stkBNB
+            if (config.stkBNB.deploy) {
+                await executeTx(contracts.addressStore, 'setStkBNB', [
+                    contracts.stakedBNBToken.address,
+                ]);
+                console.log('AddressStore updated with stkBNB');
+            }
 
-        if (config.feeVault.deploy) {
-            await executeTx(contracts.addressStore, 'setFeeVault', [contracts.feeVault.address]);
-            console.log('AddressStore updated with FeeVault');
-        }
+            if (config.undelegationHolder.deploy) {
+                await executeTx(contracts.addressStore, 'setUndelegationHolder', [
+                    contracts.undelegationHolder.address,
+                ]);
+                console.log('AddressStore updated with UndelegationHolder');
+            }
 
-        // setup StakePool
-        if (config.stakePool.deploy) {
-            await executeTx(contracts.addressStore, 'setStakePool', [contracts.stakePool.address]);
-            console.log('AddressStore updated with StakePool');
-            await executeTx(contracts.stakedBNBToken, 'grantRole', [
-                await contracts.stakedBNBToken.MINTER_ROLE(),
-                contracts.stakePool.address,
-            ]);
-            console.log('stkBNB MINTER set to StakePool');
-            await executeTx(contracts.stakedBNBToken, 'grantRole', [
-                await contracts.stakedBNBToken.BURNER_ROLE(),
-                contracts.stakePool.address,
-            ]);
-            console.log('stkBNB BURNER set to StakePool');
-            await executeTx(contracts.stakePool, 'unpause', []);
-            console.log('StakePool unpaused');
+            if (config.feeVault.deploy) {
+                await executeTx(contracts.addressStore, 'setFeeVault', [
+                    contracts.feeVault.address,
+                ]);
+                console.log('AddressStore updated with FeeVault');
+            }
+
+            // setup StakePool
+            if (config.stakePool.deploy) {
+                await executeTx(contracts.addressStore, 'setStakePool', [
+                    contracts.stakePool.address,
+                ]);
+                console.log('AddressStore updated with StakePool');
+                await executeTx(contracts.stakedBNBToken, 'grantRole', [
+                    await contracts.stakedBNBToken.MINTER_ROLE(),
+                    contracts.stakePool.address,
+                ]);
+                console.log('stkBNB MINTER set to StakePool');
+                await executeTx(contracts.stakedBNBToken, 'grantRole', [
+                    await contracts.stakedBNBToken.BURNER_ROLE(),
+                    contracts.stakePool.address,
+                ]);
+                console.log('stkBNB BURNER set to StakePool');
+                await executeTx(contracts.stakePool, 'unpause', []);
+                console.log('StakePool unpaused');
+            }
+
+            console.log('Finished post-deploy setup!');
+        } else {
+            console.log('Skipping post-deploy setup.');
         }
 
         const balanceUsed = initialDeployerBalance.sub(
@@ -187,7 +210,7 @@ export class Contracts {
 
     public static async upgrade(config: Config): Promise<Contracts> {
         const factories = await Contracts.factories();
-        const contracts = new Contracts(new Array<Contract>(Contracts.NUM_CONTRACTS));
+        const contracts = await Contracts.new(new Array<Contract>(Contracts.NUM_CONTRACTS));
 
         const deployerAddr = await logDeployerInfo();
         const initialDeployerBalance = await ethers.provider.getBalance(deployerAddr);
@@ -228,7 +251,11 @@ export class Contracts {
         const contracts = await Contracts.attach(config);
         const deployerAddr = await logDeployerInfo();
 
-        // Transfer DEFAULT_ADMIN_ROLE to a multi-sig and revoke role from deployer account
+        // stkBNB: Transfer BEP20 ownership to Gnosis
+        await executeTx(contracts.stakedBNBToken, 'transferOwnership', [config.gnosisSafeAddr]);
+        console.log('Transferred stkBNB BEP20 ownership to Gnosis');
+
+        // stkBNB: Transfer DEFAULT_ADMIN_ROLE to Gnosis and revoke role from deployer account
         await executeTx(contracts.stakedBNBToken, 'grantRole', [
             await contracts.stakedBNBToken.DEFAULT_ADMIN_ROLE(),
             config.gnosisSafeAddr,
@@ -241,6 +268,7 @@ export class Contracts {
         ]);
         console.log('Revoked stkBNB DEFAULT_ADMIN from deployer');
 
+        // StakePool: Transfer DEFAULT_ADMIN_ROLE to Gnosis and revoke role from deployer account
         await executeTx(contracts.stakePool, 'grantRole', [
             await contracts.stakePool.DEFAULT_ADMIN_ROLE(),
             config.gnosisSafeAddr,
@@ -253,7 +281,7 @@ export class Contracts {
         ]);
         console.log('Revoked StakePool DEFAULT_ADMIN from deployer');
 
-        // Transfer ownership to multisig account
+        // FeeVault & AddressStore: Transfer ownership to Gnosis
         await executeTx(contracts.feeVault, 'transferOwnership', [config.gnosisSafeAddr]);
         console.log('Transferred FeeVault ownership from deployer to Gnosis');
         await executeTx(contracts.addressStore, 'transferOwnership', [config.gnosisSafeAddr]);
@@ -294,6 +322,9 @@ export class Contracts {
         console.log('Name: ', await stkBNB.name());
         console.log('Symbol: ', await stkBNB.symbol());
         console.log(`totalSupply: ${formatEther(await stkBNB.totalSupply())} stkBNB`);
+        console.log('Decimals: ', await stkBNB.decimals());
+        console.log('Granularity: ', await stkBNB.granularity());
+        console.log('Owner: ', await stkBNB.getOwner());
         console.log(
             'DEFAULT_ADMIN_ROLE: ',
             await RoleInfo.get(stkBNB, await stkBNB.DEFAULT_ADMIN_ROLE()),
@@ -347,6 +378,18 @@ export class Contracts {
 
         console.log('End time: ', new Date());
         console.log(`Total time spent: ${(new Date().getTime() - startTime.getTime()) / 1000}s`);
+    }
+
+    public async mirrorStkBNB() {
+        await this.sys.mirror(this.stakedBNBToken.address);
+    }
+
+    public async syncStkBNB() {
+        await this.sys.sync(this.stakedBNBToken.address);
+    }
+
+    public async transferOutStkBNB(bcRecipient: string, amount: BigNumber) {
+        await this.sys.transferOut(this.stakedBNBToken, bcRecipient, amount);
     }
 
     public logAddress() {

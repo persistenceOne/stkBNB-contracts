@@ -9,6 +9,9 @@
     "numConfirmBlocks": {
       "type": "number"
     },
+    "postDeploySetup": {
+      "type": "boolean"
+    },
     "gnosisSafeAddr": {
       "type": "string"
     },
@@ -155,6 +158,7 @@
   "required": [
     "mnemonic",
     "numConfirmBlocks",
+    "postDeploySetup",
     "gnosisSafeAddr",
     "addressStore",
     "stkBNB",
