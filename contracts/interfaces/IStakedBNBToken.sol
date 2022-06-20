@@ -3,8 +3,9 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
+import "./IBEP20.sol";
 
-interface IStakedBNBToken is IERC777 {
+interface IStakedBNBToken is IERC777, IBEP20 {
     function mint(
         address account,
         uint256 amount,

@@ -34,6 +34,7 @@ interface StakePoolInit {
 export interface IConfig {
     mnemonic: string;
     numConfirmBlocks: number;
+    postDeploySetup: boolean;
     gnosisSafeAddr: string;
     addressStore: ContractConfig<null>;
     stkBNB: ContractConfig<null>;
@@ -45,6 +46,7 @@ export interface IConfig {
 export class Config implements IConfig {
     mnemonic: string;
     numConfirmBlocks: number;
+    postDeploySetup: boolean;
     gnosisSafeAddr: string;
     addressStore: ContractConfig<null>;
     stkBNB: ContractConfig<null>;
@@ -55,6 +57,7 @@ export class Config implements IConfig {
     constructor(config: IConfig) {
         this.mnemonic = config.mnemonic;
         this.numConfirmBlocks = config.numConfirmBlocks;
+        this.postDeploySetup = config.postDeploySetup;
         this.gnosisSafeAddr = config.gnosisSafeAddr;
         this.addressStore = config.addressStore;
         this.stkBNB = config.stkBNB;
