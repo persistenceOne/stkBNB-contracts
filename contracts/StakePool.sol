@@ -126,7 +126,10 @@ contract StakePool is
         uint256 timestamp
     );
     event Claim(address indexed user, ClaimRequest req, uint256 timestamp);
-    event ReceivedRewards(uint256 amount); // emitted when rewards are received
+    event DelegationInitiated(uint256 stakableBNB); // emitted on initiateDelegation
+    event EpochUpdate(uint256 bnbRewards, uint256 feeTokens); // emitted on epochUpdate
+    event UnbondingInitiated(uint256 bnbUnbonding); // emitted on unbondingInitiated
+    event UnbondingFinished(uint256 unbondedAmount); // emitted on unbondingFinished
     event Paused(address account); // emitted when the pause is triggered by `account`.
     event Unpaused(address account); // emitted when the pause is lifted by `account`.
 
@@ -502,6 +505,8 @@ contract StakePool is
             );
         }
 
+        emit DelegationInitiated(stakableBNB);
+
         return stakableBNB;
     }
 
@@ -530,7 +535,7 @@ contract StakePool is
         );
 
         // emit the ack event
-        emit ReceivedRewards(bnbRewards);
+        emit EpochUpdate(bnbRewards, feeTokens);
     }
 
     /**
@@ -542,6 +547,8 @@ contract StakePool is
     function unbondingInitiated(uint256 _bnbUnbonding) external whenNotPaused onlyRole(BOT_ROLE) {
         bnbToUnbond -= _bnbUnbonding;
         bnbUnbonding += _bnbUnbonding;
+
+        emit UnbondingInitiated(_bnbUnbonding);
     }
 
     /**
@@ -556,6 +563,8 @@ contract StakePool is
             .withdrawUnbondedBNB();
         bnbUnbonding -= unbondedAmount;
         claimReserve += unbondedAmount;
+
+        emit UnbondingFinished(unbondedAmount);
     }
 
     /*********************
