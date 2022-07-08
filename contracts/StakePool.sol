@@ -83,9 +83,11 @@ contract StakePool is
     /**
      * @dev The amount that needs to be unbonded in the next unstaking epoch.
      * This is queried by the bot in order to initiate unbonding.
+     * It is int256, not uint256 because bnbUnbonding can be more than it and is subtracted from it.
+     * So, if it is <= 0, means we don't need to unbond anything.
      * Call frequency: Weekly
      */
-    uint256 public bnbToUnbond;
+    int256 public bnbToUnbond;
 
     /**
      * @dev The amount of BNB that is unbonding in the current unstaking epoch.
@@ -492,7 +494,7 @@ contract StakePool is
      * @return The amount of stakable BNB that were transferred to the staking address on BC.
      */
     function initiateDelegation() external whenNotPaused onlyRole(BOT_ROLE) returns (uint256) {
-        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee();
+        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
         uint256 stakableBNB = getStakableBNB();
 
         if (stakableBNB > 0) {
@@ -543,9 +545,10 @@ contract StakePool is
      * Call frequency: Weekly
      *
      * @param _bnbUnbonding: The amount of BNB for which unbonding was initiated on BC.
+     *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
     function unbondingInitiated(uint256 _bnbUnbonding) external whenNotPaused onlyRole(BOT_ROLE) {
-        bnbToUnbond -= _bnbUnbonding;
+        bnbToUnbond -= int256(_bnbUnbonding);
         bnbUnbonding += _bnbUnbonding;
 
         emit UnbondingInitiated(_bnbUnbonding);
@@ -650,7 +653,7 @@ contract StakePool is
         claimReqs[from].push(ClaimRequest(weiToReturn, block.timestamp));
 
         // update the bnbToUnbond
-        bnbToUnbond += weiToReturn;
+        bnbToUnbond += int256(weiToReturn);
 
         // update the exchange rate to reflect the balance changes
         exchangeRate._update(
