@@ -31,3 +31,8 @@ artifacts
 # OpenZeppelin
 .openzeppelin/unknown-*.json
 .openzeppelin/.session
+
+# Certora
+.certora*
+resource_errors.json
+last_conf*
