@@ -1,5 +1,6 @@
-certoraRun  contracts/StakePool.sol \
---verify StakePool:certora/specs/StakePool.spec \
+certoraRun  certora/harness/StakePoolHarness.sol contracts/StakedBNBToken.sol contracts/AddressStore.sol \
+--link StakePoolHarness:addressStore=AddressStore \
+--verify StakePoolHarness:certora/specs/StakePool.spec \
 --solc solc8.7 \
---msg "stakepool"  \
---packages @openzeppelin=node_modules/@openzeppelin 
+--msg "StakePoolHarness integrityOfDeposit"  \
+--packages @openzeppelin=node_modules/@openzeppelin --rule "integrityOfDeposit"
