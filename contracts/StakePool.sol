@@ -96,8 +96,7 @@ contract StakePool is
 
     /**
      * @dev A portion of the contract balance that is reserved in order to satisfy the claim
-     * requests from users after the cooldown period. This will never be sent to the BC chain
-     * for staking.
+     * requests from users after the cooldown period. This will never be sent to BBC for staking.
      */
     uint256 public claimReserve;
 
@@ -128,7 +127,8 @@ contract StakePool is
         uint256 timestamp
     );
     event Claim(address indexed user, ClaimRequest req, uint256 timestamp);
-    event DelegationInitiated(uint256 stakableBNB); // emitted on initiateDelegation
+    event InitiateDelegation_TransferOut(uint256 transferOutAmount); // emitted during initiateDelegation
+    event InitiateDelegation_ShortCircuit(uint256 shortCircuitAmount); // emitted during initiateDelegation
     event EpochUpdate(uint256 bnbRewards, uint256 feeTokens); // emitted on epochUpdate
     event UnbondingInitiated(uint256 bnbUnbonding); // emitted on unbondingInitiated
     event UnbondingFinished(uint256 unbondedAmount); // emitted on unbondingFinished
@@ -488,33 +488,69 @@ contract StakePool is
 
     /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
-     * staking address on BC.
+     * staking address on BBC.
      * Call frequency: Daily
-     *
-     * @return The amount of stakable BNB that were transferred to the staking address on BC.
      */
-    function initiateDelegation() external whenNotPaused onlyRole(BOT_ROLE) returns (uint256) {
+    function initiateDelegation() external whenNotPaused onlyRole(BOT_ROLE) {
+        // contract will always have at least the claimReserve, so this should never overflow.
+        uint256 excessBNB = address(this).balance - claimReserve;
         uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
-        uint256 stakableBNB = getStakableBNB();
 
-        if (stakableBNB > 0) {
-            // TODO: should we charge the relay fee from the bot?
-            _TOKEN_HUB.transferOut{ value: stakableBNB + miniRelayFee }(
+        // Initiate a cross-chain transfer only if we have enough amount.
+        if (excessBNB >= miniRelayFee + config.minCrossChainTransfer) {
+            // this would always be at least config.minCrossChainTransfer
+            uint256 transferOutAmount = excessBNB - miniRelayFee;
+            // We are charging the relay fee from the user funds. Similarly, any other fees on the BBC would be
+            // paid from user funds. This will eventually lead to the total BNB with the protocol to be less than what
+            // is accounted in the exchangeRate. This might lead to claims not working in case of a black swan event.
+            // So, we must pay back the fee losses to the protocol to ensure the protocol correctness.
+            // For this, we will monitor the fee losses, and pay them back to the protocol periodically.
+            // Note that the probability of a black swan event is very low. On top of that, as time passes, we will be
+            // accumulating some stkBNB as rewards in FeeVault. This implies that our share of BNB in the pool will
+            // keep increasing over time. As long as this share is more than the total fee spent till that time, we need
+            // not worry about paying back the fee losses. Also, for us to be economically successful, we must set
+            // protocol fee rates in a way so that the rewards we earn via FeeVault are significantly more than the fee
+            // we are paying for the protocol operations.
+            _TOKEN_HUB.transferOut{ value: excessBNB }(
                 _ZERO_ADDR,
                 config.bcStakingWallet,
-                stakableBNB,
+                transferOutAmount,
                 uint64(block.timestamp + 3600)
             );
+
+            emit InitiateDelegation_TransferOut(transferOutAmount);
+        } else if (excessBNB > 0 && bnbToUnbond > 0) {
+            // if the excess amount is so small that it can't be moved to BBC and there is bnbToUnbond, short-circuit
+            // the bot process and directly update the claimReserve. This way, we will still be able to satisfy claims
+            // even if the total deposit throughout the unstaking epoch is less than the minimum cross-chain transfer.
+
+            // The reason we don't do this short-circuit process more generally is because the short-circuited amount
+            // doesn't earn any rewards. While, if it would have gone through the normal transferOut process, it would
+            // have earned significant staking rewards because we undelegate only once in 7 days on mainnet. So, we do
+            // this short-circuit process only to handle the edge case when the deposits throughout the unstaking epoch
+            // are less than the minimum cross-chain transfer and users initiated withdrawals, so that we are
+            // successfully able to satisfy the claim requests.
+
+            uint256 shortCircuitAmount;
+            if (bnbToUnbond > int256(excessBNB)) {
+                // all the excessBNB we have in the contract will be used up to satisfy claims. The remaining
+                // bnbToUnbond will be made available to the contract by the bot via the unstaking operations.
+                shortCircuitAmount = excessBNB;
+            } else {
+                // the amount we need to unbond to satisfy claims is already present in the contract. So, only that much
+                // needs to be moved to claimReserve.
+                shortCircuitAmount = uint256(bnbToUnbond);
+            }
+            bnbToUnbond -= int256(shortCircuitAmount);
+            claimReserve += shortCircuitAmount;
+
+            emit InitiateDelegation_ShortCircuit(shortCircuitAmount);
         }
-
-        emit DelegationInitiated(stakableBNB);
-
-        return stakableBNB;
     }
 
     /**
      * @dev Called by the bot to update the exchange rate in contract based on the rewards
-     * obtained in the BC staking address and accordingly mint fee tokens.
+     * obtained in the BBC staking address and accordingly mint fee tokens.
      * Call frequency: Daily
      *
      * @param bnbRewards: The amount of BNB which were received as staking rewards.
@@ -541,10 +577,10 @@ contract StakePool is
     }
 
     /**
-     * @dev This is called by the bot after it has executed the unbond transaction on BC.
+     * @dev This is called by the bot after it has executed the unbond transaction on BBC.
      * Call frequency: Weekly
      *
-     * @param _bnbUnbonding: The amount of BNB for which unbonding was initiated on BC.
+     * @param _bnbUnbonding: The amount of BNB for which unbonding was initiated on BBC.
      *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
     function unbondingInitiated(uint256 _bnbUnbonding) external whenNotPaused onlyRole(BOT_ROLE) {
@@ -555,7 +591,7 @@ contract StakePool is
     }
 
     /**
-     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BC
+     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BBC
      * and has been transferred to the UndelegationHolder contract on BSC.
      * It calls UndelegationHolder.withdrawUnbondedBNB() to fetch the unbonded BNB to itself and
      * update `bnbUnbonding` and `claimReserve`.
@@ -579,24 +615,6 @@ contract StakePool is
      */
     function paused() public view returns (bool) {
         return _paused;
-    }
-
-    /**
-     * @return The amount of BNB that can be staked. This would be same as the amount that would
-     * reach BC, if initiateDelegation() were called.
-     * This view is used by the bot.
-     */
-    function getStakableBNB() public view returns (uint256) {
-        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee();
-
-        // if we have enough balance to send to BC, return that as the stakable amount.
-        // TODO: should we put a MIN check as well? send only if the diff is greater than a min + claim + relayFee
-        if (address(this).balance > claimReserve + miniRelayFee) {
-            return address(this).balance - claimReserve - miniRelayFee;
-        }
-
-        // we don't have enough balance to send to BC
-        return 0;
     }
 
     /**
