@@ -14,6 +14,7 @@ methods {
     // Getters:
     bnbToUnbond() returns (int256) envfree
     bnbUnbonding() returns (int256) envfree
+    claimReserve() returns (int256) envfree
 
     // stkBNB methods:
     stkBNB.balanceOf(address) returns (uint256) envfree
@@ -61,9 +62,9 @@ function getFeeVaultContract() returns address {
 /**************************************************
  *                 VALID STATES                   *
  **************************************************/
-
+//  TODO: Not finished!
 invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 index)
-    getWeiToReturn(user, index) <= bnbToUnbond() + bnbUnbonding()
+    getWeiToReturn(user, index) <= bnbToUnbond() + bnbUnbonding() + claimReserve()
 
 /**************************************************
  *               STATE TRANSITIONS                *
