@@ -6,12 +6,14 @@ methods {
     deposit()
 
     // Harness methods:
+    getWeiToReturn(address user, uint256 index) returns (uint256) envfree
     getPoolTokenSupply() returns (uint256) envfree
     getTotalWei() returns (uint256) envfree
     getSTKBNB() returns (address) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
+    bnbUnbonding() returns (int256) envfree
 
     // stkBNB methods:
     stkBNB.balanceOf(address) returns (uint256) envfree
@@ -34,6 +36,19 @@ methods {
 }
 
 
+/**************************************************
+ *                GHOSTS AND HOOKS                *
+ **************************************************/
+
+ghost sumAllWei() returns uint256 {
+    init_state axiom sumAllWei() == 0;
+}
+
+
+/**************************************************
+ *               CVL FUNCS & DEFS                 *
+ **************************************************/
+
 function getStkBNBContract() returns address {
 	return stkBNB;
 }
@@ -41,6 +56,24 @@ function getStkBNBContract() returns address {
 function getFeeVaultContract() returns address {
 	return feeVault;
 }
+
+
+/**************************************************
+ *                 VALID STATES                   *
+ **************************************************/
+
+invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 index)
+    getWeiToReturn(user, index) <= bnbToUnbond() + bnbUnbonding()
+
+/**************************************************
+ *               STATE TRANSITIONS                *
+ **************************************************/
+
+
+
+/**************************************************
+ *                METHOD INTEGRITY                *
+ **************************************************/
 
 // when depositing amount x, the user balance should decrease by x and the contracts total supply should increase.
 // user stkBNB should increase by x.
@@ -68,7 +101,7 @@ rule integrityOfDeposit(address user, uint256 amount){
 //     env e;
 //     // e.msg.value = amount to deposit
 //     require e.msg.value == amount;
-// 	require e.msg.sender == user; 
+//     require e.msg.sender == user; 
 
 // }
 
