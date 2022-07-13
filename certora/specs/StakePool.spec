@@ -1,4 +1,5 @@
 using StakedBNBToken as stkBNB
+using FeeVault as feeVault
 
 
 methods {
@@ -19,6 +20,7 @@ methods {
 
 	// summarize AddressStore
 	getStkBNB() => getStkBNBContract()
+    getFeeVault() => getFeeVaultContract()
 
 	//receiver - we might want to have an implementation of this 
 	tokensReceived(
@@ -36,6 +38,10 @@ function getStkBNBContract() returns address {
 	return stkBNB;
 }
 
+function getFeeVaultContract() returns address {
+	return feeVault;
+}
+
 // when depositing amount x, the user balance should decrease by x and the contracts total supply should increase.
 // user stkBNB should increase by x.
 rule integrityOfDeposit(address user, uint256 amount){
@@ -44,9 +50,8 @@ rule integrityOfDeposit(address user, uint256 amount){
     require e.msg.value == amount;
 	require e.msg.sender == user; 
 
-    //require getSTKBNB() == stkBNB;
-
     uint256 totalSupplyBefore = getTotalWei();
+    require totalSupplyBefore < amount;
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
     deposit(e);
@@ -57,8 +62,15 @@ rule integrityOfDeposit(address user, uint256 amount){
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert totalSupplyAfter == totalSupplyBefore + amount;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-    assert false;
 }
+
+// rule cantRequestZeroOrMoreThanDeposited(address user,uint256 amount) {
+//     env e;
+//     // e.msg.value = amount to deposit
+//     require e.msg.value == amount;
+// 	require e.msg.sender == user; 
+
+// }
 
 
 rule sanity(method f){
