@@ -70,6 +70,22 @@ invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 
  *               STATE TRANSITIONS                *
  **************************************************/
 
+rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
+    env e;
+    require user == e.msg.sender && user != currentContract;
+
+    mathint bnbToUnbondBefore = bnbToUnbond();
+    mathint bnbUnbondingBefore = bnbUnbonding();
+
+    calldataarg args;
+    f(e, args);
+
+    mathint bnbToUnbondAfter = bnbToUnbond();
+    mathint bnbUnbondingAfter = bnbUnbonding();
+
+    assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore = bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
+}
 
 
 /**************************************************
