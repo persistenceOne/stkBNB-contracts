@@ -19,7 +19,7 @@ interface Fee {
     withdraw: BigNumber;
 }
 
-interface StakePoolConfig {
+export interface StakePoolConfig {
     bcStakingWallet: string;
     minCrossChainTransfer: BigNumber;
     minBNBDeposit: BigNumber;
