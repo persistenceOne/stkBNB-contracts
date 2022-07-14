@@ -13,8 +13,8 @@ methods {
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
-    bnbUnbonding() returns (int256) envfree
-    claimReserve() returns (int256) envfree
+    bnbUnbonding() returns (uint256) envfree
+    claimReserve() returns (uint256) envfree
 
     // stkBNB methods:
     stkBNB.balanceOf(address) returns (uint256) envfree
@@ -64,7 +64,7 @@ function getFeeVaultContract() returns address {
  **************************************************/
 //  TODO: Not finished!
 invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 index)
-    getWeiToReturn(user, index) <= bnbToUnbond() + bnbUnbonding() + claimReserve()
+    getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
 
 /**************************************************
  *               STATE TRANSITIONS                *
@@ -74,16 +74,16 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
     env e;
     require user == e.msg.sender && user != currentContract;
 
-    mathint bnbToUnbondBefore = bnbToUnbond();
-    mathint bnbUnbondingBefore = bnbUnbonding();
+    int256 bnbToUnbondBefore = bnbToUnbond();
+    uint256 bnbUnbondingBefore = bnbUnbonding();
 
     calldataarg args;
     f(e, args);
 
-    mathint bnbToUnbondAfter = bnbToUnbond();
-    mathint bnbUnbondingAfter = bnbUnbonding();
+    int256 bnbToUnbondAfter = bnbToUnbond();
+    uint bnbUnbondingAfter = bnbUnbonding();
 
-    assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore = bnbUnbondingAfter;
+    assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
     assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
 }
 
