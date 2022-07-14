@@ -66,6 +66,7 @@ contract UndelegationHolder is IUndelegationHolder {
         if (amountToSend > IStakePoolBot(stakePool).bnbUnbonding()) {
             amountToSend = IStakePoolBot(stakePool).bnbUnbonding();
         }
+        // can't use address.transfer() here as it limits the gas to 2300, resulting in failure due to gas exhaustion.
         (
             bool sent, /*memory data*/
 

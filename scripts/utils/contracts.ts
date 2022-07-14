@@ -405,11 +405,9 @@ export class Contracts {
         console.log();
         console.log('======== Contract Addresses ========');
         for (const [k, v] of Object.entries(this)) {
-            let address: any;
-            if (v !== undefined) {
-                address = v.address;
+            if (v instanceof Contract) {
+                console.log(`${k}: ${v.address}`);
             }
-            console.log(`${k}: ${address}`);
         }
         console.log('======== Contract Addresses ========');
         console.log();
