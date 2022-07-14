@@ -177,16 +177,25 @@ export class Contracts {
                     contracts.stakePool.address,
                 ]);
                 console.log('AddressStore updated with StakePool');
+
                 await executeTx(contracts.stakedBNBToken, 'grantRole', [
                     await contracts.stakedBNBToken.MINTER_ROLE(),
                     contracts.stakePool.address,
                 ]);
                 console.log('stkBNB MINTER set to StakePool');
+
                 await executeTx(contracts.stakedBNBToken, 'grantRole', [
                     await contracts.stakedBNBToken.BURNER_ROLE(),
                     contracts.stakePool.address,
                 ]);
                 console.log('stkBNB BURNER set to StakePool');
+
+                await executeTx(contracts.stakePool, 'grantRole', [
+                    await contracts.stakePool.BOT_ROLE(),
+                    config.botAddr,
+                ]);
+                console.log(`Granted StakePool BOT_ROLE to ${config.botAddr}`);
+
                 await executeTx(contracts.stakePool, 'unpause', []);
                 console.log('StakePool unpaused');
             }

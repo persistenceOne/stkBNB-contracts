@@ -10,6 +10,7 @@ import "./embedded-libs/Config.sol";
 import "./embedded-libs/ExchangeRate.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakedBNBToken.sol";
+import "./interfaces/IStakePoolBot.sol";
 import "./interfaces/ITokenHub.sol";
 import "./interfaces/IUndelegationHolder.sol";
 
@@ -21,7 +22,8 @@ import "./interfaces/IUndelegationHolder.sol";
 contract StakePool is
     Initializable,
     IERC777RecipientUpgradeable,
-    AccessControlEnumerableUpgradeable
+    AccessControlEnumerableUpgradeable,
+    IStakePoolBot
 {
     /*********************
      * LIB USAGES
@@ -82,23 +84,44 @@ contract StakePool is
 
     /**
      * @dev The amount that needs to be unbonded in the next unstaking epoch.
+     * It increases on every user unstake operation, and decreases when the bot initiates unbonding.
      * This is queried by the bot in order to initiate unbonding.
      * It is int256, not uint256 because bnbUnbonding can be more than it and is subtracted from it.
-     * So, if it is <= 0, means we don't need to unbond anything.
-     * Call frequency: Weekly
+     * So, if it is < 0, means we have already initiated unbonding for that much amount and eventually
+     * that amount would be part of claimReserve. So, we don't need to unbond anything new on the BBC
+     * side as long as this value is negative.
+     *
+     * Increase frequency: anytime
+     * Decrease frequency & Bot query frequency:
+     *      Mainnet: Weekly
+     *      Testnet: Daily
      */
-    int256 public bnbToUnbond;
+    int256 private _bnbToUnbond;
 
     /**
      * @dev The amount of BNB that is unbonding in the current unstaking epoch.
+     * It increases when the bot initiates unbonding, and decreases when the unbonding is finished.
+     * It is queried by the bot before calling unbondingFinished(), to figure out the amount that
+     * needs to be moved from BBC to BSC.
+     *
+     * Increase, Decrease & Bot query frequency:
+     *      Mainnet: Weekly
+     *      Testnet: Daily
      */
-    uint256 public bnbUnbonding;
+    uint256 private _bnbUnbonding;
 
     /**
-     * @dev A portion of the contract balance that is reserved in order to satisfy the claim
-     * requests from users after the cooldown period. This will never be sent to BBC for staking.
+     * @dev A portion of the contract balance that is reserved in order to satisfy the claims
+     * for which the cooldown period has finished. This will never be sent to BBC for staking.
+     * It increases when the unbonding is finished, and decreases when any user actually claims
+     * their BNB.
+     *
+     * Increase frequency:
+     *      Mainnet: Weekly
+     *      Testnet: Daily
+     * Decrease frequency: anytime
      */
-    uint256 public claimReserve;
+    uint256 private _claimReserve;
 
     /**
      * @dev The current exchange rate for converting BNB to stkBNB and vice-versa.
@@ -297,9 +320,9 @@ contract StakePool is
         _paused = true;
         _status = _NOT_ENTERED;
         // to ensure that nothing happens until the whole system is setup
-        bnbToUnbond = 0;
-        bnbUnbonding = 0;
-        claimReserve = 0;
+        _bnbToUnbond = 0;
+        _bnbUnbonding = 0;
+        _claimReserve = 0;
         exchangeRate._init();
 
         // register interfaces
@@ -489,11 +512,13 @@ contract StakePool is
     /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
      * staking address on BBC.
-     * Call frequency: Daily
+     * Call frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
      */
-    function initiateDelegation() external whenNotPaused onlyRole(BOT_ROLE) {
-        // contract will always have at least the claimReserve, so this should never overflow.
-        uint256 excessBNB = address(this).balance - claimReserve;
+    function initiateDelegation() external override whenNotPaused onlyRole(BOT_ROLE) {
+        // contract will always have at least the _claimReserve, so this should never overflow.
+        uint256 excessBNB = address(this).balance - _claimReserve;
         uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
 
         // Initiate a cross-chain transfer only if we have enough amount.
@@ -519,9 +544,9 @@ contract StakePool is
             );
 
             emit InitiateDelegation_TransferOut(transferOutAmount);
-        } else if (excessBNB > 0 && bnbToUnbond > 0) {
-            // if the excess amount is so small that it can't be moved to BBC and there is bnbToUnbond, short-circuit
-            // the bot process and directly update the claimReserve. This way, we will still be able to satisfy claims
+        } else if (excessBNB > 0 && _bnbToUnbond > 0) {
+            // if the excess amount is so small that it can't be moved to BBC and there is _bnbToUnbond, short-circuit
+            // the bot process and directly update the _claimReserve. This way, we will still be able to satisfy claims
             // even if the total deposit throughout the unstaking epoch is less than the minimum cross-chain transfer.
 
             // The reason we don't do this short-circuit process more generally is because the short-circuited amount
@@ -532,17 +557,17 @@ contract StakePool is
             // successfully able to satisfy the claim requests.
 
             uint256 shortCircuitAmount;
-            if (bnbToUnbond > int256(excessBNB)) {
+            if (_bnbToUnbond > int256(excessBNB)) {
                 // all the excessBNB we have in the contract will be used up to satisfy claims. The remaining
-                // bnbToUnbond will be made available to the contract by the bot via the unstaking operations.
+                // _bnbToUnbond will be made available to the contract by the bot via the unstaking operations.
                 shortCircuitAmount = excessBNB;
             } else {
                 // the amount we need to unbond to satisfy claims is already present in the contract. So, only that much
-                // needs to be moved to claimReserve.
-                shortCircuitAmount = uint256(bnbToUnbond);
+                // needs to be moved to _claimReserve.
+                shortCircuitAmount = uint256(_bnbToUnbond);
             }
-            bnbToUnbond -= int256(shortCircuitAmount);
-            claimReserve += shortCircuitAmount;
+            _bnbToUnbond -= int256(shortCircuitAmount);
+            _claimReserve += shortCircuitAmount;
 
             emit InitiateDelegation_ShortCircuit(shortCircuitAmount);
         }
@@ -551,11 +576,13 @@ contract StakePool is
     /**
      * @dev Called by the bot to update the exchange rate in contract based on the rewards
      * obtained in the BBC staking address and accordingly mint fee tokens.
-     * Call frequency: Daily
+     * Call frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
      *
      * @param bnbRewards: The amount of BNB which were received as staking rewards.
      */
-    function epochUpdate(uint256 bnbRewards) external whenNotPaused onlyRole(BOT_ROLE) {
+    function epochUpdate(uint256 bnbRewards) external override whenNotPaused onlyRole(BOT_ROLE) {
         // calculate fee
         uint256 feeWei = config.fee.reward._apply(bnbRewards);
         uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) /
@@ -578,16 +605,23 @@ contract StakePool is
 
     /**
      * @dev This is called by the bot after it has executed the unbond transaction on BBC.
-     * Call frequency: Weekly
+     * Call frequency:
+     *      Mainnet: Weekly
+     *      Testnet: Daily
      *
-     * @param _bnbUnbonding: The amount of BNB for which unbonding was initiated on BBC.
+     * @param bnbUnbonding_: The amount of BNB for which unbonding was initiated on BBC.
      *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
-    function unbondingInitiated(uint256 _bnbUnbonding) external whenNotPaused onlyRole(BOT_ROLE) {
-        bnbToUnbond -= int256(_bnbUnbonding);
-        bnbUnbonding += _bnbUnbonding;
+    function unbondingInitiated(uint256 bnbUnbonding_)
+        external
+        override
+        whenNotPaused
+        onlyRole(BOT_ROLE)
+    {
+        _bnbToUnbond -= int256(bnbUnbonding_);
+        _bnbUnbonding += bnbUnbonding_;
 
-        emit UnbondingInitiated(_bnbUnbonding);
+        emit UnbondingInitiated(bnbUnbonding_);
     }
 
     /**
@@ -595,15 +629,30 @@ contract StakePool is
      * and has been transferred to the UndelegationHolder contract on BSC.
      * It calls UndelegationHolder.withdrawUnbondedBNB() to fetch the unbonded BNB to itself and
      * update `bnbUnbonding` and `claimReserve`.
-     * Call frequency: Weekly
+     * Call frequency:
+     *      Mainnet: Weekly
+     *      Testnet: Daily
      */
-    function unbondingFinished() external whenNotPaused onlyRole(BOT_ROLE) {
+    function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
+        // the unbondedAmount can never be more than _bnbUnbonding. UndelegationHolder takes care of that.
+        // So, no need to worry about arithmetic overflows.
         uint256 unbondedAmount = IUndelegationHolder(payable(addressStore.getUndelegationHolder()))
             .withdrawUnbondedBNB();
-        bnbUnbonding -= unbondedAmount;
-        claimReserve += unbondedAmount;
+        _bnbUnbonding -= unbondedAmount;
+        _claimReserve += unbondedAmount;
 
         emit UnbondingFinished(unbondedAmount);
+    }
+
+    /**
+     * @dev It is called by the UndelegationHolder as part of withdrawUnbondedBNB() during the unbondingFinished() call.
+     */
+    receive() external payable whenNotPaused {
+        if (msg.sender != addressStore.getUndelegationHolder()) {
+            revert UnknownSender();
+        }
+        // do nothing
+        // Any necessary events for recording the balance change are emitted in unbondingFinished().
     }
 
     /*********************
@@ -611,10 +660,31 @@ contract StakePool is
      ********************/
 
     /**
-     * @dev paused: Returns true if the contract is paused, and false otherwise.
+     * @return true if the contract is paused, false otherwise.
      */
-    function paused() public view returns (bool) {
+    function paused() external view returns (bool) {
         return _paused;
+    }
+
+    /**
+     * @return _bnbToUnbond
+     */
+    function bnbToUnbond() external view override returns (int256) {
+        return _bnbToUnbond;
+    }
+
+    /**
+     * @return _bnbUnbonding
+     */
+    function bnbUnbonding() external view override returns (uint256) {
+        return _bnbUnbonding;
+    }
+
+    /**
+     * @return _claimReserve
+     */
+    function claimReserve() external view override returns (uint256) {
+        return _claimReserve;
     }
 
     /**
@@ -670,8 +740,8 @@ contract StakePool is
         // create a claim request for this withdrawal
         claimReqs[from].push(ClaimRequest(weiToReturn, block.timestamp));
 
-        // update the bnbToUnbond
-        bnbToUnbond += int256(weiToReturn);
+        // update the _bnbToUnbond
+        _bnbToUnbond += int256(weiToReturn);
 
         // update the exchange rate to reflect the balance changes
         exchangeRate._update(
@@ -712,8 +782,8 @@ contract StakePool is
             revert InsufficientFundsToSatisfyClaim();
         }
 
-        // update claimReserve
-        claimReserve -= req.weiToReturn;
+        // update _claimReserve
+        _claimReserve -= req.weiToReturn;
 
         // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
         claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
