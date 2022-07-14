@@ -19,8 +19,9 @@ interface Fee {
     withdraw: BigNumber;
 }
 
-interface StakePoolConfig {
+export interface StakePoolConfig {
     bcStakingWallet: string;
+    minCrossChainTransfer: BigNumber;
     minBNBDeposit: BigNumber;
     minTokenWithdrawal: BigNumber;
     cooldownPeriod: BigNumber;
@@ -33,6 +34,7 @@ interface StakePoolInit {
 
 export interface IConfig {
     mnemonic: string;
+    botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
     gnosisSafeAddr: string;
@@ -45,6 +47,7 @@ export interface IConfig {
 
 export class Config implements IConfig {
     mnemonic: string;
+    botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
     gnosisSafeAddr: string;
@@ -56,6 +59,7 @@ export class Config implements IConfig {
 
     constructor(config: IConfig) {
         this.mnemonic = config.mnemonic;
+        this.botAddr = config.botAddr;
         this.numConfirmBlocks = config.numConfirmBlocks;
         this.postDeploySetup = config.postDeploySetup;
         this.gnosisSafeAddr = config.gnosisSafeAddr;

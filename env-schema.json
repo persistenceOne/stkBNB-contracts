@@ -6,6 +6,9 @@
     "mnemonic": {
       "type": "string"
     },
+    "botAddr": {
+      "type": "string"
+    },
     "numConfirmBlocks": {
       "type": "number"
     },
@@ -101,6 +104,10 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "minCrossChainTransfer": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "minBNBDeposit": {
                   "type": "string",
                   "minLength": 1
@@ -135,6 +142,7 @@
               },
               "required": [
                 "bcStakingWallet",
+                "minCrossChainTransfer",
                 "minBNBDeposit",
                 "minTokenWithdrawal",
                 "cooldownPeriod",
@@ -157,6 +165,7 @@
   },
   "required": [
     "mnemonic",
+    "botAddr",
     "numConfirmBlocks",
     "postDeploySetup",
     "gnosisSafeAddr",

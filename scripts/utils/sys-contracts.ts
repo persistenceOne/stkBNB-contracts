@@ -17,11 +17,13 @@ interface ISysContracts {
     tokenManager: Contract;
 }
 
-export class SysContracts {
-    c: ISysContracts;
+export class SysContracts implements ISysContracts {
+    tokenHub: Contract;
+    tokenManager: Contract;
 
     private constructor(sysContracts: ISysContracts) {
-        this.c = sysContracts;
+        this.tokenHub = sysContracts.tokenHub;
+        this.tokenManager = sysContracts.tokenManager;
     }
 
     // A wrapper around the constructor to create an instance of this class.
@@ -37,8 +39,8 @@ export class SysContracts {
     public async mirror(bep20Addr: string) {
         console.log(`mirroring ${getContractName(bep20Addr)}...`);
 
-        const mirrorFee: BigNumber = await this.c.tokenManager.mirrorFee();
-        const miniRelayFee: BigNumber = await this.c.tokenHub.getMiniRelayFee();
+        const mirrorFee: BigNumber = await this.tokenManager.mirrorFee();
+        const miniRelayFee: BigNumber = await this.tokenHub.getMiniRelayFee();
         const totalFee: BigNumber = mirrorFee.add(miniRelayFee);
         console.log(
             `totalFee (${formatEther(totalFee)}) = mirrorFee (${formatEther(
@@ -47,23 +49,23 @@ export class SysContracts {
         );
 
         const opts = { value: totalFee };
-        await executeTx(this.c.tokenManager, 'mirror', [
+        await executeTx(this.tokenManager, 'mirror', [
             bep20Addr,
             nowInSecs() + mirrorTimeout,
             opts,
         ]);
 
-        const bep2Symbol: string = await this.c.tokenHub.getBoundBep2Symbol(bep20Addr);
+        const bep2Symbol: string = await this.tokenHub.getBoundBep2Symbol(bep20Addr);
         console.log(`tokenHub.getBoundBep2Symbol(${bep20Addr}): ${bep2Symbol}`);
-        const boundContract: string = await this.c.tokenHub.getBoundContract(bep2Symbol);
+        const boundContract: string = await this.tokenHub.getBoundContract(bep2Symbol);
         console.log(`tokenHub.getBoundContract(${bep2Symbol}): ${boundContract}`);
     }
 
     public async sync(bep20Addr: string) {
         console.log(`syncing ${getContractName(bep20Addr)}...`);
 
-        const syncFee: BigNumber = await this.c.tokenManager.syncFee();
-        const miniRelayFee: BigNumber = await this.c.tokenHub.getMiniRelayFee();
+        const syncFee: BigNumber = await this.tokenManager.syncFee();
+        const miniRelayFee: BigNumber = await this.tokenHub.getMiniRelayFee();
         const totalFee: BigNumber = syncFee.add(miniRelayFee);
         console.log(
             `totalFee (${formatEther(totalFee)}) = syncFee (${formatEther(
@@ -72,19 +74,19 @@ export class SysContracts {
         );
 
         const opts = { value: totalFee };
-        await executeTx(this.c.tokenManager, 'sync', [bep20Addr, nowInSecs() + syncTimeout, opts]);
+        await executeTx(this.tokenManager, 'sync', [bep20Addr, nowInSecs() + syncTimeout, opts]);
     }
 
     public async transferOut(bep20Contract: Contract, bcRecipient: string, amount: BigNumber) {
         console.log(`transferring out ${getContractName(bep20Contract.address)}...`);
 
-        await executeTx(bep20Contract, 'approve', [this.c.tokenHub.address, amount]);
+        await executeTx(bep20Contract, 'approve', [this.tokenHub.address, amount]);
 
-        const miniRelayFee: BigNumber = await this.c.tokenHub.getMiniRelayFee();
+        const miniRelayFee: BigNumber = await this.tokenHub.getMiniRelayFee();
         console.log(`miniRelayFee: ${formatEther(miniRelayFee)}`);
 
         const opts = { value: miniRelayFee };
-        await executeTx(this.c.tokenHub, 'transferOut', [
+        await executeTx(this.tokenHub, 'transferOut', [
             bep20Contract.address,
             bcRecipient,
             amount,

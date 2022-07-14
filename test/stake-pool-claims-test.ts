@@ -2,6 +2,7 @@ import { Contract, BigNumber } from 'ethers';
 import { expect } from 'chai';
 import { ethers, upgrades, network, web3 } from 'hardhat';
 import { HardhatNetworkConfig } from 'hardhat/types';
+import { StakePoolConfig } from '../scripts/types/config';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -27,20 +28,20 @@ describe('StakePool Claims', function () {
     });
 
     it('should deploy the test contract', async function () {
-        const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
         contract = await upgrades.deployProxy(await ethers.getContractFactory('StakePoolTest'), [
-            ZERO_ADDR,
+            ethers.constants.AddressZero,
             {
-                bcStakingWallet: ZERO_ADDR,
-                minBNBDeposit: 0,
-                minTokenWithdrawal: 0,
-                cooldownPeriod: 0,
+                bcStakingWallet: ethers.constants.AddressZero,
+                minCrossChainTransfer: ethers.constants.One,
+                minBNBDeposit: ethers.constants.Zero,
+                minTokenWithdrawal: ethers.constants.Zero,
+                cooldownPeriod: ethers.constants.Zero,
                 fee: {
-                    reward: 0,
-                    deposit: 0,
-                    withdraw: 0,
+                    reward: ethers.constants.Zero,
+                    deposit: ethers.constants.Zero,
+                    withdraw: ethers.constants.Zero,
                 },
-            },
+            } as StakePoolConfig,
         ]);
         await contract.deployed();
         await contract.unpause();
