@@ -1,33 +1,59 @@
 {
-  "developerAbbreviation": "",
-  "protocolName": "",
-  "protocolAbbreviation": "",
+  "developerAbbreviation": "pstake",
+  "protocolName": "Liquid Stake BNB",
+  "protocolAbbreviation": "stkBNB",
   "contracts": {
-    "contractName1": {
-      "address": "contractAddress1",
-      "abiFile": "filename1.json",
+    "StakePool": {
+      "address": "0x61BF953eAaF6238C23b68015c533aed8981990A6",
+      "abiFile": "StakePool.json",
       "events": {
-        "EventName": {
-          "expression": "address !== 0x0000000000000000000000000000000000000000",
-          "type": "Type",
-          "severity": "Severity"
+        "Paused": {
+          "type": 1,
+          "severity": 1
+        },
+        "Unpaused": {
+          "type": 1,
+          "severity": 1
+        },
+        "ConfigUpdated": {
+          "type": 1,
+          "severity": 1
         }
       }
     },
-    "contractName2": {
-      "address": "contractAddress2",
-      "abiFile": "filename2.json",
+    "AddressStore": {
+      "address": "0xAd8D9280D6890ed911e893148424dfe0d4d79bEe",
+      "abiFile": "AddressStore.json",
       "events": {
-        "EventName1": {
-          "type": "Type",
-          "severity": "Severity"
+        "SetAddress": {
+          "type": 1,
+          "severity": 1
         }
+
       }
     },
-    "contractName3": {
-      "address": "contractAddress3",
-      "abiFile": "filename3.json",
-      "proxy": "contractName2"
+    "FeeVault": {
+      "address": "0xC7ceBeA8a2A921708748d690145F3cf1543136e6",
+      "abiFile": "FeeVault.json",
+      "events": {
+        "Withdraw": {
+          "type": 1,
+          "severity": 1
+        }
+
+      }
+    },
+    "UndelegationHolder": {
+      "address": "0x00a4cE4fdf1EeE4C24a007e17C6Cac264543A303",
+      "abiFile": "UndelegationHolder.json",
+      "events": {
+        "Withdraw": {
+          "type": 1,
+          "severity": 1
+        }
+
+      }
     }
+
   }
 }
