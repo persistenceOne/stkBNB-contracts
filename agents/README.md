@@ -4,4 +4,6 @@ This agent monitors blockchain transactions for specific events emitted from spe
 type and severity are specified per event per contract address. An existing agent of this type may be modified
 to add/remove/update events and contracts in the agent configuration file....
 
+Expression for events to be added.
+
 ## [Agent Setup Walkthrough](SETUP.md)
