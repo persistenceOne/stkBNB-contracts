@@ -7,7 +7,7 @@ import 'solidity-coverage';
 import 'hardhat-contract-sizer';
 import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
 import { CONFIG } from './scripts/types/config';
-import "hardhat-forta"; 
+import "hardhat-forta"; //forta
 
 
 // This is a sample Hardhat task. To learn how to create your own go to
