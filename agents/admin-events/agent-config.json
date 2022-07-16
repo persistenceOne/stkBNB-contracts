@@ -4,7 +4,7 @@
   "protocolAbbreviation": "stkBNB",
   "contracts": {
     "StakePool": {
-      "address": "0x61BF953eAaF6238C23b68015c533aed8981990A6",
+      "address": "0xEB6048eE3F39eb701712073936CA76Be774b6e0f",
       "abiFile": "StakePool.json",
       "events": {
         "Paused": {
@@ -22,7 +22,7 @@
       }
     },
     "AddressStore": {
-      "address": "0xAd8D9280D6890ed911e893148424dfe0d4d79bEe",
+      "address": "0x29aa6Dfe5149B93eCe28f5538518C224CDDC5119",
       "abiFile": "AddressStore.json",
       "events": {
         "SetAddress": {
@@ -33,7 +33,7 @@
       }
     },
     "FeeVault": {
-      "address": "0xC7ceBeA8a2A921708748d690145F3cf1543136e6",
+      "address": "0xf3590336dc49461cdCC3821Da2Bce904566C6523",
       "abiFile": "FeeVault.json",
       "events": {
         "Withdraw": {
@@ -42,18 +42,8 @@
         }
 
       }
-    },
-    "UndelegationHolder": {
-      "address": "0x00a4cE4fdf1EeE4C24a007e17C6Cac264543A303",
-      "abiFile": "UndelegationHolder.json",
-      "events": {
-        "Withdraw": {
-          "type": 1,
-          "severity": 1
-        }
-
-      }
     }
+
 
   }
 }
