@@ -6,4 +6,9 @@ to add/remove/update events and contracts in the agent configuration file....
 
 Expression for events to be added.
 
-## [Agent Setup Walkthrough](SETUP.md)
+## [Agent Setup Walkthrough]
+
+Setup the .env 
+
+TO RUN THE BOT: 
+npx hardhat forta:run
