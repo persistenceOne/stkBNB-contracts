@@ -202,8 +202,30 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
 }
 
-rule cannotWithdrawMoreThanDeposited(){
-   env e;
+rule cannotWithdrawMoreThanDeposited(){ //still in progress
+   env e, e2;
+
+   uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
+   require stkBNB.balanceOf(e.msg.sender) == 0;
+
+   uint256 amount;
+   require amount > 0;
+   require e.msg.value == amount;
+   deposit(e);
+
+   bytes myData;
+   send(stkBNB, stkBNB.balanceOf(e.msg.sender), myData);
+
+
+
+
+
+
+    uint256 userBNBBalanceAfter = balanceOf(e.msg.sender);
+    
+    
+    
+    
     // e.msg.value = amount to deposit
     require e.msg.value == amount;
 	require e.msg.sender == user; 
