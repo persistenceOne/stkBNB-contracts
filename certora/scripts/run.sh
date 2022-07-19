@@ -1,4 +1,8 @@
-certoraRun  certora/harness/StakePoolHarness.sol contracts/StakedBNBToken.sol contracts/AddressStore.sol contracts/FeeVault.sol \
+certoraRun  certora/harness/StakePoolHarness.sol \
+            contracts/StakedBNBToken.sol \
+            contracts/AddressStore.sol \
+            contracts/FeeVault.sol \
+            contracts/embedded-libs/Config.sol \
 --link StakePoolHarness:addressStore=AddressStore \
 --verify StakePoolHarness:certora/specs/StakePool.spec \
 --solc solc8.7 --staging \

@@ -198,9 +198,30 @@ rule userDoesNotChangeOtherUserBalance(method f){
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
    env e;
    uint256 index;
-   claim@withrevert(e);
-   assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + config.cooldownPeriod => lastReverted;
+   claim@withrevert(e, index);
+   assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
 }
+
+rule cannotWithdrawMoreThanDeposited(){
+   env e;
+    // e.msg.value = amount to deposit
+    require e.msg.value == amount;
+	require e.msg.sender == user; 
+
+    uint256 totalSupplyBefore = getTotalWei();
+    require totalSupplyBefore < amount;
+    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+
+    deposit(e);
+
+    uint256 totalSupplyAfter = getTotalWei();
+    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
+
+    assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
+    assert totalSupplyAfter == totalSupplyBefore + amount;
+    assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
+}
+
 
 rule sanity(method f){
 	env e;
