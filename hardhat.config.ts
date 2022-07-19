@@ -46,7 +46,7 @@ export default {
             },
         },
     },
-    defaultNetwork: 'testnet',
+    defaultNetwork: 'hardhat', 
     networks: {
         hardhat: {
             blockGasLimit: 40000000,
