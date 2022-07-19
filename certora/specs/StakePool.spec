@@ -172,82 +172,58 @@ rule claimAllvsClaim(){
 
 //rule withdrawlAlwaysAppearAsClaimRequest(){
 
- //   env e;
+ //    env e;
     
- //   assert ();
+ //    assert ();
 //}
 
 rule doubleClaim(){
-   env e;
-   claimAll(e);
-   claimAll@withrevert(e);
-   assert (lastReverted);
+    env e;
+    claimAll(e);
+    claimAll@withrevert(e);
+    assert (lastReverted);
 }
 
 rule userDoesNotChangeOtherUserBalance(method f){
-   env e;
-   address user;
-   calldataarg args;
+    env e;
+    address user;
+    calldataarg args;
   
-   uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
-   f(e,args);
-   uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
-   assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
+    uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
+    f(e,args);
+    uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
+    assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
 }
 
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
-   env e;
-   uint256 index;
-   claim@withrevert(e, index);
-   assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
+    env e;
+    uint256 index;
+    claim@withrevert(e, index);
+    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
 }
 
-rule cannotWithdrawMoreThanDeposited(){ //still in progress
-   env e, e2;
+rule cannotWithdrawMoreThanDeposited(){
+    env e;
+    uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
+    require stkBNB.balanceOf(e.msg.sender) == 0;
+    deposit(e);  // user deposits BNB and gets stkBNB
 
-   uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
-   require stkBNB.balanceOf(e.msg.sender) == 0;
+    bytes myData;
+    send(stkBNB, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
-   uint256 amount;
-   require amount > 0;
-   require e.msg.value == amount;
-   deposit(e);
+    env e2;  // user has to wait at least two weeks
+    require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
+    require e2.msg.sender == e.msg.sender;
+    claimAll(e2);
+    uint256 userBNBBalanceAfter = balanceOf(e2.msg.sender);
 
-   bytes myData;
-   send(stkBNB, stkBNB.balanceOf(e.msg.sender), myData);
-
-
-
-
-
-
-    uint256 userBNBBalanceAfter = balanceOf(e.msg.sender);
-    
-    
-    
-    
-    // e.msg.value = amount to deposit
-    require e.msg.value == amount;
-	require e.msg.sender == user; 
-
-    uint256 totalSupplyBefore = getTotalWei();
-    require totalSupplyBefore < amount;
-    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-
-    deposit(e);
-
-    uint256 totalSupplyAfter = getTotalWei();
-    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
-
-    assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
-    assert totalSupplyAfter == totalSupplyBefore + amount;
-    assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
+    assert userBNBBalanceBefore > userBNBBalanceAfter;
 }
 
 
 rule sanity(method f){
-	env e;
-	calldataarg args;
-	f(e,args);
-	assert false;
+    env e;
+    calldataarg args;
+    f(e,args);
+    assert false;
 }

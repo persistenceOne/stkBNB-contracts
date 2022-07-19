@@ -5,11 +5,14 @@ certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/embedded-libs/Config.sol \
 --link StakePoolHarness:addressStore=AddressStore \
 --verify StakePoolHarness:certora/specs/StakePool.spec \
---solc solc8.7 --staging \
---msg "claimCanNotBeFulFilledBeforeCoolDownPeriod"  \
+--packages @openzeppelin=node_modules/@openzeppelin
+--path . \
+--solc solc8.7 \
+--staging \
 --optimistic_loop --loop_iter 3 \
---packages @openzeppelin=node_modules/@openzeppelin --path . \
---rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
+--msg "cannotWithdrawMoreThanDeposited"  \
+--rule "cannotWithdrawMoreThanDeposited"
+#--rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
 #--rule "userDoesNotChangeOtherUserBalance"
 #--rule "doubleClaim"
 #--rule_sanity
