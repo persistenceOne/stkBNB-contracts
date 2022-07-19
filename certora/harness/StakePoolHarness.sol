@@ -32,5 +32,8 @@ contract StakePoolHarness is StakePool {
     function getCooldownPeriod() public view returns (uint256) {
         return config.cooldownPeriod;
     }
+     function bnbBalanceOf(address user) public view returns (uint256) {
+        return user.balance;
+    }
  
 }

@@ -156,9 +156,9 @@ rule claimAllvsClaim(){
     storage init  = lastStorage;
 
     require (getClaimRequestLength(e,e.msg.sender) == 3);
-    claim(e,0);
-    claim(e,1);
     claim(e,2);
+    claim(e,1);
+    claim(e,0);
     uint256 L1 = getClaimRequestLength(e,e.msg.sender);
     uint256 SumReserved1 = claimReserve();
 
@@ -176,6 +176,11 @@ rule claimAllvsClaim(){
     
  //    assert ();
 //}
+rule ClaimAll(){
+    env e;
+    claimAll@withrevert(e);
+    assert (getClaimRequestLength(e,e.msg.sender)>1 => lastReverted);
+}
 
 rule doubleClaim(){
     env e;
@@ -204,20 +209,22 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 
 rule cannotWithdrawMoreThanDeposited(){
     env e;
-    uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
+    uint256 userBNBBalanceBefore = bnbBalanceOf(e, e.msg.sender);
     require stkBNB.balanceOf(e.msg.sender) == 0;
     deposit(e);  // user deposits BNB and gets stkBNB
-
+    env e3;
     bytes myData;
-    send(stkBNB, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    stkBNB.send(e3, stkBNB, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
     env e2;  // user has to wait at least two weeks
     require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
     require e2.msg.sender == e.msg.sender;
-    claimAll(e2);
-    uint256 userBNBBalanceAfter = balanceOf(e2.msg.sender);
+    require getClaimRequestLength(e2,e2.msg.sender) == 1;
+    claim(e2,0);
+    //claimAll(e2);  //check if claim(e2,o) returns same value
+    uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
 
-    assert userBNBBalanceBefore > userBNBBalanceAfter;
+    assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
 }
 
 

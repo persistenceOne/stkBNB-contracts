@@ -5,13 +5,15 @@ certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/embedded-libs/Config.sol \
 --link StakePoolHarness:addressStore=AddressStore \
 --verify StakePoolHarness:certora/specs/StakePool.spec \
---packages @openzeppelin=node_modules/@openzeppelin
+--packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
 --solc solc8.7 \
---staging \
---optimistic_loop --loop_iter 3 \
---msg "cannotWithdrawMoreThanDeposited"  \
---rule "cannotWithdrawMoreThanDeposited"
+--staging bgreenwald/cer-1005 \
+--optimistic_loop --loop_iter 1 \
+--msg "integrityOfClaimAll"  \
+--rule "integrityOfClaimAll"
+#--rule "cannotWithdrawMoreThanDeposited"
+#--rule "cannotWithdrawMoreThanDeposited"
 #--rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
 #--rule "userDoesNotChangeOtherUserBalance"
 #--rule "doubleClaim"
