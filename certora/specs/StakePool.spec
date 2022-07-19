@@ -34,8 +34,17 @@ methods {
         bytes , /*userData*/
         bytes  /*operatorData*/
     ) => NONDET 
+
+
+    /**********************
+     *    IERC777Sender   *
+     **********************/
+    tokensToSend(address, address, address, uint256, bytes, bytes) => NONDET
 }
 
+function doNothing() returns bool {
+    return true;
+}
 
 /**************************************************
  *                GHOSTS AND HOOKS                *
@@ -121,7 +130,77 @@ rule integrityOfDeposit(address user, uint256 amount){
 //     require e.msg.sender == user; 
 
 // }
+rule totalWeiIncreases (method f){
+    env e;
+    uint256 weiBefore = getTotalWei();
+    uint256 stkBefore = getPoolTokenSupply();
+    calldataarg args;
+    f(e,args);
+    uint256 weiAfter = getTotalWei();
+    uint256 stkAfter = getPoolTokenSupply();
+    assert (weiBefore < weiAfter) => (stkBefore < stkAfter);
+}
 
+rule claimAllCorrectness(){
+ //after claimAll(), length of claimRqst shouls be 0 
+    env e;
+    claimAll(e);
+    assert (getClaimRequestLength(e,e.msg.sender) == 0);
+}
+
+rule claimAllvsClaim(){
+	env e;
+    // we want to verify same amount is paid on both scenarios, example; with 3 claimRqst existing:
+    //1st scenario: claimAll()
+    //2nd scnario: claim(0), clain(1), claim(2)
+    storage init  = lastStorage;
+
+    require (getClaimRequestLength(e,e.msg.sender) == 3);
+    claim(e,0);
+    claim(e,1);
+    claim(e,2);
+    uint256 L1 = getClaimRequestLength(e,e.msg.sender);
+    uint256 SumReserved1 = claimReserve();
+
+    claimAll(e) at init;
+    uint256 L2 = getClaimRequestLength(e,e.msg.sender);
+    uint256 SumReserved2 = claimReserve();
+
+    assert (L1 == L2);
+    assert (SumReserved1 == SumReserved2);
+}
+
+//rule withdrawlAlwaysAppearAsClaimRequest(){
+
+ //   env e;
+    
+ //   assert ();
+//}
+
+rule doubleClaim(){
+   env e;
+   claimAll(e);
+   claimAll@withrevert(e);
+   assert (lastReverted);
+}
+
+rule userDoesNotChangeOtherUserBalance(method f){
+   env e;
+   address user;
+   calldataarg args;
+  
+   uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
+   f(e,args);
+   uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
+   assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
+}
+
+rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
+   env e;
+   uint256 index;
+   claim@withrevert(e);
+   assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + config.cooldownPeriod => lastReverted;
+}
 
 rule sanity(method f){
 	env e;

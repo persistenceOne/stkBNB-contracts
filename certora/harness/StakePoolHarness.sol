@@ -20,5 +20,13 @@ contract StakePoolHarness is StakePool {
     function getSTKBNB() public view returns (address){
         return addressStore.getStkBNB();
     }
-    
+
+    function getClaimRequestLength(address user) public view returns (uint256) {
+        return claimReqs[user].length;
+    }
+
+     function getClaimRequestTimestamp(address user, uint256 index) public view returns (uint256) {
+        return claimReqs[user][index].createdAt;
+    }
+ 
 }
