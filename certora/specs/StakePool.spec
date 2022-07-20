@@ -33,7 +33,13 @@ methods {
         uint256 amount,
         bytes , /*userData*/
         bytes  /*operatorData*/
-    ) => NONDET 
+    ) => NONDET
+
+    // summarizing the interface implementer as arbitrary address by using a ghost function
+    getInterfaceImplementer(
+            address account,
+            bytes32 _interfaceHash
+    ) => ghostGetInterfaceImplementer()
 
 
     /**********************
@@ -52,6 +58,10 @@ function doNothing() returns bool {
 
 ghost sumAllWei() returns uint256 {
     init_state axiom sumAllWei() == 0;
+}
+
+ghost ghostGetInterfaceImplementer() returns address {
+    axiom ghostGetInterfaceImplementer() == 0xce4604a000000000000000000ce4604a;
 }
 
 

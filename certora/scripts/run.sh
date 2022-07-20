@@ -8,10 +8,10 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
 --solc solc8.7 \
---staging bgreenwald/cer-1005 \
+--staging \
 --optimistic_loop --loop_iter 1 \
---msg "integrityOfClaimAll"  \
---rule "integrityOfClaimAll"
+--msg "cannotWithdrawMoreThanDeposited"  \
+--rule "cannotWithdrawMoreThanDeposited"
 #--rule "cannotWithdrawMoreThanDeposited"
 #--rule "cannotWithdrawMoreThanDeposited"
 #--rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
