@@ -20,6 +20,7 @@ methods {
     stkBNB.balanceOf(address) returns (uint256) envfree
 	burn(uint256 amount, bytes data) => DISPATCHER(true);
 	mint(address account, uint256 amount, bytes userData, bytes operatorData) => DISPATCHER(true);
+    send(address recipient,uint256 amount,bytes data) => DISPATCHER(true);
 
 	// summarize AddressStore
 	getStkBNB() => getStkBNBContract()
@@ -248,5 +249,11 @@ rule sanity(method f){
 invariant claimVsClaimRequest(env e, address user)
     getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
 
+invariant claimVsClaimReserve(env e, address user)
+    getClaimRequestLength(e,user) > 0 => claimReserve() > 0
+
+invariant zeroSupplyZeroClaim()
+    getPoolTokenSupply() == 0 => claimReserve() == 0
+
 invariant bnbUnbounding()
-    to_uint256(bnbToUnbond()) <= bnbUnbonding()
+    bnbToUnbond() <= to_int256(bnbUnbonding())
