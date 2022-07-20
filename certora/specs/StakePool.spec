@@ -33,7 +33,13 @@ methods {
         uint256 amount,
         bytes , /*userData*/
         bytes  /*operatorData*/
-    ) => NONDET 
+    ) => NONDET
+
+    // summarizing the interface implementer as arbitrary address by using a ghost function
+    getInterfaceImplementer(
+            address account,
+            bytes32 _interfaceHash
+    ) => ghostGetInterfaceImplementer()
 
 
     /**********************
@@ -52,6 +58,10 @@ function doNothing() returns bool {
 
 ghost sumAllWei() returns uint256 {
     init_state axiom sumAllWei() == 0;
+}
+
+ghost ghostGetInterfaceImplementer() returns address {
+    axiom ghostGetInterfaceImplementer() == 0xce4604a000000000000000000ce4604a;
 }
 
 
@@ -156,9 +166,9 @@ rule claimAllvsClaim(){
     storage init  = lastStorage;
 
     require (getClaimRequestLength(e,e.msg.sender) == 3);
-    claim(e,0);
-    claim(e,1);
     claim(e,2);
+    claim(e,1);
+    claim(e,0);
     uint256 L1 = getClaimRequestLength(e,e.msg.sender);
     uint256 SumReserved1 = claimReserve();
 
@@ -172,81 +182,65 @@ rule claimAllvsClaim(){
 
 //rule withdrawlAlwaysAppearAsClaimRequest(){
 
- //   env e;
+ //    env e;
     
- //   assert ();
+ //    assert ();
 //}
+rule ClaimAll(){
+    env e;
+    claimAll@withrevert(e);
+    assert (getClaimRequestLength(e,e.msg.sender)>1 => lastReverted);
+}
 
 rule doubleClaim(){
-   env e;
-   claimAll(e);
-   claimAll@withrevert(e);
-   assert (lastReverted);
+    env e;
+    claimAll(e);
+    claimAll@withrevert(e);
+    assert (lastReverted);
 }
 
 rule userDoesNotChangeOtherUserBalance(method f){
-   env e;
-   address user;
-   calldataarg args;
+    env e;
+    address user;
+    calldataarg args;
   
-   uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
-   f(e,args);
-   uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
-   assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
+    uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
+    f(e,args);
+    uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
+    assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
 }
 
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
-   env e;
-   uint256 index;
-   claim@withrevert(e, index);
-   assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
+    env e;
+    uint256 index;
+    claim@withrevert(e, index);
+    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
 }
 
-// rule cannotWithdrawMoreThanDeposited(){ //still in progress
-//    env e;
-//    env e2;
+rule cannotWithdrawMoreThanDeposited(){
+    env e;
+    uint256 userBNBBalanceBefore = bnbBalanceOf(e, e.msg.sender);
+    require stkBNB.balanceOf(e.msg.sender) == 0;
+    deposit(e);  // user deposits BNB and gets stkBNB
+    env e3;
+    bytes myData;
+    stkBNB.send(e3, stkBNB, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
-//    uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
-//    require stkBNB.balanceOf(e.msg.sender) == 0;
+    env e2;  // user has to wait at least two weeks
+    require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
+    require e2.msg.sender == e.msg.sender;
+    require getClaimRequestLength(e2,e2.msg.sender) == 1;
+    claim(e2,0);
+    //claimAll(e2);  //check if claim(e2,o) returns same value
+    uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
 
-// //    uint256 amount;
-// //    require amount > 0;
-// //    require e.msg.value == amount;
-//    deposit(e);
-
-//    bytes myData;
-//    send(e,stkBNB, stkBNB.balanceOf(e.msg.sender), myData);
-
-
-
-
-
-
-//     uint256 userBNBBalanceAfter = balanceOf(e.msg.sender);
-    
-    
-    
-//     require e.msg.value == amount;
-// 	require e.msg.sender == user; 
-
-//     uint256 totalSupplyBefore = getTotalWei();
-//     require totalSupplyBefore < amount;
-//     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-
-//     deposit(e);
-
-//     uint256 totalSupplyAfter = getTotalWei();
-//     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
-
-//     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
-//     assert totalSupplyAfter == totalSupplyBefore + amount;
-//     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-// }
+    assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
+}
 
 
-// rule sanity(method f){
-// 	env e;
-// 	calldataarg args;
-// 	f(e,args);
-// 	assert false;
-// }
+rule sanity(method f){
+    env e;
+    calldataarg args;
+    f(e,args);
+    assert false;
+}
