@@ -202,52 +202,51 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
 }
 
-rule cannotWithdrawMoreThanDeposited(){ //still in progress
-   env e, e2;
+// rule cannotWithdrawMoreThanDeposited(){ //still in progress
+//    env e;
+//    env e2;
 
-   uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
-   require stkBNB.balanceOf(e.msg.sender) == 0;
+//    uint256 userBNBBalanceBefore = balanceOf(e.msg.sender);
+//    require stkBNB.balanceOf(e.msg.sender) == 0;
 
-   uint256 amount;
-   require amount > 0;
-   require e.msg.value == amount;
-   deposit(e);
+// //    uint256 amount;
+// //    require amount > 0;
+// //    require e.msg.value == amount;
+//    deposit(e);
 
-   bytes myData;
-   send(stkBNB, stkBNB.balanceOf(e.msg.sender), myData);
-
-
-
+//    bytes myData;
+//    send(e,stkBNB, stkBNB.balanceOf(e.msg.sender), myData);
 
 
 
-    uint256 userBNBBalanceAfter = balanceOf(e.msg.sender);
+
+
+
+//     uint256 userBNBBalanceAfter = balanceOf(e.msg.sender);
     
     
     
-    
-    // e.msg.value = amount to deposit
-    require e.msg.value == amount;
-	require e.msg.sender == user; 
+//     require e.msg.value == amount;
+// 	require e.msg.sender == user; 
 
-    uint256 totalSupplyBefore = getTotalWei();
-    require totalSupplyBefore < amount;
-    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+//     uint256 totalSupplyBefore = getTotalWei();
+//     require totalSupplyBefore < amount;
+//     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
-    deposit(e);
+//     deposit(e);
 
-    uint256 totalSupplyAfter = getTotalWei();
-    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
+//     uint256 totalSupplyAfter = getTotalWei();
+//     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
 
-    assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
-    assert totalSupplyAfter == totalSupplyBefore + amount;
-    assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-}
+//     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
+//     assert totalSupplyAfter == totalSupplyBefore + amount;
+//     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
+// }
 
 
-rule sanity(method f){
-	env e;
-	calldataarg args;
-	f(e,args);
-	assert false;
-}
+// rule sanity(method f){
+// 	env e;
+// 	calldataarg args;
+// 	f(e,args);
+// 	assert false;
+// }

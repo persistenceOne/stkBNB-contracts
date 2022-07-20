@@ -9,7 +9,8 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --msg "claimCanNotBeFulFilledBeforeCoolDownPeriod"  \
 --optimistic_loop --loop_iter 3 \
 --packages @openzeppelin=node_modules/@openzeppelin --path . \
---rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
+--settings -optimisticFallback=true 
+#--rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
 #--rule "userDoesNotChangeOtherUserBalance"
 #--rule "doubleClaim"
 #--rule_sanity
