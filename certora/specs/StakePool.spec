@@ -157,7 +157,7 @@ rule claimAllCorrectness(){
     claimAll(e);
     assert (getClaimRequestLength(e,e.msg.sender) == 0);
 }
-
+/*
 rule claimAllvsClaim(){
 	env e;
     // we want to verify same amount is paid on both scenarios, example; with 3 claimRqst existing:
@@ -178,7 +178,7 @@ rule claimAllvsClaim(){
 
     assert (L1 == L2);
     assert (SumReserved1 == SumReserved2);
-}
+}*/
 
 //rule withdrawlAlwaysAppearAsClaimRequest(){
 
@@ -244,3 +244,9 @@ rule sanity(method f){
     f(e,args);
     assert false;
 }
+
+invariant claimVsClaimRequest(env e, address user)
+    getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
+
+invariant bnbUnbounding()
+    to_uint256(bnbToUnbond()) <= bnbUnbonding()

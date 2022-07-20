@@ -1,3 +1,8 @@
+if [[ "$1" ]]
+then
+    RULE="--rule $1"
+fi
+
 certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/StakedBNBToken.sol \
             contracts/AddressStore.sol \
@@ -9,15 +14,7 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --path . \
 --solc solc8.7 \
 --staging \
---optimistic_loop --loop_iter 1 \
+--optimistic_loop --loop_iter 2 \
 --settings -optimisticFallback=true \
---msg "cannotWithdrawMoreThanDeposited"  \
---rule "cannotWithdrawMoreThanDeposited"
-#--rule "cannotWithdrawMoreThanDeposited"
-#--rule "cannotWithdrawMoreThanDeposited"
-#--rule "claimCanNotBeFulFilledBeforeCoolDownPeriod"
-#--rule "userDoesNotChangeOtherUserBalance"
-#--rule "doubleClaim"
-#--rule_sanity
-#--rule "claimAllvsClaim" \
-#--rule "claimAllCorrectness"
+$RULE  \
+--msg "Endpoint -$RULE"
