@@ -155,8 +155,9 @@ rule totalWeiIncreases (method f){
 rule claimAllCorrectness(){
  //after claimAll(), length of claimRqst shouls be 0 
     env e;
+    uint256 index;
     claimAll(e);
-    assert (getClaimRequestLength(e,e.msg.sender) == 0);
+    assert canBeClaimed(e, index) =>  getClaimRequestLength(e,e.msg.sender) == 0;
 }
 /*
 rule claimAllvsClaim(){
@@ -190,7 +191,7 @@ rule claimAllvsClaim(){
 rule ClaimAll(){
     env e;
     claimAll@withrevert(e);
-    assert (getClaimRequestLength(e,e.msg.sender)>1 => lastReverted);
+    assert getClaimRequestLength(e,e.msg.sender)>1 => lastReverted;
 }
 
 rule doubleClaim(){

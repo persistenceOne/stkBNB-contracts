@@ -714,7 +714,7 @@ contract StakePool is
      * @param req: The request which needs to be checked.
      * @return true if the request can be claimed.
      */
-    function _canBeClaimed(ClaimRequest memory req) internal view returns (bool) {
+    function _canBeClaimed(ClaimRequest memory req) public view returns (bool) {
         return block.timestamp > (req.createdAt + config.cooldownPeriod);
     }
 }

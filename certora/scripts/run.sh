@@ -15,7 +15,7 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --path . \
 --solc solc8.7 \
 --staging \
---optimistic_loop --loop_iter 2 \
+--optimistic_loop --loop_iter 3 \
 --settings -optimisticFallback=true \
 $RULE  \
 --msg "Endpoint -$RULE"
