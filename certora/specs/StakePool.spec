@@ -92,9 +92,11 @@ invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 
 invariant bnbUnbounding()
     bnbToUnbond() <= to_int256(bnbUnbonding())
 
-invariant ClaimReqIndexOrder(env e, uint256 i, uint256 j)
+invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
     (i<j) => getClaimRequestTimestamp(e,e.msg.sender, i) < getClaimRequestTimestamp(e,e.msg.sender, j) 
     //TBD -  call resolution tokensReceived fix.
+
+//invariant exchangeRate()
 
 
 /**************************************************
@@ -188,7 +190,7 @@ rule doubleClaim(){
 }
 
 
-rule ClaimOrder(){
+rule claimOrder(){
     env e;
     uint256 index;
     uint256 LengthBefore = getClaimRequestLength(e,e.msg.sender);
