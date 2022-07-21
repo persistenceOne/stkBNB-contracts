@@ -147,7 +147,7 @@ rule integrityOfDeposit(address user, uint256 amount){
 //     require e.msg.sender == user; 
 
 // }
-rule totalWeiIncreases (method f){
+rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     env e;
     uint256 weiBefore = getTotalWei();
     uint256 stkBefore = getPoolTokenSupply();
@@ -155,7 +155,7 @@ rule totalWeiIncreases (method f){
     f(e,args);
     uint256 weiAfter = getTotalWei();
     uint256 stkAfter = getPoolTokenSupply();
-    assert (weiBefore < weiAfter) => (stkBefore < stkAfter);
+    assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
 }
 
 rule claimAllCorrectness(){   //only correct for list that all request's time expired!!
