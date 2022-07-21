@@ -18,4 +18,4 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --optimistic_loop --loop_iter 3 \
 --settings -optimisticFallback=true \
 $RULE  \
---msg "Endpoint -$RULE"
+--msg "pstake -$RULE"

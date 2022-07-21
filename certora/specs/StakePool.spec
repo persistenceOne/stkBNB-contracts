@@ -1,9 +1,11 @@
 using StakedBNBToken as stkBNB
 using FeeVault as feeVault
+using StakePoolHarness as stakePoolContract
 
 
 methods {
     deposit()
+    unpause()
 
     // Harness methods:
     getWeiToReturn(address user, uint256 index) returns (uint256) envfree
@@ -33,7 +35,8 @@ methods {
         uint256 amount,
         bytes , /*userData*/
         bytes  /*operatorData*/
-    ) => NONDET
+    //) => NONDET
+    ) => DISPATCHER(true);
   
     // summarizing the interface implementer as arbitrary address by using a ghost function
     getInterfaceImplementer(
@@ -50,9 +53,9 @@ methods {
 /**************************************************
  *                GHOSTS AND HOOKS                *
  **************************************************/
-ghost sumAllWei() returns uint256 {
+/*ghost sumAllWei() returns uint256 {
     init_state axiom sumAllWei() == 0;
-}
+}*/
 
 ghost ghostGetInterfaceImplementer() returns address {
     axiom ghostGetInterfaceImplementer() == 0xce4604a000000000000000000ce4604a;
@@ -71,13 +74,28 @@ function getFeeVaultContract() returns address {
     return feeVault;
 }
 
+function getStakePoolContract() returns address {
+    return stakePoolContract;
+}
+
 
 /**************************************************
  *                 VALID STATES                   *
  **************************************************/
-//  TODO: Not finished!
 invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 index)
     getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
+
+//invariant claimVsClaimRequest(env e, address user)
+ //   getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
+ //   getClaimRequestLength(e,user) > 0 => bnbBalanceOf(e, e.msg.this) > 0
+
+invariant bnbUnbounding()
+    bnbToUnbond() <= to_int256(bnbUnbonding())
+
+invariant ClaimReqIndexOrder(env e, uint256 i, uint256 j)
+    (i<j) => getClaimRequestTimestamp(e,e.msg.sender, i) < getClaimRequestTimestamp(e,e.msg.sender, j) 
+    //TBD -  call resolution tokensReceived fix.
+
 
 /**************************************************
  *               STATE TRANSITIONS                *
@@ -134,7 +152,7 @@ rule integrityOfDeposit(address user, uint256 amount){
 //     require e.msg.sender == user; 
 
 // }
-rule totalWeiIncreases (method f){
+rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     env e;
     uint256 weiBefore = getTotalWei();
     uint256 stkBefore = getPoolTokenSupply();
@@ -142,10 +160,11 @@ rule totalWeiIncreases (method f){
     f(e,args);
     uint256 weiAfter = getTotalWei();
     uint256 stkAfter = getPoolTokenSupply();
-    assert (weiBefore < weiAfter) => (stkBefore < stkAfter);
+    assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
+    assert (false);
 }
 
-rule claimAllCorrectness(){
+rule claimAllCorrectness(){   //only correct for list that all request's time expired!!
  //after claimAll(), length of claimRqst shouls be 0 
     env e;
     uint256 index;
@@ -153,17 +172,35 @@ rule claimAllCorrectness(){
     assert canBeClaimed(e, index) =>  getClaimRequestLength(e,e.msg.sender) == 0;
 }
 //same as above
-rule ClaimAll(){
+/*rule ClaimAll(){
     env e;
+    unpause(e);
     claimAll@withrevert(e);
     assert (getClaimRequestLength(e,e.msg.sender)>=1 => lastReverted);
-}
+}*/
+
 
 rule doubleClaim(){
     env e;
+    uint256 index;
     claimAll(e);
-    claimAll@withrevert(e);
+    claim@withrevert(e,index);
     assert (lastReverted);
+}
+
+
+rule ClaimOrder(){
+    env e;
+    uint256 index;
+    uint256 LengthBefore = getClaimRequestLength(e,e.msg.sender);
+    require LengthBefore > 2;
+    //require 2 first request expired, last request not expired.
+    require (getClaimRequestTimestamp(e,e.msg.sender, 0) + getCooldownPeriod(e)) < e.block.timestamp;
+    require (getClaimRequestTimestamp(e,e.msg.sender, 1) + getCooldownPeriod(e)) < e.block.timestamp;
+    require (getClaimRequestTimestamp(e,e.msg.sender, LengthBefore-1) + getCooldownPeriod(e)) > e.block.timestamp; 
+    claim(e,0);
+    claimAll@withrevert(e);
+    assert (!lastReverted);
 }
 
 //Claim All will work only if all claims are available. else- it would do revert. 
@@ -178,7 +215,7 @@ rule claimAllvsClaim(){
     
     require (getClaimRequestLength(e,e.msg.sender) == 3);
     claim(e,0);
-    claim(e,0);
+  /*  claim(e,0);
     claim(e,0);
     uint256 L1 = getClaimRequestLength(e,e.msg.sender);
     uint256 SumReserved1 = claimReserve();
@@ -189,7 +226,8 @@ rule claimAllvsClaim(){
 
     assert (L1 == L2);
     assert (SumReserved1 == SumReserved2);
-    assert (SumReservedBefore > SumReserved1);
+    assert (SumReservedBefore > SumReserved1);*/
+    assert false;
 }
 
 //rule withdrawlAlwaysAppearAsClaimRequest(){
@@ -224,7 +262,7 @@ rule cannotWithdrawMoreThanDeposited(){
     deposit(e);  // user deposits BNB and gets stkBNB
     env e3;
     bytes myData;
-    stkBNB.send(e3, stkBNB, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    stkBNB.send(e3, stakePoolContract, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
     env e2;  // user has to wait at least two weeks
     require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
@@ -245,8 +283,3 @@ rule sanity(method f){
     assert false;
 }
 
-invariant claimVsClaimRequest(env e, address user)
-    getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
-
-invariant bnbUnbounding()
-    to_uint256(bnbToUnbond()) <= bnbUnbonding()
