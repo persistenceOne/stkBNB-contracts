@@ -1,5 +1,6 @@
 using StakedBNBToken as stkBNB
 using FeeVault as feeVault
+using StakePoolHarness as stakePoolContract
 
 
 methods {
@@ -71,6 +72,10 @@ function getStkBNBContract() returns address {
 
 function getFeeVaultContract() returns address {
     return feeVault;
+}
+
+function getStakePoolContract() returns address {
+    return stakePoolContract;
 }
 
 
@@ -156,6 +161,7 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     uint256 weiAfter = getTotalWei();
     uint256 stkAfter = getPoolTokenSupply();
     assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
+    assert (false);
 }
 
 rule claimAllCorrectness(){   //only correct for list that all request's time expired!!
@@ -255,7 +261,7 @@ rule cannotWithdrawMoreThanDeposited(){
     deposit(e);  // user deposits BNB and gets stkBNB
     env e3;
     bytes myData;
-    stkBNB.send(e3, stkBNB, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    stkBNB.send(e3, stakePoolContract, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
     env e2;  // user has to wait at least two weeks
     require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
