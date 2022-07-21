@@ -18,16 +18,15 @@ methods {
 
     // stkBNB methods:
     stkBNB.balanceOf(address) returns (uint256) envfree
-	burn(uint256 amount, bytes data) => DISPATCHER(true);
-	mint(address account, uint256 amount, bytes userData, bytes operatorData) => DISPATCHER(true);
-    send(address recipient,uint256 amount,bytes data) => DISPATCHER(true);
+    burn(uint256 amount, bytes data) => DISPATCHER(true);
+    mint(address account, uint256 amount, bytes userData, bytes operatorData) => DISPATCHER(true);
 
-	// summarize AddressStore
-	getStkBNB() => getStkBNBContract()
+    // summarize AddressStore
+    getStkBNB() => getStkBNBContract()
     getFeeVault() => getFeeVaultContract()
 
-	//receiver - we might want to have an implementation of this 
-	tokensReceived(
+    //receiver - we might want to have an implementation of this 
+    tokensReceived(
         address, /*operator*/
         address from,
         address to,
@@ -35,13 +34,12 @@ methods {
         bytes , /*userData*/
         bytes  /*operatorData*/
     ) => NONDET
-
+  
     // summarizing the interface implementer as arbitrary address by using a ghost function
     getInterfaceImplementer(
             address account,
             bytes32 _interfaceHash
     ) => ghostGetInterfaceImplementer()
-
 
     /**********************
      *    IERC777Sender   *
@@ -49,14 +47,9 @@ methods {
     tokensToSend(address, address, address, uint256, bytes, bytes) => NONDET
 }
 
-function doNothing() returns bool {
-    return true;
-}
-
 /**************************************************
  *                GHOSTS AND HOOKS                *
  **************************************************/
-
 ghost sumAllWei() returns uint256 {
     init_state axiom sumAllWei() == 0;
 }
@@ -71,11 +64,11 @@ ghost ghostGetInterfaceImplementer() returns address {
  **************************************************/
 
 function getStkBNBContract() returns address {
-	return stkBNB;
+    return stkBNB;
 }
 
 function getFeeVaultContract() returns address {
-	return feeVault;
+    return feeVault;
 }
 
 
@@ -118,10 +111,10 @@ rule integrityOfDeposit(address user, uint256 amount){
     env e;
     // e.msg.value = amount to deposit
     require e.msg.value == amount;
-	require e.msg.sender == user; 
+    require e.msg.sender == user; 
 
     uint256 totalSupplyBefore = getTotalWei();
-    require totalSupplyBefore < amount;
+    //require totalSupplyBefore < amount;
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
     deposit(e);
@@ -130,7 +123,7 @@ rule integrityOfDeposit(address user, uint256 amount){
     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
-    assert totalSupplyAfter == totalSupplyBefore + amount;
+    //assert totalSupplyBefore == totalSupplyAfter + amount; //might not be accurate because of fee's
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
 }
 
@@ -158,17 +151,33 @@ rule claimAllCorrectness(){
     claimAll(e);
     assert (getClaimRequestLength(e,e.msg.sender) == 0);
 }
-/*
+//same as above
+rule ClaimAll(){
+    env e;
+    claimAll@withrevert(e);
+    assert (getClaimRequestLength(e,e.msg.sender)>=1 => lastReverted);
+}
+
+rule doubleClaim(){
+    env e;
+    claimAll(e);
+    claimAll@withrevert(e);
+    assert (lastReverted);
+}
+
+//Claim All will work only if all claims are available. else- it would do revert. 
+//if ClaimAll is designed to claim all available this function is expected to fail.
 rule claimAllvsClaim(){
-	env e;
+    env e;
     // we want to verify same amount is paid on both scenarios, example; with 3 claimRqst existing:
     //1st scenario: claimAll()
-    //2nd scnario: claim(0), clain(1), claim(2)
+    //2nd scnario: claim(0), clain(0), claim(0)
     storage init  = lastStorage;
-
+    uint256 SumReservedBefore = claimReserve();
+    
     require (getClaimRequestLength(e,e.msg.sender) == 3);
-    claim(e,2);
-    claim(e,1);
+    claim(e,0);
+    claim(e,0);
     claim(e,0);
     uint256 L1 = getClaimRequestLength(e,e.msg.sender);
     uint256 SumReserved1 = claimReserve();
@@ -179,7 +188,8 @@ rule claimAllvsClaim(){
 
     assert (L1 == L2);
     assert (SumReserved1 == SumReserved2);
-}*/
+    assert (SumReservedBefore > SumReserved1);
+}
 
 //rule withdrawlAlwaysAppearAsClaimRequest(){
 
@@ -187,18 +197,6 @@ rule claimAllvsClaim(){
     
  //    assert ();
 //}
-rule ClaimAll(){
-    env e;
-    claimAll@withrevert(e);
-    assert (getClaimRequestLength(e,e.msg.sender)>1 => lastReverted);
-}
-
-rule doubleClaim(){
-    env e;
-    claimAll(e);
-    claimAll@withrevert(e);
-    assert (lastReverted);
-}
 
 rule userDoesNotChangeOtherUserBalance(method f){
     env e;
@@ -249,11 +247,5 @@ rule sanity(method f){
 invariant claimVsClaimRequest(env e, address user)
     getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
 
-invariant claimVsClaimReserve(env e, address user)
-    getClaimRequestLength(e,user) > 0 => claimReserve() > 0
-
-invariant zeroSupplyZeroClaim()
-    getPoolTokenSupply() == 0 => claimReserve() == 0
-
 invariant bnbUnbounding()
-    bnbToUnbond() <= to_int256(bnbUnbonding())
+    to_uint256(bnbToUnbond()) <= bnbUnbonding()
