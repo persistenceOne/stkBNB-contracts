@@ -6,6 +6,7 @@
     "StakePool": {
       "address": "0xEB6048eE3F39eb701712073936CA76Be774b6e0f",
       "abiFile": "StakePool.json",
+
       "events": {
         "Paused": {
           "type": 1,
@@ -39,13 +40,21 @@
           "type": 1,
           "severity": 1
         },
+        "EpochUpdate": {
+          "type": 1,
+          "severity": 1
+        },
         "InitiateDelegation_TransferOut": {
           "type": 1,
           "severity": 1
+        },
+        "UnbondingFinished": {
+          "type": 1,
+          "severity": 1
         }
-
       }
     },
+
     "AddressStore": {
       "address": "0x29aa6Dfe5149B93eCe28f5538518C224CDDC5119",
       "abiFile": "AddressStore.json",
@@ -58,7 +67,6 @@
           "type": 1,
           "severity": 1
         }
-
       }
     },
     "FeeVault": {
@@ -77,7 +85,6 @@
           "type": 1,
           "severity": 1
         }
-
       }
     },
     "StakedBNBToken": {
@@ -100,9 +107,15 @@
         "RoleRevoked": {
           "type": 1,
           "severity": 1
+        },
+        "Paused": {
+          "type": 1,
+          "severity": 1
+        },
+        "Unpaused": {
+          "type": 1,
+          "severity": 1
         }
-
-
 
       }
     },
@@ -118,8 +131,7 @@
 
       }
     }
-
-
-
+     
   }
+
 }
