@@ -164,21 +164,19 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     assert (false);
 }
 
-rule claimAllCorrectness(){   //only correct for list that all request's time expired!!
- //after claimAll(), length of claimRqst shouls be 0 
+rule claimAllCorrectness(){ 
+    env e; env e2;
+    uint256 index;
+    bool notAllCanBeClaimed  = index < getClaimRequestLength(e,e.msg.sender) && !canBeClaimed(e, index);
+    claimAll(e);
+    assert notAllCanBeClaimed => getClaimRequestLength(e2,e.msg.sender) > 0;
+}
+rule claimAllCorrectness2(){   
     env e;
     uint256 index;
     claimAll(e);
-    assert canBeClaimed(e, index) =>  getClaimRequestLength(e,e.msg.sender) == 0;
+    assert !canBeClaimed(e, index);
 }
-//same as above
-/*rule ClaimAll(){
-    env e;
-    unpause(e);
-    claimAll@withrevert(e);
-    assert (getClaimRequestLength(e,e.msg.sender)>=1 => lastReverted);
-}*/
-
 
 rule doubleClaim(){
     env e;
@@ -215,7 +213,7 @@ rule claimAllvsClaim(){
     
     require (getClaimRequestLength(e,e.msg.sender) == 3);
     claim(e,0);
-  /*  claim(e,0);
+    claim(e,0);
     claim(e,0);
     uint256 L1 = getClaimRequestLength(e,e.msg.sender);
     uint256 SumReserved1 = claimReserve();
@@ -226,7 +224,7 @@ rule claimAllvsClaim(){
 
     assert (L1 == L2);
     assert (SumReserved1 == SumReserved2);
-    assert (SumReservedBefore > SumReserved1);*/
+    assert (SumReservedBefore > SumReserved1);
     assert false;
 }
 
@@ -262,7 +260,7 @@ rule cannotWithdrawMoreThanDeposited(){
     deposit(e);  // user deposits BNB and gets stkBNB
     env e3;
     bytes myData;
-    stkBNB.send(e3, stakePoolContract, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    stkBNB.send(e3, currentContract , stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
     env e2;  // user has to wait at least two weeks
     require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
@@ -273,6 +271,7 @@ rule cannotWithdrawMoreThanDeposited(){
     uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
 
     assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
+    assert false;
 }
 
 
