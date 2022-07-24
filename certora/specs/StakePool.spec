@@ -13,7 +13,7 @@ methods {
     getTotalWei() returns (uint256) envfree
     getStkBnbAddress() returns (address) envfree
     getStakePoolAddress() returns (address) envfree
-    getBcStakingWallet() returns (address) envfree
+    getMinBNBDeposit() returns (uint256) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
@@ -104,7 +104,7 @@ invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
     getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
-
+    //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
     //tbd - check how balance of works, if it matters from where to pull
   //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
 
@@ -263,9 +263,15 @@ rule cannotWithdrawMoreThanDeposited(){
     uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
 
     assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
-    assert false;
 }
 
+//User should deposit at least minBNBDeposit tokens.
+rule depositAtLeastMinBNB(env e){
+    uint256 minDeposit = getMinBNBDeposit();
+    deposit@withrevert(e);
+    assert e.msg.value < minDeposit => lastReverted;
+
+}
 
 rule sanity(method f){
     env e;
