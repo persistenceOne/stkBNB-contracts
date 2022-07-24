@@ -11,7 +11,7 @@ methods {
     getWeiToReturn(address user, uint256 index) returns (uint256) envfree
     getPoolTokenSupply() returns (uint256) envfree
     getTotalWei() returns (uint256) envfree
-    getSTKBNB() returns (address) envfree
+    getStkBnbAddress() returns (address) envfree
     getStakePoolAddress() returns (address) envfree
     getBcStakingWallet() returns (address) envfree
 
@@ -103,7 +103,7 @@ invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
-    getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBNB() ?
+    getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
 
     //tbd - check how balance of works, if it matters from where to pull
   //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
