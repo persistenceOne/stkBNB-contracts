@@ -19,11 +19,11 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --solc solc8.7 \
 --staging \
 --loop_iter 3 \
---settings -optimisticFallback=true \
 $RULE  \
 --msg "pstake -$RULE"
 
 #        StakePoolHarness:config=Config \
 #        StakePoolHarness:exchangeRate=ExchangeRate \
 #        StakePoolHarness:BasisFee=BasisFee \
-#--optimistic_loop 
+#--optimistic_loop
+#--settings -optimisticFallback=true \
