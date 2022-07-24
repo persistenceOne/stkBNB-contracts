@@ -174,15 +174,21 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
     assert (false);
 }
-/*
-rule claimAllCorrectness(){   //only correct for list that all request's time expired!!
- //after claimAll(), length of claimRqst shouls be 0 
-    env e;
-    claimAll(e);
-    assert (getClaimRequestLength(e,e.msg.sender) == 0);
-}*/
 
-rule claimOnEmpty(){
+rule claimAllCorrectness(){ 
+    env e; env e2;
+    uint256 index;
+    bool notAllCanBeClaimed  = index < getClaimRequestLength(e,e.msg.sender) && !canBeClaimed(e, index);
+    claimAll(e);
+    assert notAllCanBeClaimed => getClaimRequestLength(e2,e.msg.sender) > 0;
+}
+rule claimAllCorrectness2(){   
+    env e;
+    uint256 index;
+    claimAll(e);
+    assert !canBeClaimed(e, index);
+}
+rule claimOnEmpty(){    
     env e;
     uint256 index;
     require (getClaimRequestLength(e,e.msg.sender)==0);
@@ -190,20 +196,34 @@ rule claimOnEmpty(){
     assert (lastReverted);
 }
 
+//Claim All will work only if all claims are available. else- it would do revert. 
+//if ClaimAll is designed to claim all available this function is expected to fail.
 /*
-rule claimOrder(){
+rule claimAllvsClaim(){
     env e;
-    uint256 index;
-    uint256 LengthBefore = getClaimRequestLength(e,e.msg.sender);
-    require LengthBefore > 2;
-    //require 2 first request expired, last request not expired.
-    require (getClaimRequestTimestamp(e,e.msg.sender, 0) + getCooldownPeriod(e)) < e.block.timestamp;
-    require (getClaimRequestTimestamp(e,e.msg.sender, 1) + getCooldownPeriod(e)) < e.block.timestamp;
-    require (getClaimRequestTimestamp(e,e.msg.sender, LengthBefore-1) + getCooldownPeriod(e)) > e.block.timestamp; 
+    // we want to verify same amount is paid on both scenarios, example; with 3 claimRqst existing:
+    //1st scenario: claimAll()
+    //2nd scnario: claim(0), clain(0), claim(0)
+    storage init  = lastStorage;
+    uint256 SumReservedBefore = claimReserve();
+    
+    require (getClaimRequestLength(e,e.msg.sender) == 3);
     claim(e,0);
-    claimAll@withrevert(e);
-    assert (!lastReverted);
+    claim(e,0);
+    claim(e,0);
+    uint256 L1 = getClaimRequestLength(e,e.msg.sender);
+    uint256 SumReserved1 = claimReserve();
+
+    claimAll(e) at init;
+    uint256 L2 = getClaimRequestLength(e,e.msg.sender);
+    uint256 SumReserved2 = claimReserve();
+
+    assert (L1 == L2);
+    assert (SumReserved1 == SumReserved2);
+    assert (SumReservedBefore > SumReserved1);
+    assert false;
 }*/
+
 
 
 rule userDoesNotChangeOtherUserBalance(method f){
@@ -232,7 +252,7 @@ rule cannotWithdrawMoreThanDeposited(){
     deposit(e);  // user deposits BNB and gets stkBNB
     env e3;
     bytes myData;
-    stkBNB.send(e3, stakePoolContract, stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    stkBNB.send(e3, currentContract , stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
     env e2;  // user has to wait at least two weeks
     require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
@@ -243,6 +263,7 @@ rule cannotWithdrawMoreThanDeposited(){
     uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
 
     assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
+    assert false;
 }
 
 

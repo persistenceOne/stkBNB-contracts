@@ -40,11 +40,13 @@ contract StakePoolHarness is StakePool {
         return config.cooldownPeriod;
     }
 
-     function getBcStakingWallet() public view returns (address) {
-        return config.bcStakingWallet;
-    }
-     function bnbBalanceOf(address user) public view returns (uint256) {
+    function bnbBalanceOf(address user) public view returns (uint256) {
         return user.balance;
     }
- 
+
+    function canBeClaimed(uint256 index) public view returns (bool) {
+            ClaimRequest memory req = claimReqs[msg.sender][index];
+        return _canBeClaimed(req);
+    }
+
 }
