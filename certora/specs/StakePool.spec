@@ -4,7 +4,7 @@ using StakePoolHarness as stakePoolContract
 
 
 methods {
-    deposit()
+    //deposit()
     unpause()
 
     // Harness methods:
@@ -13,12 +13,13 @@ methods {
     getTotalWei() returns (uint256) envfree
     getStkBnbAddress() returns (address) envfree
     getStakePoolAddress() returns (address) envfree
-    getBcStakingWallet() returns (address) envfree
+    getMinBNBDeposit() returns (uint256) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
     bnbUnbonding() returns (uint256) envfree
     claimReserve() returns (uint256) envfree
+    getCooldownPeriod() returns (uint256) envfree
 
     // stkBNB methods:
     stkBNB.balanceOf(address) returns (uint256) envfree
@@ -39,6 +40,14 @@ methods {
         bytes  /*operatorData*/
     //) => NONDET
     ) => DISPATCHER(true);
+
+    deposit() => DISPATCHER(true);
+
+    epochUpdate(uint256) =>  DISPATCHER(true);
+    
+    getStakePool() returns (address) => ghostGetStakePool();
+
+    withdrawUnbondedBNB() returns (uint256) => DISPATCHER(true);
   
     // summarizing the interface implementer as arbitrary address by using a ghost function
     getInterfaceImplementer(
@@ -63,6 +72,9 @@ ghost ghostGetInterfaceImplementer() returns address {
     axiom ghostGetInterfaceImplementer() == 0xce4604a000000000000000000ce4604a;
 }
 
+ghost ghostGetStakePool() returns address {
+    axiom ghostGetStakePool() == currentContract;
+}
 
 /**************************************************
  *               CVL FUNCS & DEFS                 *
@@ -106,7 +118,7 @@ invariant exchangeRate()
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
     getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
-
+    //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
     //tbd - check how balance of works, if it matters from where to pull
   //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
 
@@ -154,6 +166,7 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
+    assert false;
 }
 
 // rule cantRequestZeroOrMoreThanDeposited(address user,uint256 amount) {
@@ -239,30 +252,43 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     uint256 index;
     claim@withrevert(e, index);
     bool reverted = lastReverted;
-    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => reverted;
+    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod() => reverted;
 }
 
 rule cannotWithdrawMoreThanDeposited(){
     env e;
-    uint256 userBNBBalanceBefore = bnbBalanceOf(e, e.msg.sender);
-    require stkBNB.balanceOf(e.msg.sender) == 0;
+    //uint256 userBNBBalanceBefore = bnbBalanceOf(e, e.msg.sender);
+    //require stkBNB.balanceOf(e.msg.sender) == 0;
     deposit(e);  // user deposits BNB and gets stkBNB
-    env e3;
-    bytes myData;
-    stkBNB.send(e3, currentContract , stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    //env e3;
+    //bytes myData;
+    //stkBNB.send(e3, currentContract , stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
 
-    env e2;  // user has to wait at least two weeks
-    require e2.block.timestamp > e.block.timestamp + getCooldownPeriod(e);
-    require e2.msg.sender == e.msg.sender;
-    require getClaimRequestLength(e2,e2.msg.sender) == 1;
-    claim(e2,0);
+    //env e2;  // user has to wait at least two weeks
+    //require e2.block.timestamp > e.block.timestamp + getCooldownPeriod();
+    //require e2.msg.sender == e.msg.sender;
+    //require getClaimRequestLength(e2,e2.msg.sender) == 1;
+    //claim(e2,0);
     //claimAll(e2);  //check if claim(e2,o) returns same value
-    uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
+    //uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
 
-    assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
+    //assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
     assert false;
 }
 
+rule testDeposit(){
+    env e;
+    deposit(e);
+    assert false;
+}
+
+//User should deposit at least minBNBDeposit tokens.
+rule depositAtLeastMinBNB(env e){
+    uint256 minDeposit = getMinBNBDeposit();
+    deposit@withrevert(e);
+    assert e.msg.value < minDeposit => lastReverted;
+
+}
 
 // rule sanity(method f){
 //     env e;
