@@ -16,9 +16,16 @@ contract StakePoolHarness is StakePool {
     function getTotalWei() public view returns (uint256) {
         return exchangeRate.totalWei;
     }
+ 
+    /* function getTokensByExchangeRate(uint256 twei) public view returns (uint256) {
+        return exchangeRate._calcPoolTokensForDeposit(twei);
+    }*/
 
     function getSTKBNB() public view returns (address){
         return addressStore.getStkBNB();
+    }
+     function getStakePoolAddress() public view returns (address){
+        return addressStore.getStakePool();
     }
 
     function getClaimRequestLength(address user) public view returns (uint256) {
@@ -31,6 +38,10 @@ contract StakePoolHarness is StakePool {
 
     function getCooldownPeriod() public view returns (uint256) {
         return config.cooldownPeriod;
+    }
+
+     function getBcStakingWallet() public view returns (address) {
+        return config.bcStakingWallet;
     }
      function bnbBalanceOf(address user) public view returns (uint256) {
         return user.balance;

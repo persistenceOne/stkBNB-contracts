@@ -12,6 +12,8 @@ methods {
     getPoolTokenSupply() returns (uint256) envfree
     getTotalWei() returns (uint256) envfree
     getSTKBNB() returns (address) envfree
+    getStakePoolAddress() returns (address) envfree
+    getBcStakingWallet() returns (address) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
@@ -89,6 +91,7 @@ invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 
  //   getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
  //   getClaimRequestLength(e,user) > 0 => bnbBalanceOf(e, e.msg.this) > 0
 
+
 invariant bnbUnbounding()
     bnbToUnbond() <= to_int256(bnbUnbonding())
 
@@ -98,6 +101,12 @@ invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
 
 //invariant exchangeRate()
 
+//Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
+invariant totalTokenSupply()
+    getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBNB() ?
+
+    //tbd - check how balance of works, if it matters from where to pull
+  //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
 
 /**************************************************
  *               STATE TRANSITIONS                *
@@ -165,31 +174,23 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
     assert (false);
 }
-
+/*
 rule claimAllCorrectness(){   //only correct for list that all request's time expired!!
  //after claimAll(), length of claimRqst shouls be 0 
     env e;
     claimAll(e);
     assert (getClaimRequestLength(e,e.msg.sender) == 0);
-}
-//same as above
-/*rule ClaimAll(){
-    env e;
-    unpause(e);
-    claimAll@withrevert(e);
-    assert (getClaimRequestLength(e,e.msg.sender)>=1 => lastReverted);
 }*/
 
-
-rule doubleClaim(){
+rule claimOnEmpty(){
     env e;
     uint256 index;
-    claimAll(e);
+    require (getClaimRequestLength(e,e.msg.sender)==0);
     claim@withrevert(e,index);
     assert (lastReverted);
 }
 
-
+/*
 rule claimOrder(){
     env e;
     uint256 index;
@@ -202,41 +203,8 @@ rule claimOrder(){
     claim(e,0);
     claimAll@withrevert(e);
     assert (!lastReverted);
-}
+}*/
 
-//Claim All will work only if all claims are available. else- it would do revert. 
-//if ClaimAll is designed to claim all available this function is expected to fail.
-rule claimAllvsClaim(){
-    env e;
-    // we want to verify same amount is paid on both scenarios, example; with 3 claimRqst existing:
-    //1st scenario: claimAll()
-    //2nd scnario: claim(0), clain(0), claim(0)
-    storage init  = lastStorage;
-    uint256 SumReservedBefore = claimReserve();
-    
-    require (getClaimRequestLength(e,e.msg.sender) == 3);
-    claim(e,0);
-  /*  claim(e,0);
-    claim(e,0);
-    uint256 L1 = getClaimRequestLength(e,e.msg.sender);
-    uint256 SumReserved1 = claimReserve();
-
-    claimAll(e) at init;
-    uint256 L2 = getClaimRequestLength(e,e.msg.sender);
-    uint256 SumReserved2 = claimReserve();
-
-    assert (L1 == L2);
-    assert (SumReserved1 == SumReserved2);
-    assert (SumReservedBefore > SumReserved1);*/
-    assert false;
-}
-
-//rule withdrawlAlwaysAppearAsClaimRequest(){
-
- //    env e;
-    
- //    assert ();
-//}
 
 rule userDoesNotChangeOtherUserBalance(method f){
     env e;
@@ -253,7 +221,8 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
     uint256 index;
     claim@withrevert(e, index);
-    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
+    bool reverted = lastReverted;
+    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => reverted;
 }
 
 rule cannotWithdrawMoreThanDeposited(){
