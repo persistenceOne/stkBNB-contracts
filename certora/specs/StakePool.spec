@@ -96,8 +96,8 @@ invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
     (i<j) => getClaimRequestTimestamp(e,e.msg.sender, i) < getClaimRequestTimestamp(e,e.msg.sender, j) 
     //TBD -  call resolution tokensReceived fix.
 
-//invariant exchangeRate()
-
+invariant exchangeRate()
+    getTotalWei() == getPoolTokenSupply()
 
 /**************************************************
  *               STATE TRANSITIONS                *
@@ -117,7 +117,7 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
     uint bnbUnbondingAfter = bnbUnbonding();
 
     assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
-    assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
+    assert bnbToUnbondBefore >= bnbToUnbondAfter => bnbUnbondingBefore <= bnbUnbondingAfter;
 }
 
 
@@ -129,12 +129,11 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
 // user stkBNB should increase by x.
 rule integrityOfDeposit(address user, uint256 amount){
     env e;
-    // e.msg.value = amount to deposit
+
     require e.msg.value == amount;
     require e.msg.sender == user; 
 
     uint256 totalSupplyBefore = getTotalWei();
-    //require totalSupplyBefore < amount;
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
     deposit(e);
@@ -143,7 +142,6 @@ rule integrityOfDeposit(address user, uint256 amount){
     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
-    //assert totalSupplyBefore == totalSupplyAfter + amount; //might not be accurate because of fee's
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
 }
 
@@ -188,21 +186,6 @@ rule doubleClaim(){
     assert (lastReverted);
 }
 
-
-rule claimOrder(){
-    env e;
-    uint256 index;
-    uint256 LengthBefore = getClaimRequestLength(e,e.msg.sender);
-    require LengthBefore > 2;
-    //require 2 first request expired, last request not expired.
-    require (getClaimRequestTimestamp(e,e.msg.sender, 0) + getCooldownPeriod(e)) < e.block.timestamp;
-    require (getClaimRequestTimestamp(e,e.msg.sender, 1) + getCooldownPeriod(e)) < e.block.timestamp;
-    require (getClaimRequestTimestamp(e,e.msg.sender, LengthBefore-1) + getCooldownPeriod(e)) > e.block.timestamp; 
-    claim(e,0);
-    claimAll@withrevert(e);
-    assert (!lastReverted);
-}
-
 //Claim All will work only if all claims are available. else- it would do revert. 
 //if ClaimAll is designed to claim all available this function is expected to fail.
 rule claimAllvsClaim(){
@@ -211,7 +194,7 @@ rule claimAllvsClaim(){
     //1st scenario: claimAll()
     //2nd scnario: claim(0), clain(0), claim(0)
     storage init  = lastStorage;
-    uint256 SumReservedBefore = claimReserve();
+    // uint256 SumReservedBefore = claimReserve();
     
     require (getClaimRequestLength(e,e.msg.sender) == 3);
     claim(e,0);
@@ -226,8 +209,7 @@ rule claimAllvsClaim(){
 
     assert (L1 == L2);
     assert (SumReserved1 == SumReserved2);
-    assert (SumReservedBefore > SumReserved1);
-    assert false;
+    // assert (SumReservedBefore > SumReserved1);
 }
 
 //rule withdrawlAlwaysAppearAsClaimRequest(){
@@ -252,7 +234,8 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
     uint256 index;
     claim@withrevert(e, index);
-    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => lastReverted;
+    bool reverted = lastReverted;
+    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod(e) => reverted;
 }
 
 rule cannotWithdrawMoreThanDeposited(){
@@ -277,10 +260,10 @@ rule cannotWithdrawMoreThanDeposited(){
 }
 
 
-rule sanity(method f){
-    env e;
-    calldataarg args;
-    f(e,args);
-    assert false;
-}
+// rule sanity(method f){
+//     env e;
+//     calldataarg args;
+//     f(e,args);
+//     assert false;
+// }
 
