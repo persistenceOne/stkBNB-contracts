@@ -5,20 +5,30 @@ pragma solidity ^0.8.7;
 import "../../contracts/StakePool.sol";
 
 contract StakePoolHarness is StakePool {
-    function getWeiToReturn(address user, uint256 index) public view returns (uint256) {
-        return claimReqs[user][index].weiToReturn;
-    }
 
+    /* Exchange Rate Params */
+    function getTotalWei() public view returns (uint256) {
+        return exchangeRate.totalWei;
+    }   
     function getPoolTokenSupply() public view returns (uint256) {
         return exchangeRate.poolTokenSupply;
     }
 
-    function getTotalWei() public view returns (uint256) {
-        return exchangeRate.totalWei;
+    /* function getTokensByExchangeRate(uint256 twei) public view returns (uint256) {
+        return exchangeRate._calcPoolTokensForDeposit(twei);
+    }*/
+
+    /* Address Store Params */
+    function getStkBnbAddress() public view returns (address){
+        return addressStore.getStkBNB();
+    }
+     function getStakePoolAddress() public view returns (address){
+        return addressStore.getStakePool();
     }
 
-    function getSTKBNB() public view returns (address){
-        return addressStore.getStkBNB();
+    /* Claim Request Params */
+    function getWeiToReturn(address user, uint256 index) public view returns (uint256) {
+        return claimReqs[user][index].weiToReturn;
     }
 
     function getClaimRequestLength(address user) public view returns (uint256) {
@@ -28,10 +38,25 @@ contract StakePoolHarness is StakePool {
      function getClaimRequestTimestamp(address user, uint256 index) public view returns (uint256) {
         return claimReqs[user][index].createdAt;
     }
+    
 
+    /* CONFIG Params */
     function getCooldownPeriod() public view returns (uint256) {
         return config.cooldownPeriod;
     }
+    function getbcStakingWallet() public view returns (address) {
+        return config.bcStakingWallet;
+    }
+
+    function getMinBNBDeposit() public view returns (uint256) {
+        return config.minBNBDeposit;
+    }
+    
+    function getMinTokenWithdrawal() public view returns (uint256) {
+        return config.minTokenWithdrawal;
+    }
+
+
     function bnbBalanceOf(address user) public view returns (uint256) {
         return user.balance;
     }
