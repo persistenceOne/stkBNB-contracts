@@ -11,9 +11,9 @@ methods {
     getWeiToReturn(address user, uint256 index) returns (uint256) envfree
     getPoolTokenSupply() returns (uint256) envfree
     getTotalWei() returns (uint256) envfree
-    getSTKBNB() returns (address) envfree
+    getStkBnbAddress() returns (address) envfree
     getStakePoolAddress() returns (address) envfree
-    getBcStakingWallet() returns (address) envfree
+    getMinBNBDeposit() returns (uint256) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
@@ -111,8 +111,8 @@ invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
-    getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBNB() ?
-
+    getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
+    //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
     //tbd - check how balance of works, if it matters from where to pull
   //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
 
@@ -281,6 +281,13 @@ rule testDeposit(){
     assert false;
 }
 
+//User should deposit at least minBNBDeposit tokens.
+rule depositAtLeastMinBNB(env e){
+    uint256 minDeposit = getMinBNBDeposit();
+    deposit@withrevert(e);
+    assert e.msg.value < minDeposit => lastReverted;
+
+}
 
 rule sanity(method f){
     env e;
