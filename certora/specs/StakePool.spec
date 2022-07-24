@@ -40,6 +40,10 @@ methods {
         bytes  /*operatorData*/
     //) => NONDET
     ) => DISPATCHER(true);
+
+    deposit() => DISPATCHER(true);
+
+    epochUpdate(uint256) =>  DISPATCHER(true);
     
     getStakePool() returns (address) => ghostGetStakePool();
 
