@@ -39,7 +39,7 @@ methods {
         address to,
         uint256 amount,
         bytes calldata, /*userData*/
-        bytes  calldata/*operatorData*/
+        bytes calldata/*operatorData*/
     ) => NONDET
 
     _callTokensReceived(
@@ -99,9 +99,11 @@ methods {
     init_state axiom sumAllWei() == 0;
 }*/
 
+/*
 ghost ghostGetInterfaceImplementer() returns address {
     axiom ghostGetInterfaceImplementer() == 0xce4604a000000000000000000ce4604a;
 }
+*/
 
 ghost ghostGetStakePool() returns address {
     axiom ghostGetStakePool() == currentContract;
@@ -134,10 +136,6 @@ invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 
 invariant bnbUnbounding()
     bnbToUnbond() <= to_int256(bnbUnbonding())
 
-invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
-    (i<j) => getClaimRequestTimestamp(e,e.msg.sender, i) < getClaimRequestTimestamp(e,e.msg.sender, j) 
-    //TBD -  call resolution tokensReceived fix.
-
 invariant exchangeRate()
     getTotalWei() == getPoolTokenSupply()
 //invariant exchangeRate()
@@ -145,7 +143,7 @@ invariant exchangeRate()
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 //TBD
 invariant totalTokenSupply()
-    getPoolTokenSupply() <= stkBNB.totalSupply()
+    getPoolTokenSupply() == stkBNB.totalSupply()
 
 
 // what can we say about bnbBalanceOf(currentContract) //stkBNB == getStkBnbAddress() ?
@@ -172,6 +170,18 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
 
     assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
     assert bnbToUnbondBefore >= bnbToUnbondAfter => bnbUnbondingBefore <= bnbUnbondingAfter;
+}
+
+
+rule userDoesNotChangeOtherUserBalance(method f){
+    env e;
+    address user;
+    calldataarg args;
+  
+    uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
+    f(e,args);
+    uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
+    assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
 }
 
 
@@ -219,19 +229,25 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     assert (false);
 }
 
+// if there is a claim that can NOT be claimed => after claimAll(), there are claims left
+// claimAll() does not delete unclaimable claims
 rule claimAllCorrectness(){ 
-    env e; env e2;
+    env e; //env e2;
     uint256 index;
     bool notAllCanBeClaimed  = index < getClaimRequestLength(e,e.msg.sender) && !canBeClaimed(e, index);
     claimAll(e);
-    assert notAllCanBeClaimed => getClaimRequestLength(e2,e.msg.sender) > 0;
+    assert notAllCanBeClaimed => getClaimRequestLength(e,e.msg.sender) > 0;
 }
+
+// if a user did claimAll() => all the claims that are left are not claimable
 rule claimAllCorrectness2(){   
     env e;
     uint256 index;
     claimAll(e);
     assert !canBeClaimed(e, index);
 }
+
+// if user has no claims => claim() will revert
 rule claimOnEmpty(){    
     env e;
     uint256 index;
@@ -240,6 +256,7 @@ rule claimOnEmpty(){
     assert (lastReverted);
 }
 
+/* (only true in case all 3 claims are claimable)
 //Claim All will work only if all claims are available. else- it would do revert. 
 //if ClaimAll is designed to claim all available this function is expected to fail.
 rule claimAllvsClaim(){
@@ -264,19 +281,8 @@ rule claimAllvsClaim(){
     assert (L1 == L2);
     assert (SumReserved1 == SumReserved2);
 }
+*/
 
-
-
-rule userDoesNotChangeOtherUserBalance(method f){
-    env e;
-    address user;
-    calldataarg args;
-  
-    uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
-    f(e,args);
-    uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
-    assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
-}
 
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
@@ -287,24 +293,25 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 }
 
 rule cannotWithdrawMoreThanDeposited(){
-    env e;
-    //uint256 userBNBBalanceBefore = bnbBalanceOf(e, e.msg.sender);
-    //require stkBNB.balanceOf(e.msg.sender) == 0;
-    deposit(e);  // user deposits BNB and gets stkBNB
-    //env e3;
-    //bytes myData;
-    //stkBNB.send(e3, currentContract , stkBNB.balanceOf(e.msg.sender), myData);  //user immediatedly sends all his stkBNB for withdraw
+    env e; env e0; env e1; env e2;
+    address user;
+    require user == e.msg.sender && user == e0.msg.sender && user == e1.msg.sender && user == e2.msg.sender;
+    uint256 userBNBBalanceBefore = bnbBalanceOf(e, user);
+    require stkBNB.balanceOf(user) == 0;
+    
+    deposit(e0);  // user deposits BNB and gets stkBNB
+    bytes myData;
+    stkBNB.send(e1, currentContract , stkBNB.balanceOf(user), myData);  //user immediatedly sends all his stkBNB for withdraw
 
-    //env e2;  // user has to wait at least two weeks
-    //require e2.block.timestamp > e.block.timestamp + getCooldownPeriod();
-    //require e2.msg.sender == e.msg.sender;
-    //require getClaimRequestLength(e2,e2.msg.sender) == 1;
-    //claim(e2,0);
-    //claimAll(e2);  //check if claim(e2,o) returns same value
-    //uint256 userBNBBalanceAfter = bnbBalanceOf(e2, e2.msg.sender);
+    // user has to wait at least two weeks
+    require e2.block.timestamp > e.block.timestamp + getCooldownPeriod();
+    require canBeClaimed(e, 0);
+    claim(e2,0);
+    //claimAll(e2);  //check if claim(e2,0) returns same value
+    uint256 userBNBBalanceAfter = bnbBalanceOf(e2, user);
 
-    //assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
-    assert false;
+    assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
+    //assert false;
 }
 
 rule testDeposit(){
