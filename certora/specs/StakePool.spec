@@ -89,10 +89,6 @@ function getFeeVaultContract() returns address {
     return feeVault;
 }
 
-function getStakePoolContract() returns address {
-    return stakePoolContract;
-}
-
 
 /**************************************************
  *                 VALID STATES                   *

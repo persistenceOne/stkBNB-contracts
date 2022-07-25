@@ -387,10 +387,10 @@ contract StakePool is
 
         // mint the tokens for appropriate accounts
         IStakedBNBToken stkBNB = IStakedBNBToken(addressStore.getStkBNB());
-        /*stkBNB.mint(msg.sender, poolTokensUser, "", "");
+        stkBNB.mint(msg.sender, poolTokensUser, "", "");
         if (poolTokensDepositFee > 0) {
             stkBNB.mint(addressStore.getFeeVault(), poolTokensDepositFee, "", "");
-        }*/
+        }
 
         emit Deposit(msg.sender, msg.value, poolTokensUser, block.timestamp);
     }
@@ -529,12 +529,12 @@ contract StakePool is
         exchangeRate._update(ExchangeRate.Data(bnbRewards, feeTokens), ExchangeRate.UpdateOp.Add);
 
         // mint the fee tokens to FeeVault
-        /*IStakedBNBToken(addressStore.getStkBNB()).mint(
+        IStakedBNBToken(addressStore.getStkBNB()).mint(
             addressStore.getFeeVault(),
             feeTokens,
             "",
             ""
-        );*/
+        );
 
         // emit the ack event
         emit EpochUpdate(bnbRewards, feeTokens);
