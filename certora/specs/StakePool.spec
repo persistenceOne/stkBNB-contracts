@@ -56,6 +56,25 @@ methods {
             bytes32 _interfaceHash
     //) => ghostGetInterfaceImplementer()
     ) => NONDET
+    //) => ALWAYS(0xce4604a000000000000000000ce4604a);
+
+    setInterfaceImplementer(
+        address account,
+        bytes32 _interfaceHash,
+        address implementer
+    ) => NONDET
+
+    transfer(address recipient, uint256 amount) returns (bool) => DISPATCHER(true);
+
+    transferOut(
+        address contractAddr,
+        address recipient,
+        uint256 amount,
+        uint64 expireTime
+    ) returns (bool) => DISPATCHER(true);
+
+    //ERC777 summarizing
+    send(address,uint256,bytes) => DISPATCHER(true);
 
     /**********************
      *    IERC777Sender   *

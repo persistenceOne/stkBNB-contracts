@@ -3,6 +3,11 @@ then
     RULE="--rule $1"
 fi
 
+if [[ "$2" ]]
+then
+    MSG=": $2"
+fi
+
 certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/AddressStore.sol \
             contracts/FeeVault.sol \
@@ -20,7 +25,7 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --staging \
 --loop_iter 3 \
 $RULE  \
---msg "pstake -$RULE"
+--msg "pstake -$RULE $MSG"
 
 #        StakePoolHarness:config=Config \
 #        StakePoolHarness:exchangeRate=ExchangeRate \
