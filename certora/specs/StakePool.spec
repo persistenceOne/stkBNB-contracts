@@ -41,9 +41,8 @@ methods {
     //) => NONDET
     ) => DISPATCHER(true);
 
-    deposit() => DISPATCHER(true);
-
-    epochUpdate(uint256) =>  DISPATCHER(true);
+    // deposit() => DISPATCHER(true);
+    // epochUpdate(uint256) =>  DISPATCHER(true);
     
     getStakePool() returns (address) => ghostGetStakePool();
 
@@ -53,7 +52,7 @@ methods {
     getInterfaceImplementer(
             address account,
             bytes32 _interfaceHash
-    ) => ghostGetInterfaceImplementer()
+    ) => ALWAYS(0xce4604a000000000000000000ce4604a); //=> ghostGetInterfaceImplementer()
 
     /**********************
      *    IERC777Sender   *
@@ -287,7 +286,6 @@ rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
     deposit@withrevert(e);
     assert e.msg.value < minDeposit => lastReverted;
-
 }
 
 // rule sanity(method f){
