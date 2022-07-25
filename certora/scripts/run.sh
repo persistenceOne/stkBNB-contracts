@@ -13,10 +13,6 @@ certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/FeeVault.sol \
             contracts/StakedBNBToken.sol \
             contracts/UndelegationHolder.sol \
-            contracts/embedded-libs/BasisFee.sol \
-            contracts/embedded-libs/Config.sol \
-            contracts/embedded-libs/ExchangeRate.sol \
-            contracts/embedded-libs/FeeDistribution.sol \
 --link  StakePoolHarness:addressStore=AddressStore \
 --verify StakePoolHarness:certora/specs/StakePool.spec \
 --packages @openzeppelin=node_modules/@openzeppelin \
@@ -24,6 +20,7 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --solc solc8.7 \
 --staging \
 --loop_iter 3 \
+--settings -optimisticFallback=true --optimistic_loop \
 $RULE  \
 --msg "pstake -$RULE $MSG"
 

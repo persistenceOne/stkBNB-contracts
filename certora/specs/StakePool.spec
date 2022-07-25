@@ -24,6 +24,7 @@ methods {
 
     // stkBNB methods:
     stkBNB.balanceOf(address) returns (uint256) envfree
+    stkBNB.totalSupply() returns (uint256) envfree
     burn(uint256 amount, bytes data) => DISPATCHER(true);
     mint(address account, uint256 amount, bytes userData, bytes operatorData) => DISPATCHER(true);
 
@@ -31,7 +32,7 @@ methods {
     getStkBNB() => getStkBNBContract()
     getFeeVault() => getFeeVaultContract()
 
-    //receiver - we might want to have an implementation of this 
+    //receiver - we might want to have an implementation of this. for now we assume an empty implementation 
     tokensReceived(
         address, /*operator*/
         address from,
@@ -39,8 +40,18 @@ methods {
         uint256 amount,
         bytes calldata, /*userData*/
         bytes  calldata/*operatorData*/
-    //) => NONDET
-    ) => DISPATCHER(true);
+    ) => NONDET
+
+    _callTokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes userData,
+        bytes operatorData,
+        bool requireReceptionAck
+    )  => NONDET
+    // ) => DISPATCHER(true);
 
     // deposit() => DISPATCHER(true);
     // epochUpdate(uint256) =>  DISPATCHER(true);
@@ -134,7 +145,10 @@ invariant exchangeRate()
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 //TBD
 invariant totalTokenSupply()
-    getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
+    getPoolTokenSupply() <= stkBNB.totalSupply()
+
+
+// what can we say about bnbBalanceOf(currentContract) //stkBNB == getStkBnbAddress() ?
     //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
     //tbd - check how balance of works, if it matters from where to pull
   //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
@@ -320,10 +334,10 @@ rule WithdrawalAtLeastMinToken(env e){
     assert amount < minWithdrawl => lastReverted;
 }
 
-// rule sanity(method f){
-//     env e;
-//     calldataarg args;
-//     f(e,args);
-//     assert false;
-// }
+ rule sanity(method f){
+     env e;
+     calldataarg args;
+     f(e,args);
+     assert false;
+ }
 
