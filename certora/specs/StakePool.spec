@@ -14,6 +14,7 @@ methods {
     getStkBnbAddress() returns (address) envfree
     getStakePoolAddress() returns (address) envfree
     getMinBNBDeposit() returns (uint256) envfree
+    getMinTokenWithdrawal() returns (uint256) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
@@ -35,8 +36,8 @@ methods {
         address from,
         address to,
         uint256 amount,
-        bytes , /*userData*/
-        bytes  /*operatorData*/
+        bytes calldata, /*userData*/
+        bytes  calldata/*operatorData*/
     //) => NONDET
     ) => DISPATCHER(true);
   
@@ -270,6 +271,22 @@ rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
     deposit@withrevert(e);
     assert e.msg.value < minDeposit => lastReverted;
+}
+
+//User should make withdrawal of at least minTokenWithdrawal tokens.
+rule WithdrawalAtLeastMinToken(env e){
+    uint256 minWithdrawl = getMinTokenWithdrawal();
+    address stkBnbAddr = getStkBnbAddress();
+    address generalOperator;
+    address from;
+    address to;
+    uint256 amount;
+    bytes data;
+    require e.msg.sender == stkBnbAddr;
+    require from != stakePoolContract;
+    require to != stakePoolContract;
+    tokensReceived@withrevert(e, generalOperator, from, to, amount, data,data);
+    assert amount < minWithdrawl => lastReverted;
 
 }
 
