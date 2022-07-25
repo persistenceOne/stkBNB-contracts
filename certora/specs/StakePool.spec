@@ -14,6 +14,7 @@ methods {
     getStkBnbAddress() returns (address) envfree
     getStakePoolAddress() returns (address) envfree
     getMinBNBDeposit() returns (uint256) envfree
+    getMinTokenWithdrawal() returns (uint256) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
@@ -36,8 +37,8 @@ methods {
         address from,
         address to,
         uint256 amount,
-        bytes , /*userData*/
-        bytes  /*operatorData*/
+        bytes calldata, /*userData*/
+        bytes  calldata/*operatorData*/
     //) => NONDET
     ) => DISPATCHER(true);
 
@@ -52,7 +53,27 @@ methods {
     getInterfaceImplementer(
             address account,
             bytes32 _interfaceHash
-    ) => ALWAYS(0xce4604a000000000000000000ce4604a); //=> ghostGetInterfaceImplementer()
+    //) => ghostGetInterfaceImplementer()
+    ) => NONDET
+    //) => ALWAYS(0xce4604a000000000000000000ce4604a);
+
+    setInterfaceImplementer(
+        address account,
+        bytes32 _interfaceHash,
+        address implementer
+    ) => NONDET
+
+    transfer(address recipient, uint256 amount) returns (bool) => DISPATCHER(true);
+
+    transferOut(
+        address contractAddr,
+        address recipient,
+        uint256 amount,
+        uint64 expireTime
+    ) returns (bool) => DISPATCHER(true);
+
+    //ERC777 summarizing
+    send(address,uint256,bytes) => DISPATCHER(true);
 
     /**********************
      *    IERC777Sender   *
@@ -87,10 +108,6 @@ function getFeeVaultContract() returns address {
     return feeVault;
 }
 
-function getStakePoolContract() returns address {
-    return stakePoolContract;
-}
-
 
 /**************************************************
  *                 VALID STATES                   *
@@ -115,6 +132,7 @@ invariant exchangeRate()
 //invariant exchangeRate()
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
+//TBD
 invariant totalTokenSupply()
     getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
     //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
@@ -286,6 +304,20 @@ rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
     deposit@withrevert(e);
     assert e.msg.value < minDeposit => lastReverted;
+}
+
+//User should make withdrawal of at least minTokenWithdrawal tokens.
+rule WithdrawalAtLeastMinToken(env e){
+    uint256 minWithdrawl = getMinTokenWithdrawal();
+    address stkBnbAddr;
+    address generalOperator;
+    address from;
+    address to;
+    uint256 amount;
+    bytes   data;
+
+    tokensReceived@withrevert(e, generalOperator, from, to, amount, data,data);
+    assert amount < minWithdrawl => lastReverted;
 }
 
 // rule sanity(method f){
