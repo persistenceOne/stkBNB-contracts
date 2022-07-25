@@ -131,6 +131,7 @@ invariant claimReqIndexOrder(env e, uint256 i, uint256 j)
 //invariant exchangeRate()
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
+//TBD
 invariant totalTokenSupply()
     getPoolTokenSupply() >= stkBNB.balanceOf(stkBNB) //stkBNB == getStkBnbAddress() ?
     //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
@@ -312,18 +313,15 @@ rule depositAtLeastMinBNB(env e){
 //User should make withdrawal of at least minTokenWithdrawal tokens.
 rule WithdrawalAtLeastMinToken(env e){
     uint256 minWithdrawl = getMinTokenWithdrawal();
-    address stkBnbAddr = getStkBnbAddress();
+    address stkBnbAddr;
     address generalOperator;
     address from;
     address to;
     uint256 amount;
-    bytes data;
-    require e.msg.sender == stkBnbAddr;
-    require from != stakePoolContract;
-    require to != stakePoolContract;
+    bytes   data;
+
     tokensReceived@withrevert(e, generalOperator, from, to, amount, data,data);
     assert amount < minWithdrawl => lastReverted;
-
 }
 
 rule sanity(method f){
