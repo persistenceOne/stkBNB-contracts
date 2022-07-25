@@ -54,7 +54,8 @@ methods {
     getInterfaceImplementer(
             address account,
             bytes32 _interfaceHash
-    ) => ghostGetInterfaceImplementer()
+    //) => ghostGetInterfaceImplementer()
+    ) => NONDET
 
     /**********************
      *    IERC777Sender   *
