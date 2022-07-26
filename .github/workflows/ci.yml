@@ -190,8 +190,8 @@ jobs:
           fx artifacts/contracts/StakePool.sol/StakePool.json .bytecode > temp/StakePool.bin
           fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenHub.json .abi > temp/ITokenHub.json
           fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenHub.json .bytecode > temp/ITokenHub.bin
-          fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenManager.json .abi > temp/ITokenManager.json
-          fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenManager.json .bytecode > temp/ITokenManager.bin
+          fx artifacts/contracts/interfaces/ITokenManager.sol/ITokenManager.json .abi > temp/ITokenManager.json
+          fx artifacts/contracts/interfaces/ITokenManager.sol/ITokenManager.json .bytecode > temp/ITokenManager.bin
 
       - name: Generate Go ABIs
         run: |
