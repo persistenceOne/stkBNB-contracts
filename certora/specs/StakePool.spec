@@ -207,7 +207,7 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-    assert false;
+    // assert false;
 }
 
 // rule cantRequestZeroOrMoreThanDeposited(address user,uint256 amount) {
