@@ -375,10 +375,10 @@ export class Contracts {
         console.log('BOT_ROLE: ', await RoleInfo.get(stakePool, await stakePool.BOT_ROLE()));
         console.log('Paused: ', await stakePool.paused());
         console.log('AddressStore: ', await stakePool.addressStore());
-        console.log('bnbToUnbond: ', await stakePool.bnbToUnbond());
-        console.log('bnbUnbonding: ', await stakePool.bnbUnbonding());
-        console.log('claimReserve: ', claimReserve);
-        console.log('Balance - claimReserve: ', balance.sub(claimReserve));
+        console.log('bnbToUnbond: ', formatEther(await stakePool.bnbToUnbond()));
+        console.log('bnbUnbonding: ', formatEther(await stakePool.bnbUnbonding()));
+        console.log('claimReserve: ', formatEther(claimReserve));
+        console.log('Balance - claimReserve: ', formatEther(balance.sub(claimReserve)));
         console.log('Exchange Rate: ', await stakePool.exchangeRate());
         console.log('Config: ', await stakePool.config());
         console.log(`claims[${deployerAddr}]: `, await Claims.get(stakePool, deployerAddr)); // claims for the deployer

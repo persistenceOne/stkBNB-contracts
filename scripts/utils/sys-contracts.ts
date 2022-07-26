@@ -32,7 +32,7 @@ export class SysContracts implements ISysContracts {
     public static async new(): Promise<SysContracts> {
         return new SysContracts({
             tokenHub: await ethers.getContractAt('ITokenHub', ADDRESS.tokenHub),
-            tokenManager: await ethers.getContractAt('TokenManager', ADDRESS.tokenManager),
+            tokenManager: await ethers.getContractAt('ITokenManager', ADDRESS.tokenManager),
         });
     }
 

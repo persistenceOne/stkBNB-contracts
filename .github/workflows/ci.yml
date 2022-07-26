@@ -188,6 +188,10 @@ jobs:
           fx artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json .bytecode > temp/StakedBNBToken.bin
           fx artifacts/contracts/StakePool.sol/StakePool.json .abi > temp/StakePool.json
           fx artifacts/contracts/StakePool.sol/StakePool.json .bytecode > temp/StakePool.bin
+          fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenHub.json .abi > temp/ITokenHub.json
+          fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenHub.json .bytecode > temp/ITokenHub.bin
+          fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenManager.json .abi > temp/ITokenManager.json
+          fx artifacts/contracts/interfaces/ITokenHub.sol/ITokenManager.json .bytecode > temp/ITokenManager.bin
 
       - name: Generate Go ABIs
         run: |
@@ -195,6 +199,8 @@ jobs:
           mkdir -p abis/go
           ./tools/abigen --abi=temp/StakedBNBToken.json --bin=temp/StakedBNBToken.bin --pkg=contracts --type=StakedBNBToken --out=abis/go/staked_bnb_token.go
           ./tools/abigen --abi=temp/StakePool.json --bin=temp/StakePool.bin --pkg=contracts --type=StakePool --out=abis/go/stake_pool.go
+          ./tools/abigen --abi=temp/ITokenHub.json --bin=temp/ITokenHub.bin --pkg=contracts --type=TokenHub --out=abis/go/token_hub.go
+          ./tools/abigen --abi=temp/ITokenManager.json --bin=temp/ITokenManager.bin --pkg=contracts --type=TokenManager --out=abis/go/token_manager.go
           rm -rf temp
 
       - name: Commit
