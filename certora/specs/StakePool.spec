@@ -333,31 +333,35 @@ rule cannotWithdrawMoreThanDeposited(){
     //assert false;
 }
 
+/*
 rule testDeposit(){
     env e;
     deposit(e);
     assert false;
 }
+*/
 
 //User should deposit at least minBNBDeposit tokens.
 rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
     deposit@withrevert(e);
     assert e.msg.value < minDeposit => lastReverted;
+    // assert false;
 }
 
 //User should make withdrawal of at least minTokenWithdrawal tokens.
-rule WithdrawalAtLeastMinToken(env e){
-    uint256 minWithdrawl = getMinTokenWithdrawal();
-    address stkBnbAddr;
+rule withdrawalAtLeastMinToken(env e){
+    uint256 minWithdrawal = getMinTokenWithdrawal();
+    //address stkBnbAddr;
     address generalOperator;
     address from;
     address to;
     uint256 amount;
     bytes   data;
 
-    tokensReceived@withrevert(e, generalOperator, from, to, amount, data,data);
-    assert amount < minWithdrawl => lastReverted;
+    tokensReceived@withrevert(e, generalOperator, from, to, amount, data, data);
+    assert amount < minWithdrawal => lastReverted;
+    // assert false;
 }
 
  rule sanity(method f){
