@@ -291,9 +291,11 @@ rule claimAllvsClaim(){
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
     uint256 index;
+    uint256 claimRequestTimestamp = getClaimRequestTimestamp(e, e.msg.sender, index);
     claim@withrevert(e, index);
     bool reverted = lastReverted;
-    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod() => reverted;
+    assert e.block.timestamp < claimRequestTimestamp + getCooldownPeriod() => reverted;
+    // assert false;
 }
 
 rule cannotWithdrawMoreThanDeposited(){
