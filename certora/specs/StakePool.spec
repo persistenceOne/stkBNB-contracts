@@ -177,11 +177,14 @@ rule userDoesNotChangeOtherUserBalance(method f){
     env e;
     address user;
     calldataarg args;
-  
+    // explain therefore function tokensReceived is not checked 
+    require e.msg.sender != stkBNB;
+    // explain - users increase feeVault balance 
+    require user != feeVault;
     uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
     f(e,args);
     uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
-    assert (user != e.msg.sender => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
+    assert ((user != e.msg.sender) => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
 }
 
 
