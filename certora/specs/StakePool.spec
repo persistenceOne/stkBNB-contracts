@@ -177,9 +177,10 @@ rule userDoesNotChangeOtherUserBalance(method f){
     env e;
     address user;
     calldataarg args;
-    // explain therefore function tokensReceived is not checked 
+    // stkBNB contract is allowed to mint and burn, so we do not include it
+    // therefore function tokensReceived is not checked 
     require e.msg.sender != stkBNB;
-    // explain - users increase feeVault balance 
+    // feeVault contract collects the fees, so we do not include it in the test
     require user != feeVault;
     uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
     f(e,args);
@@ -229,7 +230,7 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     uint256 weiAfter = getTotalWei();
     uint256 stkAfter = getPoolTokenSupply();
     assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
-    assert (false);
+    // assert (false);
 }
 
 // if there is a claim that can NOT be claimed => after claimAll(), there are claims left
@@ -304,13 +305,13 @@ rule cannotWithdrawMoreThanDeposited(){
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
     uint256 totalWeiBefore = getTotalWei();
 
-    // make sure user had no stkBNB at the begining
+    // make sure user had no stkBNB at the beginning
     require userStkBNBBalanceBefore == 0;
     
     // user deposits BNB and gets stkBNB
     deposit(e0);
 
-    // user immediatedly sends all his stkBNB for withdraw
+    // user immediately sends all his stkBNB for withdraw
     //stkBNB.send(e1, currentContract, stkBNB.balanceOf(user), myData);
     stkBNB.send(e1, stakePoolContract, stkBNB.balanceOf(user), myData);
 
