@@ -294,21 +294,34 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 
 rule cannotWithdrawMoreThanDeposited(){
     env e; env e0; env e1; env e2;
+    bytes myData;
     address user;
     require user == e.msg.sender && user == e0.msg.sender && user == e1.msg.sender && user == e2.msg.sender;
     uint256 userBNBBalanceBefore = bnbBalanceOf(e, user);
-    require stkBNB.balanceOf(user) == 0;
-    
-    deposit(e0);  // user deposits BNB and gets stkBNB
-    bytes myData;
-    stkBNB.send(e1, currentContract , stkBNB.balanceOf(user), myData);  //user immediatedly sends all his stkBNB for withdraw
+    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+    uint256 totalWeiBefore = getTotalWei();
 
-    // user has to wait at least two weeks
-    require e2.block.timestamp > e.block.timestamp + getCooldownPeriod();
-    require canBeClaimed(e, 0);
+    // make sure user had no stkBNB at the begining
+    require userStkBNBBalanceBefore == 0;
+    
+    // user deposits BNB and gets stkBNB
+    deposit(e0);
+
+    // user immediatedly sends all his stkBNB for withdraw
+    //stkBNB.send(e1, currentContract, stkBNB.balanceOf(user), myData);
+    stkBNB.send(e1, stakePoolContract, stkBNB.balanceOf(user), myData);
+
+    // user has to wait the CoolDownPeriod
+    require e2.block.timestamp > e1.block.timestamp + getCooldownPeriod();
+    
+    // user claims back his BNB
+    require canBeClaimed(e2, 0);
     claim(e2,0);
     //claimAll(e2);  //check if claim(e2,0) returns same value
+    
     uint256 userBNBBalanceAfter = bnbBalanceOf(e2, user);
+    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
+    uint256 totalWeiAfter = getTotalWei();
 
     assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
     //assert false;
