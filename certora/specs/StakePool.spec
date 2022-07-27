@@ -196,9 +196,10 @@ rule userDoesNotChangeOtherUserBalance(method f){
     env e;
     address user;
     calldataarg args;
-    // explain therefore function tokensReceived is not checked 
+    // stkBNB contract is allowed to mint and burn, so we do not include it
+    // therefore function tokensReceived is not checked 
     require e.msg.sender != stkBNB;
-    // explain - users increase feeVault balance 
+    // feeVault contract collects the fees, so we do not include it in the test
     require user != feeVault;
     uint256 userStkBNBBalanceUserBefore = stkBNB.balanceOf(user);
     f(e,args);
@@ -229,7 +230,7 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-    assert false;
+    // assert false;
 }
 
 // rule cantRequestZeroOrMoreThanDeposited(address user,uint256 amount) {
@@ -248,7 +249,7 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     uint256 weiAfter = getTotalWei();
     uint256 stkAfter = getPoolTokenSupply();
     assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
-    assert (false);
+    // assert (false);
 }
 
 // if there is a claim that can NOT be claimed => after claimAll(), there are claims left
@@ -309,9 +310,11 @@ rule claimAllvsClaim(){
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
     uint256 index;
+    uint256 claimRequestTimestamp = getClaimRequestTimestamp(e, e.msg.sender, index);
     claim@withrevert(e, index);
     bool reverted = lastReverted;
-    assert e.block.timestamp < getClaimRequestTimestamp(e,e.msg.sender, index) + getCooldownPeriod() => reverted;
+    assert e.block.timestamp < claimRequestTimestamp + getCooldownPeriod() => reverted;
+    // assert false;
 }
 
 rule cannotWithdrawMoreThanDeposited(){
@@ -323,13 +326,13 @@ rule cannotWithdrawMoreThanDeposited(){
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
     uint256 totalWeiBefore = getTotalWei();
 
-    // make sure user had no stkBNB at the begining
+    // make sure user had no stkBNB at the beginning
     require userStkBNBBalanceBefore == 0;
     
     // user deposits BNB and gets stkBNB
     deposit(e0);
 
-    // user immediatedly sends all his stkBNB for withdraw
+    // user immediately sends all his stkBNB for withdraw
     //stkBNB.send(e1, currentContract, stkBNB.balanceOf(user), myData);
     stkBNB.send(e1, stakePoolContract, stkBNB.balanceOf(user), myData);
 
@@ -349,31 +352,35 @@ rule cannotWithdrawMoreThanDeposited(){
     //assert false;
 }
 
+/*
 rule testDeposit(){
     env e;
     deposit(e);
     assert false;
 }
+*/
 
 //User should deposit at least minBNBDeposit tokens.
 rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
     deposit@withrevert(e);
     assert e.msg.value < minDeposit => lastReverted;
+    // assert false;
 }
 
 //User should make withdrawal of at least minTokenWithdrawal tokens.
-rule WithdrawalAtLeastMinToken(env e){
-    uint256 minWithdrawl = getMinTokenWithdrawal();
-    address stkBnbAddr;
+rule withdrawalAtLeastMinToken(env e){
+    uint256 minWithdrawal = getMinTokenWithdrawal();
+    //address stkBnbAddr;
     address generalOperator;
     address from;
     address to;
     uint256 amount;
     bytes   data;
 
-    tokensReceived@withrevert(e, generalOperator, from, to, amount, data,data);
-    assert amount < minWithdrawl => lastReverted;
+    tokensReceived@withrevert(e, generalOperator, from, to, amount, data, data);
+    assert amount < minWithdrawal => lastReverted;
+    // assert false;
 }
 
  rule sanity(method f){
