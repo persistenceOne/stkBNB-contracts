@@ -15,6 +15,8 @@ methods {
     getStakePoolAddress() returns (address) envfree
     getMinBNBDeposit() returns (uint256) envfree
     getMinTokenWithdrawal() returns (uint256) envfree
+    bnbBalanceOf(address) returns (uint256) envfree
+    getFee() returns ( uint256, uint256, uint256) envfree
 
     // Getters:
     bnbToUnbond() returns (int256) envfree
@@ -105,6 +107,7 @@ ghost ghostGetInterfaceImplementer() returns address {
 }
 */
 
+
 ghost ghostGetStakePool() returns address {
     axiom ghostGetStakePool() == currentContract;
 }
@@ -188,7 +191,7 @@ invariant zeroWeiZeroClaims(env e, address user)
 rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
     env e;
     require user == e.msg.sender && user != currentContract;
-
+    
     int256 bnbToUnbondBefore = bnbToUnbond();
     uint256 bnbUnbondingBefore = bnbUnbonding();
 
@@ -333,7 +336,7 @@ rule cannotWithdrawMoreThanDeposited(){
     bytes myData;
     address user;
     require user == e.msg.sender && user == e0.msg.sender && user == e1.msg.sender && user == e2.msg.sender;
-    uint256 userBNBBalanceBefore = bnbBalanceOf(e, user);
+    uint256 userBNBBalanceBefore = bnbBalanceOf(user);
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
     uint256 totalWeiBefore = getTotalWei();
 
@@ -355,12 +358,54 @@ rule cannotWithdrawMoreThanDeposited(){
     claim(e2,0);
     //claimAll(e2);  //check if claim(e2,0) returns same value
     
-    uint256 userBNBBalanceAfter = bnbBalanceOf(e2, user);
+    uint256 userBNBBalanceAfter = bnbBalanceOf(user);
     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
     uint256 totalWeiAfter = getTotalWei();
 
     assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
     //assert false;
+}
+
+/** verifying that one can not gain or lose **/
+/** checking this on a 1 exchange rate and no fee- can be adjusted to more cases **/
+totalAssetOfUserPreserved(method f, address user) {
+    uint256 rewardFee;
+    uint256 depositFee;
+    uint256 withdrawFee;
+    rewardFee, depositFee, withdrawFee = getFee();
+    // assumptions 
+    require rewardFee == 0 && depositFee == 0 && withdrawFee == 0;
+    require getTotalWei() == getPoolTokenSupply();
+    // values before
+    uint256 userBNBBalanceBefore = bnbBalanceOf(user);
+    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+
+    mathint totalBefore = userBNBBalanceBefore + userStkBNBBalanceBefore; 
+
+    /* for tokensReceived - first call send of stkBNB and then since the send function will not call tokensReceived (nondet)- we can call it */
+  /* if (f.selector ==  tokensReceived(address, address, address, uint256, bytes, bytes).selector) {
+        env eSend;
+        require (eSend == user);
+        uint256 amount;
+        bytes data; 
+        //stkBNB.send(eSend, currentContract, amount, data);
+        //we have a nondet summarization 
+        env eRec;
+        //tokensReceived(eRec, _, user, user, amount, _, _ );
+    }
+    else {   
+    */    env e;
+        calldataarg args;
+        f(e,args);
+    //}
+    
+    // values before
+    uint256 userBNBBalanceAfter = bnbBalanceOf(user);
+    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
+
+    mathint totalAfter = userBNBBalanceAfter + userStkBNBBalanceAfter ;
+
+    assert totalBefore == totalAfter;
 }
 
 /*
