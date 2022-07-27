@@ -127,6 +127,12 @@ function getFeeVaultContract() returns address {
  **************************************************/
 invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 index)
     getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    {
+        preserved with (env e){
+            require e.msg.sender != stkBNB;
+        }
+    }
 
 //invariant claimVsClaimRequest(env e, address user)
  //   getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
@@ -136,6 +142,11 @@ invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 
 invariant bnbUnbounding()
     bnbToUnbond() <= to_int256(bnbUnbonding())
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    {
+        preserved with (env e){
+            require e.msg.sender != stkBNB;
+        }
+    }
 
 invariant exchangeRate()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
