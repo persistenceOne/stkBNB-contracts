@@ -135,16 +135,35 @@ invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 
 
 invariant bnbUnbounding()
     bnbToUnbond() <= to_int256(bnbUnbonding())
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 invariant exchangeRate()
-    getTotalWei() == getPoolTokenSupply()
+    getTotalWei() == 0 =>  getPoolTokenSupply() == 0
 //invariant exchangeRate()
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 //TBD
 invariant totalTokenSupply()
     getPoolTokenSupply() == stkBNB.totalSupply()
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
+invariant zeroWeiZeroSTK(method f, address user)
+    getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    {
+        preserved with (env e){
+            require e.msg.sender != stkBNB;
+        }
+    }
+
+invariant zeroWeiZeroClaims(env e, address user)
+    getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    {
+        preserved with (env e1){
+            require e1.msg.sender != stkBNB;
+        }
+    }
 
 // what can we say about bnbBalanceOf(currentContract) //stkBNB == getStkBnbAddress() ?
     //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
