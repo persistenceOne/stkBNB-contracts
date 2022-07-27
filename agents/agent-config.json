@@ -5,7 +5,7 @@
   "contracts": {
     "StakePool": {
       "address": "0xEB6048eE3F39eb701712073936CA76Be774b6e0f",
-      "abiFile": "StakePool.json",
+      "abiFile": "../../abis/ui/StakePool.json",
 
       "events": {
         "Paused": {
@@ -57,7 +57,7 @@
 
     "AddressStore": {
       "address": "0x29aa6Dfe5149B93eCe28f5538518C224CDDC5119",
-      "abiFile": "AddressStore.json",
+      "abiFile": "../../abis/ui/AddressStore.json",
       "events": {
         "SetAddress": {
           "type": 1,
@@ -71,7 +71,7 @@
     },
     "FeeVault": {
       "address": "0xf3590336dc49461cdCC3821Da2Bce904566C6523",
-      "abiFile": "FeeVault.json",
+      "abiFile": "../../abis/ui/FeeVault.json",
       "events": {
         "Withdraw": {
           "type": 1,
@@ -89,7 +89,7 @@
     },
     "StakedBNBToken": {
       "address": "0xCA115d3723A0d36f4984d7CebE69a85ca235CfCA",
-      "abiFile": "StakedBNBToken.json",
+      "abiFile": "../../abis/ui/StakedBNBToken.json",
       "events": {
 
         "OwnershipTransferred": {
@@ -121,7 +121,7 @@
     },
     "UndelegationHolder": {
       "address": "0xbB0Af14Aa12A491334148F752D24c5AE9B13c533",
-      "abiFile": "UndelegationHolder.json",
+      "abiFile": "../../abis/ui/UndelegationHolder.json",
       "events": {
 
         "Received": {
