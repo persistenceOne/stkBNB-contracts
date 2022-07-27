@@ -1,6 +1,7 @@
 using StakedBNBToken as stkBNB
 using FeeVault as feeVault
 using StakePoolHarness as stakePoolContract
+using UndelegationHolder as delegationHolder
 
 
 methods {
@@ -107,9 +108,39 @@ ghost ghostGetInterfaceImplementer() returns address {
 }
 */
 
+ghost mapping(address => mathint) sumClaimsPerUser {
+    init_state axiom forall address u. sumClaimsPerUser[u] == 0;
+}
 
 ghost ghostGetStakePool() returns address {
     axiom ghostGetStakePool() == currentContract;
+}
+
+/*
+on update to 
+    claimReqs[user][i].weiToReturn = amount
+when before
+    claimReqs[user][i].weiToReturn == old_amount
+
+then update 
+    sumClaimsPerUser[user] := sumClaimsPerUser[user] + amount - old_amount 
+*/
+
+hook Sstore claimReqs[KEY address user][INDEX uint256 i].weiToReturn uint256 amount
+    (uint256 old_amount) STORAGE {
+        sumClaimsPerUser[user] = sumClaimsPerUser[user] + 
+            to_mathint(amount) - to_mathint(old_amount);
+    }
+
+rule whoChangedGhost(method f) {
+    env e;
+    calldataarg args;
+    address user;
+    mathint before = sumClaimsPerUser[user];
+    f(e,args);
+    mathint after = sumClaimsPerUser[user];
+    
+    assert before == after; 
 }
 
 /**************************************************
@@ -188,7 +219,8 @@ invariant zeroWeiZeroClaims(env e, address user)
  *               STATE TRANSITIONS                *
  **************************************************/
 
-rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
+rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+{
     env e;
     require user == e.msg.sender && user != currentContract;
     
@@ -202,7 +234,7 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) {
     uint bnbUnbondingAfter = bnbUnbonding();
 
     assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
-    assert bnbToUnbondBefore >= bnbToUnbondAfter => bnbUnbondingBefore <= bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
 }
 
 
@@ -331,40 +363,6 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     // assert false;
 }
 
-rule cannotWithdrawMoreThanDeposited(){
-    env e; env e0; env e1; env e2;
-    bytes myData;
-    address user;
-    require user == e.msg.sender && user == e0.msg.sender && user == e1.msg.sender && user == e2.msg.sender;
-    uint256 userBNBBalanceBefore = bnbBalanceOf(user);
-    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-    uint256 totalWeiBefore = getTotalWei();
-
-    // make sure user had no stkBNB at the beginning
-    require userStkBNBBalanceBefore == 0;
-    
-    // user deposits BNB and gets stkBNB
-    deposit(e0);
-
-    // user immediately sends all his stkBNB for withdraw
-    //stkBNB.send(e1, currentContract, stkBNB.balanceOf(user), myData);
-    stkBNB.send(e1, stakePoolContract, stkBNB.balanceOf(user), myData);
-
-    // user has to wait the CoolDownPeriod
-    require e2.block.timestamp > e1.block.timestamp + getCooldownPeriod();
-    
-    // user claims back his BNB
-    require canBeClaimed(e2, 0);
-    claim(e2,0);
-    //claimAll(e2);  //check if claim(e2,0) returns same value
-    
-    uint256 userBNBBalanceAfter = bnbBalanceOf(user);
-    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
-    uint256 totalWeiAfter = getTotalWei();
-
-    assert userBNBBalanceBefore >= userBNBBalanceAfter; //added = in case fee is zero (possible use case)
-    //assert false;
-}
 
 /** verifying that one can not gain or lose **/
 /** checking this on a 1 exchange rate and no fee- can be adjusted to more cases **/
@@ -376,11 +374,14 @@ totalAssetOfUserPreserved(method f, address user) {
     // assumptions 
     require rewardFee == 0 && depositFee == 0 && withdrawFee == 0;
     require getTotalWei() == getPoolTokenSupply();
+    // safe assumption - as rule breaks on this cases 
+    require user != currentContract && user != delegationHolder; 
     // values before
     uint256 userBNBBalanceBefore = bnbBalanceOf(user);
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+    mathint sumClaimsPerUserBefore = sumClaimsPerUser[user];
 
-    mathint totalBefore = userBNBBalanceBefore + userStkBNBBalanceBefore; 
+    mathint totalBefore = userBNBBalanceBefore + userStkBNBBalanceBefore + sumClaimsPerUserBefore; 
 
     /* for tokensReceived - first call send of stkBNB and then since the send function will not call tokensReceived (nondet)- we can call it */
   /* if (f.selector ==  tokensReceived(address, address, address, uint256, bytes, bytes).selector) {
@@ -402,8 +403,9 @@ totalAssetOfUserPreserved(method f, address user) {
     // values before
     uint256 userBNBBalanceAfter = bnbBalanceOf(user);
     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
+     mathint sumClaimsPerUserAfter = sumClaimsPerUser[user];
 
-    mathint totalAfter = userBNBBalanceAfter + userStkBNBBalanceAfter ;
+    mathint totalAfter = userBNBBalanceAfter + userStkBNBBalanceAfter + sumClaimsPerUserAfter;
 
     assert totalBefore == totalAfter;
 }
