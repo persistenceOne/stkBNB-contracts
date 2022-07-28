@@ -266,7 +266,8 @@ rule integrityOfDeposit(address user, uint256 amount){
 }
 
 
-rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
+// rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
+rule correlationPoolTokenSupplyVsTotalWei (method f){
     env e;
     uint256 weiBefore = getTotalWei();
     uint256 stkBefore = getPoolTokenSupply();
@@ -386,7 +387,7 @@ rule withdrawalAtLeastMinToken(env e){
     assert amount < minWithdrawal => lastReverted;
 }
 
- rule initOnlyOnce(method f){
+ rule initAllowedOnlyOnce(method f){
     env e; env e1;
     calldataarg args; calldataarg args1;
     initialize(e,args);
