@@ -1,10 +1,8 @@
 {
-  "name": "forta-agent-starter",
+  "name": "forta-pstake-stkBNB-large-value-events",
   "version": "0.0.1",
-  "description": "Forta Agent Javascript starter project",
-  "chainIds": [
-    1
-  ],
+  "description": "Forta bot that alerts on deposit/withdrawals/Mints/Burns of stkBNB token based on 3 thresholds 1Million/500,000/100,000",
+  "chainIds":[97],
   "scripts": {
     "start": "npm run start:dev",
     "start:dev": "nodemon --watch src --watch forta.config.json -e js,json --exec \"forta-agent run\"",
