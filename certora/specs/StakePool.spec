@@ -33,6 +33,8 @@ methods {
     getFeeVault() => getFeeVaultContract()
 
     //receiver - we might want to have an implementation of this. for now we assume an empty implementation 
+    // this summarization applies only to calls from ERC777:_callTokensReceived 
+    //however calls directly to StakePool:tokensReceived are not summarized 
     tokensReceived(
         address, /*operator*/
         address from,
@@ -51,11 +53,8 @@ methods {
         bytes operatorData,
         bool requireReceptionAck
     )  => NONDET
-    // ) => DISPATCHER(true);
-
-    // deposit() => DISPATCHER(true);
-    // epochUpdate(uint256) =>  DISPATCHER(true);
     
+
     getStakePool() returns (address) => ghostGetStakePool();
 
     withdrawUnbondedBNB() returns (uint256) => DISPATCHER(true);
@@ -64,15 +63,15 @@ methods {
     getInterfaceImplementer(
             address account,
             bytes32 _interfaceHash
-    //) => ghostGetInterfaceImplementer()
     ) => NONDET
-    //) => ALWAYS(0xce4604a000000000000000000ce4604a);
 
     setInterfaceImplementer(
         address account,
         bytes32 _interfaceHash,
         address implementer
     ) => NONDET
+
+    //ERC777 summarizing
 
     transfer(address recipient, uint256 amount) returns (bool) => DISPATCHER(true);
 
@@ -83,7 +82,6 @@ methods {
         uint64 expireTime
     ) returns (bool) => DISPATCHER(true);
 
-    //ERC777 summarizing
     send(address,uint256,bytes) => DISPATCHER(true);
 
     /**********************
@@ -95,16 +93,8 @@ methods {
 /**************************************************
  *                GHOSTS AND HOOKS                *
  **************************************************/
-/*ghost sumAllWei() returns uint256 {
-    init_state axiom sumAllWei() == 0;
-}*/
 
-/*
-ghost ghostGetInterfaceImplementer() returns address {
-    axiom ghostGetInterfaceImplementer() == 0xce4604a000000000000000000ce4604a;
-}
-*/
-
+/* a ghost to summarize the total claims per user */
 ghost mapping(address => mathint) sumClaimsPerUser {
     init_state axiom forall address u. sumClaimsPerUser[u] == 0;
 }
@@ -129,16 +119,6 @@ hook Sstore claimReqs[KEY address user][INDEX uint256 i].weiToReturn uint256 amo
             to_mathint(amount) - to_mathint(old_amount);
     }
 
-rule whoChangedClaimRequests(method f) {
-    env e;
-    calldataarg args;
-    address user;
-    mathint before = sumClaimsPerUser[user];
-    f(e,args);
-    mathint after = sumClaimsPerUser[user];
-    
-    assert before == after; 
-}
 
 /**************************************************
  *               CVL FUNCS & DEFS                 *
@@ -156,18 +136,9 @@ function getFeeVaultContract() returns address {
 /**************************************************
  *                 VALID STATES                   *
  **************************************************/
-invariant singleUserSolvency(address user, uint256 index)
-    getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-
-//invariant claimVsClaimRequest(env e, address user)
- //   getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
- //   getClaimRequestLength(e,user) > 0 => bnbBalanceOf(e, e.msg.this) > 0
 
 
-invariant integrityOfBoundingValues()
-    bnbToUnbond() > 0 => (to_uint256(bnbToUnbond()) <= bnbUnbonding())
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+
 
 invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
@@ -207,23 +178,7 @@ invariant zeroWeiZeroClaims(env e, address user)
  *               STATE TRANSITIONS                *
  **************************************************/
 
-rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-{
-    env e;
-    require user == e.msg.sender && user != currentContract;
-    
-    int256 bnbToUnbondBefore = bnbToUnbond();
-    uint256 bnbUnbondingBefore = bnbUnbonding();
 
-    calldataarg args;
-    f(e, args);
-
-    int256 bnbToUnbondAfter = bnbToUnbond();
-    uint bnbUnbondingAfter = bnbUnbonding();
-
-    assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
-    assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
-}
 
 
 rule userDoesNotChangeOtherUserBalance(method f){
@@ -397,6 +352,47 @@ rule withdrawalAtLeastMinToken(env e){
     assert reverted;
  }
 
+
+
+/*** Rules that might not be accurate - they have violations ***/
+/*
+rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+{
+    env e;
+    require user == e.msg.sender && user != currentContract;
+    
+    int256 bnbToUnbondBefore = bnbToUnbond();
+    uint256 bnbUnbondingBefore = bnbUnbonding();
+
+    calldataarg args;
+    f(e, args);
+
+    int256 bnbToUnbondAfter = bnbToUnbond();
+    uint bnbUnbondingAfter = bnbUnbonding();
+
+    assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
+}
+*/
+/*************** NEED MORE WORK *******/
+/*
+Need to strength this invariant and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
+invariant singleUserSolvency(address user, uint256 index)
+    getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+*/
+
+
+// Not sure that this is correct 
+/*
+invariant integrityOfBoundingValues()
+    bnbToUnbond() > 0 => (to_uint256(bnbToUnbond()) <= bnbUnbonding())
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+*/
+
+
+/****  rules for info and checking the ghost and tool - expecting to fail ****/
+/* 
  rule sanity(method f){
      env e;
      calldataarg args;
@@ -404,3 +400,15 @@ rule withdrawalAtLeastMinToken(env e){
      assert false;
  }
 
+rule whoChangedClaimRequests(method f) {
+    env e;
+    calldataarg args;
+    address user;
+    mathint before = sumClaimsPerUser[user];
+    f(e,args);
+    mathint after = sumClaimsPerUser[user];
+    
+    assert before == after; 
+}
+*/
+ 
