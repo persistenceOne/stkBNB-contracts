@@ -142,12 +142,11 @@ function getFeeVaultContract() returns address {
 
 invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
-   {  
-/*    preserved  with (env e){
-        epochUpdate(e, uint256 bnbRewards) {
+    {
+        preserved epochUpdate(uint256 bnbRewards) with (env e){
             require getTotalWei() > 0;
-        }*/
-   }
+        } 
+    }
 
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
