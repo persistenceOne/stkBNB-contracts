@@ -54,7 +54,7 @@ methods {
     // ) => DISPATCHER(true);
 
     // deposit() => DISPATCHER(true);
-    // epochUpdate(uint256) =>  DISPATCHER(true);
+    // epochUpdate(uint256 a) =>  DISPATCHER(true);
     
     getStakePool() returns (address) => ghostGetStakePool();
 
@@ -171,12 +171,11 @@ invariant integrityOfBoundingValues()
 
 invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
-   {  
-/*    preserved  with (env e){
-        epochUpdate(e, uint256 bnbRewards) {
+    {
+        preserved epochUpdate(uint256 bnbRewards) with (env e){
             require getTotalWei() > 0;
-        }*/
-   }
+        } 
+    }
 
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
