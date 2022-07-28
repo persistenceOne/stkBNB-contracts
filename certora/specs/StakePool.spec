@@ -154,13 +154,6 @@ invariant totalTokenSupply()
     getPoolTokenSupply() == stkBNB.totalSupply()
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
-invariant zeroWeiZeroSTK(method f, address user)
-    getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-
-invariant zeroWeiZeroClaims(env e, address user)
-    getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 
 /**************************************************
@@ -342,6 +335,7 @@ rule withdrawalAtLeastMinToken(env e){
  }
 
 
+/*************** NEED MORE WORK *******/
 
 /*** Rules that might not be accurate - they have violations ***/
 /*
@@ -363,14 +357,26 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) filtered {f-
     assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
 }
 */
-/*************** NEED MORE WORK *******/
+
 /*
-Need to strength this invariant and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
+Need to strength these invariants and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
+
+Also we totalWei is zero probably many other variables are also empty\zero - can be improved
+
+
+
 invariant singleUserSolvency(address user, uint256 index)
     getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-*/
 
+invariant zeroWeiZeroSTK(method f, address user)
+    getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+
+invariant zeroWeiZeroClaims(env e, address user)
+    getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+*/
 
 // Not sure that this is correct 
 /*
