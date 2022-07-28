@@ -267,7 +267,8 @@ rule integrityOfDeposit(address user, uint256 amount){
 }
 
 
-rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
+// rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
+rule correlationPoolTokenSupplyVsTotalWei (method f){
     env e;
     uint256 weiBefore = getTotalWei();
     uint256 stkBefore = getPoolTokenSupply();
