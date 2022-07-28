@@ -56,6 +56,10 @@ contract StakePoolHarness is StakePool {
         return config.minTokenWithdrawal;
     }
 
+    function getFee() public view returns ( uint256, uint256, uint256) {
+        return ( config.fee.reward, config.fee.deposit, config.fee.withdraw) ;
+    }
+
 
     function bnbBalanceOf(address user) public view returns (uint256) {
         return user.balance;
