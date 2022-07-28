@@ -384,21 +384,21 @@ totalAssetOfUserPreserved(method f, address user) {
     mathint totalBefore = userBNBBalanceBefore + userStkBNBBalanceBefore + sumClaimsPerUserBefore; 
 
     /* for tokensReceived - first call send of stkBNB and then since the send function will not call tokensReceived (nondet)- we can call it */
-  /* if (f.selector ==  tokensReceived(address, address, address, uint256, bytes, bytes).selector) {
+   if (f.selector ==  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector) {
         env eSend;
-        require (eSend == user);
         uint256 amount;
         bytes data; 
-        //stkBNB.send(eSend, currentContract, amount, data);
+        //require (eSend == user); // env vs address - TBD
+        stkBNB.send(eSend, currentContract, amount, data);
         //we have a nondet summarization 
         env eRec;
-        //tokensReceived(eRec, _, user, user, amount, _, _ );
+        tokensReceived(eRec, _, user, user, amount, _, _ );
     }
     else {   
-    */    env e;
+        env e;
         calldataarg args;
         f(e,args);
-    //}
+    }
     
     // values before
     uint256 userBNBBalanceAfter = bnbBalanceOf(user);
