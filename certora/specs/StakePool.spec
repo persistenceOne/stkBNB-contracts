@@ -5,9 +5,6 @@ using UndelegationHolder as delegationHolder
 
 
 methods {
-    //deposit()
-    unpause()
-
     // Harness methods:
     getWeiToReturn(address user, uint256 index) returns (uint256) envfree
     getPoolTokenSupply() returns (uint256) envfree
@@ -132,7 +129,7 @@ hook Sstore claimReqs[KEY address user][INDEX uint256 i].weiToReturn uint256 amo
             to_mathint(amount) - to_mathint(old_amount);
     }
 
-rule whoChangedGhost(method f) {
+rule whoChangedClaimRequests(method f) {
     env e;
     calldataarg args;
     address user;
@@ -159,35 +156,30 @@ function getFeeVaultContract() returns address {
 /**************************************************
  *                 VALID STATES                   *
  **************************************************/
-invariant weiInClaimReqAtMostBnbToUnboungPlusBnbUnbonding(address user, uint256 index)
+invariant singleUserSolvency(address user, uint256 index)
     getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-    {
-        preserved with (env e){
-            require e.msg.sender != stkBNB;
-        }
-    }
 
 //invariant claimVsClaimRequest(env e, address user)
  //   getClaimRequestLength(e,user) > 0 => getPoolTokenSupply() > 0
  //   getClaimRequestLength(e,user) > 0 => bnbBalanceOf(e, e.msg.this) > 0
 
 
-invariant bnbUnbounding()
-    bnbToUnbond() <= to_int256(bnbUnbonding())
+invariant integrityOfBoundingValues()
+    bnbToUnbond() > 0 => (to_uint256(bnbToUnbond()) <= bnbUnbonding())
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-    {
-        preserved with (env e){
-            require e.msg.sender != stkBNB;
-        }
-    }
 
-invariant exchangeRate()
+invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
-//invariant exchangeRate()
+   {  
+/*    preserved  with (env e){
+        epochUpdate(e, uint256 bnbRewards) {
+            require getTotalWei() > 0;
+        }*/
+   }
+
 
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
-//TBD
 invariant totalTokenSupply()
     getPoolTokenSupply() == stkBNB.totalSupply()
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
@@ -210,10 +202,6 @@ invariant zeroWeiZeroClaims(env e, address user)
         }
     }
 
-// what can we say about bnbBalanceOf(currentContract) //stkBNB == getStkBnbAddress() ?
-    //getPoolTokenSupply() == stkBNB.balanceOf(stkBNB)
-    //tbd - check how balance of works, if it matters from where to pull
-  //stkBNB.balanceOf(getBcStakingWallet())==  getStakePoolAddress().balanceOf(getBcStakingWallet())
 
 /**************************************************
  *               STATE TRANSITIONS                *
@@ -276,16 +264,9 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-    // assert false;
 }
 
-// rule cantRequestZeroOrMoreThanDeposited(address user,uint256 amount) {
-//     env e;
-//     // e.msg.value = amount to deposit
-//     require e.msg.value == amount;
-//     require e.msg.sender == user; 
 
-// }
 rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     env e;
     uint256 weiBefore = getTotalWei();
@@ -295,7 +276,6 @@ rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
     uint256 weiAfter = getTotalWei();
     uint256 stkAfter = getPoolTokenSupply();
     assert (stkBefore < stkAfter) => (weiBefore < weiAfter);
-    // assert (false);
 }
 
 // if there is a claim that can NOT be claimed => after claimAll(), there are claims left
@@ -325,32 +305,7 @@ rule claimOnEmpty(){
     assert (lastReverted);
 }
 
-/* (only true in case all 3 claims are claimable)
-//Claim All will work only if all claims are available. else- it would do revert. 
-//if ClaimAll is designed to claim all available this function is expected to fail.
-rule claimAllvsClaim(){
-    env e;
-    // we want to verify same amount is paid on both scenarios, example; with 3 claimRqst existing:
-    //1st scenario: claimAll()
-    //2nd scnario: claim(0), clain(0), claim(0)
-    storage init  = lastStorage;
-    // uint256 SumReservedBefore = claimReserve();
-    
-    require (getClaimRequestLength(e,e.msg.sender) == 3);
-    claim(e,0);
-    claim(e,0);
-    claim(e,0);
-    uint256 L1 = getClaimRequestLength(e,e.msg.sender);
-    uint256 SumReserved1 = claimReserve();
 
-    claimAll(e) at init;
-    uint256 L2 = getClaimRequestLength(e,e.msg.sender);
-    uint256 SumReserved2 = claimReserve();
-
-    assert (L1 == L2);
-    assert (SumReserved1 == SumReserved2);
-}
-*/
 
 
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
@@ -400,7 +355,7 @@ rule totalAssetOfUserPreserved(method f, address user) {
         f(e,args);
     }
     
-    // values before
+    // values after
     uint256 userBNBBalanceAfter = bnbBalanceOf(user);
     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
      mathint sumClaimsPerUserAfter = sumClaimsPerUser[user];
@@ -410,20 +365,12 @@ rule totalAssetOfUserPreserved(method f, address user) {
     assert totalBefore == totalAfter;
 }
 
-/*
-rule testDeposit(){
-    env e;
-    deposit(e);
-    assert false;
-}
-*/
 
 //User should deposit at least minBNBDeposit tokens.
 rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
     deposit@withrevert(e);
     assert e.msg.value < minDeposit => lastReverted;
-    // assert false;
 }
 
 //User should make withdrawal of at least minTokenWithdrawal tokens.
@@ -438,8 +385,16 @@ rule withdrawalAtLeastMinToken(env e){
 
     tokensReceived@withrevert(e, generalOperator, from, to, amount, data, data);
     assert amount < minWithdrawal => lastReverted;
-    // assert false;
 }
+
+ rule initOnlyOnce(method f){
+    env e; env e1;
+    calldataarg args; calldataarg args1;
+    initialize(e,args);
+    initialize@withrevert(e1,args1);
+    bool reverted = lastReverted;
+    assert reverted;
+ }
 
  rule sanity(method f){
      env e;
