@@ -23,7 +23,7 @@
 # 3) with two parameters:
 #     - the first parameter is the rule name, as in 2)
 #     - the second parameter is an optional message to help distinguish the rule
-#     - the second parameter should be encircled "with quotes"
+#       the second parameter should be encircled "with quotes"
 #    example:
 #
 #    ./certora/scripts/run.sh integrityOfDeposit "user should get stkBNB for any deposit"
@@ -50,14 +50,13 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
 --solc solc8.7 \
---staging \
 --loop_iter 3 \
 --settings -optimisticFallback=true --optimistic_loop \
 $RULE  \
 --msg "pstake -$RULE $MSG"
 
-#        StakePoolHarness:config=Config \
-#        StakePoolHarness:exchangeRate=ExchangeRate \
-#        StakePoolHarness:BasisFee=BasisFee \
+
+# additional parameters that might be helpful:
 #--optimistic_loop
 #--settings -optimisticFallback=true \
+#--staging \
