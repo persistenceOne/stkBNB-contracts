@@ -387,7 +387,7 @@ rule withdrawalAtLeastMinToken(env e){
     assert amount < minWithdrawal => lastReverted;
 }
 
- rule initOnlyOnce(method f){
+ rule initAllowedOnlyOnce(method f){
     env e; env e1;
     calldataarg args; calldataarg args1;
     initialize(e,args);
