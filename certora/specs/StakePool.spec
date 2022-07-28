@@ -157,20 +157,10 @@ invariant totalTokenSupply()
 invariant zeroWeiZeroSTK(method f, address user)
     getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-    {
-        preserved with (env e){
-            require e.msg.sender != stkBNB;
-        }
-    }
 
 invariant zeroWeiZeroClaims(env e, address user)
     getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-    {
-        preserved with (env e1){
-            require e1.msg.sender != stkBNB;
-        }
-    }
 
 
 /**************************************************
