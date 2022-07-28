@@ -366,7 +366,7 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 
 /** verifying that one can not gain or lose **/
 /** checking this on a 1 exchange rate and no fee- can be adjusted to more cases **/
-totalAssetOfUserPreserved(method f, address user) {
+rule totalAssetOfUserPreserved(method f, address user) {
     uint256 rewardFee;
     uint256 depositFee;
     uint256 withdrawFee;
@@ -388,7 +388,7 @@ totalAssetOfUserPreserved(method f, address user) {
         env eSend;
         uint256 amount;
         bytes data; 
-        //require (eSend == user); // env vs address - TBD
+        require eSend.msg.sender == user;
         stkBNB.send(eSend, currentContract, amount, data);
         //we have a nondet summarization 
         env eRec;
