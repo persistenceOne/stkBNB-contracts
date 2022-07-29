@@ -1,27 +1,26 @@
 const { Finding, FindingSeverity, FindingType } = require("forta-agent");
 const { after } = require("mocha");
+const config = require('../agent-config.json');
+import {normalizeValue} from './utils.js';
 
 // StakePool contract events
-const STKBNB_DEPOSIT_EVENT = "event Deposit(address indexed user,uint256 bnbAmount,uint256 poolTokenAmount,uint256 timestamp)";
-const STKBNB_WITHDRAW_EVENT = "event Withdraw(address indexed user,uint256 poolTokenAmount,uint256 bnbAmount,uint256 timestamp)";
+const STAKE_POOL_DEPOSIT_EVENT = "event Deposit(address indexed user,uint256 bnbAmount,uint256 poolTokenAmount,uint256 timestamp)";
+const STAKE_POOL_WITHDRAW_EVENT = "event Withdraw(address indexed user,uint256 poolTokenAmount,uint256 bnbAmount,uint256 timestamp)";
 
 // StkBNBToken contract events
-const STKBNB_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
-const STKBNB_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
+const STAKE_POOL_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
+const STAKE_POOL_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
 
 
 // Contract Addresses
-const STAKEPOOL_ADDRESS = "0xEB6048eE3F39eb701712073936CA76Be774b6e0f";
-const STAKEDBNBTOKEN_ADDRESS= "0xCA115d3723A0d36f4984d7CebE69a85ca235CfCA"
+const STAKEPOOL_ADDRESS = config.STAKEPOOL_ADDRESS;
+const STAKEDBNBTOKEN_ADDRESS= config.STAKEDBNBTOKEN_ADDRESS
 
 // Thresholds 
-const HighThreshold = 1000000;   // 1 Million $
-const MediumThreshold = 500000;  // 500k $
-const LowThreshold = 100000;     // 100k $
+const HighThreshold = config.HighThreshold;   // 1 Million 
+const MediumThreshold = config.MediumThreshold;  // 500k 
+const LowThreshold = config.LowThreshold;     // 100k 
 
-// Unused
-const STKBNB_DECIMALS = 18;
-let findingsCount = 0;
 
 const handleTransaction = async (txEvent) => {
 
@@ -30,7 +29,7 @@ const handleTransaction = async (txEvent) => {
 
   //////////////////////////////////MINTED/////////////////////////////////////////////////////////
   const stkbnbMintedEvents = txEvent.filterLog(
-       STKBNB_MINT_EVENT,
+       STAKE_POOL_MINT_EVENT,
        STAKEDBNBTOKEN_ADDRESS
      );
   
@@ -38,43 +37,34 @@ const handleTransaction = async (txEvent) => {
       // extract mint event arguments
       const { amount } = mintEvent.args;
       
-      // Normalize decimal places from 18 NOTE: Div does not support 18 decimals hence done in 2 steps
-      function normalizeValue(value){
-        value=value.div(10**10)
-        value=value.div(10**8)
-        return value
-      }
-
-      // Log the timestamp
-      console.log(new Date( txEvent.block.timestamp * 1000) )
 
       // Normalised value bought down from 18 decimals
-      const normalizedValue= normalizeValue(amount)
+       normalizedValue= normalizeValue(amount)
 
   
       // if more than 1Million stkBNB were minted, report it
       if (normalizedValue.gte(HighThreshold) ) {
         findings.push(
           Finding.fromObject({
-            name: "High stkBNB Mint",
-            description: `High amount of StkBNB minted: ${normalizedValue}`,
+            protocol:"pStake stkBNB",
+            name: "Large stkBNB Mint",
+            description: `Large amount of StkBNB minted: ${normalizedValue}`,
             alertId: "FORTA-1",
             severity: FindingSeverity.High,
             type: FindingType.Info,
             metadata: {
                amount
-  
-              
             },
           })
         );
         findingsCount++;
       }
       // else if more than 500,000 stkBNB but less than 1 Million stkBNB were minted, report it
-      else if (normalizedValue.gte(MediumThreshold) && normalizedValue.lt(HighThreshold) ) {
+      else if (normalizedValue.gte(MediumThreshold) ) {
         findings.push(
           Finding.fromObject({
-            name: "High stkBNB Mint",
+            protocol:"pStake stkBNB",
+            name: "Large stkBNB Mint",
             description: `Medium amount of StkBNB minted: ${normalizedValue}`,
             alertId: "FORTA-1",
             severity: FindingSeverity.Medium,
@@ -87,11 +77,12 @@ const handleTransaction = async (txEvent) => {
         findingsCount++;
       }
       // else if more than 100,000 stkBNB but less than 500,000 stkBNB were minted, report it
-      else if (normalizedValue.gte(LowThreshold) && normalizedValue.lt(MediumThreshold) ) {
+      else if (normalizedValue.gte(LowThreshold)  ) {
         findings.push(
           Finding.fromObject({
-            name: "High stkBNB Mint",
-            description: `Low amount of StkBNB minted: ${normalizedValue}`,
+            protocol:"pStake stkBNB",
+            name: "Large stkBNB Mint",
+            description: `Small amount of StkBNB minted: ${normalizedValue}`,
             alertId: "FORTA-1",
             severity: FindingSeverity.Low,
             type: FindingType.Info,
@@ -108,7 +99,7 @@ const handleTransaction = async (txEvent) => {
 
 
 const stkbnbBurnedEvents = txEvent.filterLog(
-  STKBNB_BURN_EVENT,
+  STAKE_POOL_BURN_EVENT,
   STAKEDBNBTOKEN_ADDRESS
 );
 
@@ -116,39 +107,33 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
  // extract burn event arguments
  const { amount } = burnEvent.args;
 
- function normalizeValue(value){
-   value=value.div(10**10)
-   value=value.div(10**8)
-   return value
- }
- console.log(new Date( txEvent.block.timestamp * 1000) )
- const normalizedValue= normalizeValue(amount)
+
+ normalizedValue= normalizeValue(amount)
 
 
  // if equal or more than 1 Million stkBNB were burnt, report it
  if (normalizedValue.gte(HighThreshold) ) {
    findings.push(
      Finding.fromObject({
-       name: "High stkBNB Burn",
-       description: `High amount of StkBNB burnt: ${normalizedValue}`,
+       protocol:"pStake stkBNB",
+       name: "Large stkBNB Burn",
+       description: `Large amount of StkBNB burnt: ${normalizedValue}`,
        alertId: "FORTA-1",
        severity: FindingSeverity.High,
        type: FindingType.Info,
        metadata: {
-          amount,
-          
-
-         
+          amount
        },
      })
    );
    findingsCount++;
  }
  // else if euqal or more than 500,000 stkBNB but less than 1Million stkBNB were burnt, report it
- else if (normalizedValue.gte(MediumThreshold) && normalizedValue.lt(HighThreshold) ) {
+ else if (normalizedValue.gte(MediumThreshold) ) {
    findings.push(
      Finding.fromObject({
-       name: "High stkBNB Mint",
+       protocol:"pStake stkBNB",
+       name: "Large stkBNB Burn",
        description: `Medium amount of StkBNB burnt: ${normalizedValue}`,
        alertId: "FORTA-1",
        severity: FindingSeverity.Medium,
@@ -161,11 +146,12 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
    findingsCount++;
  }
  // else if equal or more than 100,000 stkBNB but less than 500,000 stkBNB were burnt, report it
- else if (normalizedValue.gte(LowThreshold) && normalizedValue.lt(MediumThreshold) ) {
+ else if (normalizedValue.gte(LowThreshold) ) {
    findings.push(
      Finding.fromObject({
-       name: "High stkBNB Mint",
-       description: `Low amount of StkBNB burnt: ${normalizedValue}`,
+       protocol:"pStake stkBNB",
+       name: "Large stkBNB Burn",
+       description: `Small amount of StkBNB burnt: ${normalizedValue}`,
        alertId: "FORTA-1",
        severity: FindingSeverity.Low,
        type: FindingType.Info,
@@ -186,7 +172,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
 
   // filter the transaction logs for stkbnb Deposit events
   const stkbnbDepositEvents = txEvent.filterLog(
-    STKBNB_DEPOSIT_EVENT,
+    STAKE_POOL_DEPOSIT_EVENT,
     STAKEPOOL_ADDRESS
   );
 
@@ -195,24 +181,21 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
     // extract deposit event arguments
     const { timestamp, bnbAmount } = depositEvent.args;
 
-    function normalizeValue(value){
-      value=value.div(10**10)
-      value=value.div(10**8)
-      return value
-    }
-    const normalizedValue= normalizeValue(bnbAmount)
+    normalizedValue= normalizeValue(bnbAmount)
 
     // if equal or more than 1 Million stkBNB were deposited, report it
     if (normalizedValue.gte(HighThreshold) ) {
       findings.push(
         Finding.fromObject({
-          name: "High stkBNB Deposit",
-          description: `High amount of StkBNB deposit: ${normalizedValue}`,
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Deposit",
+          description: `Large amount of StkBNB deposit: ${normalizedValue}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.High,
           type: FindingType.Info,
           metadata: {
-             date : new Date(timestamp * 1000),
+            bnbAmount,
+            timestamp
 
             
           },
@@ -221,15 +204,17 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
       findingsCount++;
     }
     // else if equal or more than 500,000 stkBNB but less than 1 Million stkBNB were deposited, report it
-    else if (normalizedValue.gte(MediumThreshold) && normalizedValue.lt(HighThreshold) ) {
+    else if (normalizedValue.gte(MediumThreshold) ) {
       findings.push(
         Finding.fromObject({
-          name: "High stkBNB Deposit",
-          description: `High amount of StkBNB deposit: ${normalizedValue}`,
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Deposit",
+          description: `Medium amount of StkBNB deposit: ${normalizedValue}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
           metadata: {
+            bnbAmount,
             timestamp
           },
         })
@@ -237,15 +222,17 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
       findingsCount++;
     }
     // else if equal or more than 100,000 stkBNB but less than 500,000 stkBNB were deposited, report it
-    else if (normalizedValue.gte(LowThreshold) && normalizedValue.lt(MediumThreshold) ) {
+    else if (normalizedValue.gte(LowThreshold)  ) {
       findings.push(
         Finding.fromObject({
-          name: "High stkBNB Deposit",
-          description: `High amount of StkBNB deposit: ${normalizedValue}`,
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Deposit",
+          description: `Small amount of StkBNB deposit: ${normalizedValue}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           metadata: {
+            bnbAmount,
             timestamp
           },
         })
@@ -256,7 +243,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
 ////////////////////////////////WITHDRWALS////////////////////////////////////////////////////////////////
 
 const stkbnbWithdrawEvents=txEvent.filterLog(
-  STKBNB_WITHDRAW_EVENT,
+  STAKE_POOL_WITHDRAW_EVENT,
   STAKEPOOL_ADDRESS
 );
 
@@ -264,24 +251,22 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
     // extract withdraw event arguments
     const { timestamp, bnbAmount } = depositEvent.args;
     // convert 18 decimal places to normal value
-    function normalizeValue(value){
-      value=value.div(10**10)
-      value=value.div(10**8)
-      return value
-    }
-    const normalizedValue= normalizeValue(bnbAmount)
+
+    normalizedValue= normalizeValue(bnbAmount)
 
     // if equal or more than 1 Million stkBNB were withdrawn, report it
     if (normalizedValue.gte(HighThreshold) ) {
       findings.push(
         Finding.fromObject({
-          name: "High stkBNB Withdrawal",
-          description: `High amount of StkBNB withdrawn: ${normalizedValue}`,
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Withdrawal",
+          description: `Large amount of StkBNB withdrawn: ${normalizedValue}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.High,
           type: FindingType.Info,
           metadata: {
-             date : new Date(timestamp * 1000),
+            bnbAmount,
+            timestamp
 
             
           },
@@ -290,15 +275,17 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
       findingsCount++;
     }
      // else if equal or more than 500,000 stkBNB but less than 1 Million stkBNB were withdrawn, report it
-    else if (normalizedValue.gte(MediumThreshold) && normalizedValue.lt(HighThreshold) ) {
+    else if (normalizedValue.gte(MediumThreshold)  ) {
       findings.push(
         Finding.fromObject({
-          name: "High stkBNB Withdrawal",
-          description: `High amount of StkBNB withdrawn: ${normalizedValue}`,
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Withdrawal",
+          description: `Medium amount of StkBNB withdrawn: ${normalizedValue}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
           metadata: {
+            bnbAmount,
             timestamp
           },
         })
@@ -306,15 +293,17 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
       findingsCount++;
     }
     // else if equal or more than 100,000 stkBNB but less than 500,000 stkBNB were withdrawn, report it
-    else if (normalizedValue.gte(LowThreshold) && normalizedValue.lt(MediumThreshold) ) {
+    else if (normalizedValue.gte(LowThreshold) ) {
       findings.push(
         Finding.fromObject({
-          name: "High stkBNB Withdrawal",
-          description: `High amount of StkBNB withdrawn: ${normalizedValue}`,
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Withdrawal",
+          description: `Small amount of StkBNB withdrawn: ${normalizedValue}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           metadata: {
+            bnbAmount,
             timestamp
           },
         })
