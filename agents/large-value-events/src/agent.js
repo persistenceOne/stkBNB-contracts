@@ -65,7 +65,7 @@ const handleTransaction = async (txEvent) => {
           Finding.fromObject({
             protocol:"pStake stkBNB",
             name: "Large stkBNB Mint",
-            description: `Medium amount of StkBNB minted: ${ethers.utils.formatEther(amount)}`,
+            description: `Large amount of StkBNB minted: ${ethers.utils.formatEther(amount)}`,
             alertId: "FORTA-1",
             severity: FindingSeverity.Medium,
             type: FindingType.Info,
@@ -82,7 +82,7 @@ const handleTransaction = async (txEvent) => {
           Finding.fromObject({
             protocol:"pStake stkBNB",
             name: "Large stkBNB Mint",
-            description: `Small amount of StkBNB minted: ${ethers.utils.formatEther(amount)}`,
+            description: `Large amount of StkBNB minted: ${ethers.utils.formatEther(amount)}`,
             alertId: "FORTA-1",
             severity: FindingSeverity.Low,
             type: FindingType.Info,
@@ -134,7 +134,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
      Finding.fromObject({
        protocol:"pStake stkBNB",
        name: "Large stkBNB Burn",
-       description: `Medium amount of StkBNB burnt: ${ethers.utils.formatEther(amount)}`,
+       description: `Large amount of StkBNB burnt: ${ethers.utils.formatEther(amount)}`,
        alertId: "FORTA-1",
        severity: FindingSeverity.Medium,
        type: FindingType.Info,
@@ -151,7 +151,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
      Finding.fromObject({
        protocol:"pStake stkBNB",
        name: "Large stkBNB Burn",
-       description: `Small amount of StkBNB burnt: ${ethers.utils.formatEther(amount)}`,
+       description: `Large amount of StkBNB burnt: ${ethers.utils.formatEther(amount)}`,
        alertId: "FORTA-1",
        severity: FindingSeverity.Low,
        type: FindingType.Info,
@@ -209,7 +209,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Deposit",
-          description: `Medium amount of StkBNB deposit: ${ethers.utils.formatEther(bnbAmount)}`,
+          description: `Large amount of StkBNB deposit: ${ethers.utils.formatEther(bnbAmount)}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
@@ -227,7 +227,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Deposit",
-          description: `Small amount of StkBNB deposit: ${ethers.utils.formatEther(bnbAmount)}`,
+          description: `Large amount of StkBNB deposit: ${ethers.utils.formatEther(bnbAmount)}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
@@ -280,7 +280,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
-          description: `Medium amount of StkBNB withdrawn: ${ethers.utils.formatEther(bnbAmount)}`,
+          description: `Large amount of StkBNB withdrawn: ${ethers.utils.formatEther(bnbAmount)}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
@@ -298,7 +298,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
-          description: `Small amount of StkBNB withdrawn: ${ethers.utils.formatEther(bnbAmount)}`,
+          description: `Large amount of StkBNB withdrawn: ${ethers.utils.formatEther(bnbAmount)}`,
           alertId: "FORTA-1",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
