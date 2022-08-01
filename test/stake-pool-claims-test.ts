@@ -12,7 +12,7 @@ const { singletons } = require('@openzeppelin/test-helpers');
 // will not work. Although, claiming one by one will still work.
 // Also, claiming this many number of requests at once is possible only if the claimAll tx is the
 // only tx in the block, as it will consume all the blockGasLimit.
-const MAX_CLAIMS_PER_USER = 3125;
+const MAX_CLAIMS_PER_USER = 3089;
 
 describe('StakePool Claims', function () {
     let deployerAddr: string, contract: Contract;

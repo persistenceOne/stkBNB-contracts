@@ -12,9 +12,9 @@ contract UndelegationHolder is IUndelegationHolder {
      ********************/
 
     /**
-     * @dev addressStore: The Address Store. Used to fetch addresses of the other contracts in the system.
+     * @dev _addressStore: The Address Store. Used to fetch addresses of the other contracts in the system.
      */
-    IAddressStore public addressStore;
+    IAddressStore private _addressStore;
 
     /*********************
      * ERRORS
@@ -26,8 +26,8 @@ contract UndelegationHolder is IUndelegationHolder {
      * CONTRACT LOGIC
      ********************/
 
-    constructor(IAddressStore _addressStore) {
-        addressStore = _addressStore;
+    constructor(IAddressStore addressStore_) {
+        _addressStore = addressStore_;
     }
 
     /**
@@ -50,7 +50,7 @@ contract UndelegationHolder is IUndelegationHolder {
      * @return The amount it sent to the StakePool.
      */
     function withdrawUnbondedBNB() external override returns (uint256) {
-        address stakePool = addressStore.getStakePool();
+        address stakePool = _addressStore.getStakePool();
         if (msg.sender != stakePool) {
             revert UnauthorizedSender();
         }
@@ -63,8 +63,9 @@ contract UndelegationHolder is IUndelegationHolder {
         // advance, without hampering protocol's security, and at the same time, be free of worries about claims failing
         // even in the rarest of the rare scenarios.
         uint256 amountToSend = address(this).balance;
-        if (amountToSend > IStakePoolBot(stakePool).bnbUnbonding()) {
-            amountToSend = IStakePoolBot(stakePool).bnbUnbonding();
+        uint256 bnbUnbonding = IStakePoolBot(stakePool).bnbUnbonding();
+        if (amountToSend > bnbUnbonding) {
+            amountToSend = bnbUnbonding;
         }
         // can't use address.transfer() here as it limits the gas to 2300, resulting in failure due to gas exhaustion.
         (
@@ -76,5 +77,12 @@ contract UndelegationHolder is IUndelegationHolder {
         }
 
         return amountToSend;
+    }
+
+    /**
+     * @return the address store
+     */
+    function addressStore() external view returns (IAddressStore) {
+        return _addressStore;
     }
 }

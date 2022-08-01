@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./abstract/BEP20.sol";
+import "./interfaces/IStakedBNBToken.sol";
 
 /**
  * @dev {ERC777} token, including:
@@ -22,7 +23,7 @@ import "./abstract/BEP20.sol";
 /**/
 
 /// @custom:security-contact support@persistence.one
-contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
+contract StakedBNBToken is IStakedBNBToken, ERC777, BEP20, AccessControlEnumerable, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
@@ -31,6 +32,25 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
         // Once we are sure the system is stable and there are no issues, the multi-sig can choose to renounce the
         // DEFAULT_ADMIN_ROLE, but not the BEP20 owner.
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    /**
+     * @dev See {IERC777-totalSupply}.
+     */
+    function totalSupply() public view override(IERC777, ERC777) returns (uint256) {
+        return ERC777.totalSupply();
+    }
+
+    /**
+     * @dev Returns the amount of tokens owned by an account (`tokenHolder`).
+     */
+    function balanceOf(address tokenHolder)
+        public
+        view
+        override(IERC777, ERC777)
+        returns (uint256)
+    {
+        return ERC777.balanceOf(tokenHolder);
     }
 
     /**
@@ -44,7 +64,7 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
      */
     function burn(uint256 amount, bytes memory data)
         public
-        override
+        override(IERC777, ERC777)
         onlyRole(BURNER_ROLE)
         whenNotPaused
     {
@@ -66,7 +86,7 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
         uint256 amount,
         bytes memory data,
         bytes memory operatorData
-    ) public override onlyRole(BURNER_ROLE) whenNotPaused {
+    ) public override(IERC777, ERC777) onlyRole(BURNER_ROLE) whenNotPaused {
         ERC777.operatorBurn(account, amount, data, operatorData);
     }
 
@@ -84,7 +104,7 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
         uint256 amount,
         bytes memory userData,
         bytes memory operatorData
-    ) external onlyRole(MINTER_ROLE) whenNotPaused {
+    ) external override onlyRole(MINTER_ROLE) whenNotPaused {
         ERC777._mint(account, amount, userData, operatorData);
     }
 
@@ -96,7 +116,7 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
      *
      * - The caller must have the DEFAULT_ADMIN_ROLE.
      */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() external override onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
@@ -108,7 +128,7 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
      *
      * - The caller must have the DEFAULT_ADMIN_ROLE.
      */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() external override onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 
@@ -122,7 +142,7 @@ contract StakedBNBToken is ERC777, BEP20, AccessControlEnumerable, Pausable {
      * - the caller must have the `DEFAULT_ADMIN_ROLE`.
      *
      */
-    function selfDestruct(address addr) external onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
+    function selfDestruct(address addr) external override onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
         selfdestruct(payable(addr));
     }
 }

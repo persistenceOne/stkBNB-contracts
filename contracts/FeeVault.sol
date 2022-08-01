@@ -9,7 +9,7 @@ import "./interfaces/IFeeVault.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakedBNBToken.sol";
 
-contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, OwnableUpgradeable {
+contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, OwnableUpgradeable {
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
         IERC1820RegistryUpgradeable(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
@@ -20,7 +20,7 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
     /**
      * @dev addressStore: The Address Store. Used to fetch addresses of the other contracts in the system.
      */
-    IAddressStore public addressStore;
+    IAddressStore private _addressStore;
 
     /*********************
      * EVENTS
@@ -32,6 +32,7 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
     /*********************
      * ERRORS
      ********************/
+    error UnstakingFeeTokensIsntSupported();
     error ReceivedUnknownToken();
     error UnexpectedSender(address from);
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
@@ -45,20 +46,20 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
         _disableInitializers();
     }
 
-    function initialize(IAddressStore _addressStore) public initializer {
-        __FeeVault_init(_addressStore);
+    function initialize(IAddressStore addressStore_) public initializer {
+        __FeeVault_init(addressStore_);
     }
 
-    function __FeeVault_init(IAddressStore _addressStore) internal onlyInitializing {
+    function __FeeVault_init(IAddressStore addressStore_) internal onlyInitializing {
         // Need to call initializers for each parent without calling anything twice.
         __Context_init_unchained();
         __Ownable_init_unchained();
         // Finally, initialize this contract.
-        __FeeVault_init_unchained(_addressStore);
+        __FeeVault_init_unchained(addressStore_);
     }
 
-    function __FeeVault_init_unchained(IAddressStore _addressStore) internal onlyInitializing {
-        addressStore = _addressStore;
+    function __FeeVault_init_unchained(IAddressStore addressStore_) internal onlyInitializing {
+        _addressStore = addressStore_;
         _ERC1820_REGISTRY.setInterfaceImplementer(
             address(this),
             keccak256("ERC777TokensRecipient"),
@@ -73,7 +74,12 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
      * - Only owner can call
      */
     function claimStkBNB(address recipient, uint256 amount) external override onlyOwner {
-        IStakedBNBToken(addressStore.getStkBNB()).send(recipient, amount, "");
+        if (recipient == _addressStore.getStakePool()) {
+            // No point supporting this, and make things complicated.
+            // One can just send tokens to an EOA address, which can do the unstaking, if needed.
+            revert UnstakingFeeTokensIsntSupported();
+        }
+        IStakedBNBToken(_addressStore.getStkBNB()).send(recipient, amount, "");
 
         emit Withdraw(msg.sender, recipient, amount);
     }
@@ -94,10 +100,10 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
         bytes calldata, /*userData*/
         bytes calldata /*operatorData*/
     ) external override {
-        if (msg.sender != addressStore.getStkBNB()) {
+        if (msg.sender != _addressStore.getStkBNB()) {
             revert ReceivedUnknownToken();
         }
-        if (from != address(0) && from != addressStore.getStakePool()) {
+        if (from != address(0) && from != _addressStore.getStakePool()) {
             revert UnexpectedSender(from);
         }
         if (to != address(this)) {
@@ -105,5 +111,12 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
         }
 
         emit Deposit(from, amount);
+    }
+
+    /**
+     * @return the address store
+     */
+    function addressStore() external view returns (IAddressStore) {
+        return _addressStore;
     }
 }

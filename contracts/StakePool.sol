@@ -5,6 +5,7 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820RegistryUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "./embedded-libs/BasisFee.sol";
 import "./embedded-libs/Config.sol";
 import "./embedded-libs/ExchangeRate.sol";
@@ -16,14 +17,11 @@ import "./interfaces/IUndelegationHolder.sol";
 
 // TODO:
 // * Tests
-// * Optimize Storage layout (both contract size and gas wise)
-//      * Changing something from public to private optimizes contract size, even after adding a public view.
-//      * Changing the location of _paused affects the contract size as well. If kept before addressStore, it increases.
 contract StakePool is
-    Initializable,
+    IStakePoolBot,
     IERC777RecipientUpgradeable,
-    AccessControlEnumerableUpgradeable,
-    IStakePoolBot
+    Initializable,
+    AccessControlEnumerableUpgradeable
 {
     /*********************
      * LIB USAGES
@@ -32,6 +30,7 @@ contract StakePool is
     using Config for Config.Data;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
+    using SafeCastUpgradeable for uint256;
 
     /*********************
      * STRUCTS
@@ -76,8 +75,8 @@ contract StakePool is
      * STATE VARIABLES
      ********************/
 
-    IAddressStore public addressStore;
-    Config.Data public config;
+    IAddressStore private _addressStore; // Used to fetch addresses of the other contracts in the system.
+    Config.Data public config; // the contract configuration
 
     bool private _paused; // indicates whether this contract is paused or not
     uint256 private _status; // used for reentrancy protection
@@ -170,6 +169,8 @@ contract StakePool is
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
     error CantClaimBeforeDeadline();
     error InsufficientFundsToSatisfyClaim();
+    error InsufficientClaimReserve();
+    error BNBTransferToUserFailed();
     error IndexOutOfBounds(uint256 index);
     error ToIndexMustBeGreaterThanFromIndex(uint256 from, uint256 to);
     error PausablePaused();
@@ -315,11 +316,10 @@ contract StakePool is
         onlyInitializing
     {
         // set contract state variables
-        addressStore = addressStore_;
+        _addressStore = addressStore_;
         config._init(config_);
-        _paused = true;
+        _paused = true; // to ensure that nothing happens until the whole system is setup
         _status = _NOT_ENTERED;
-        // to ensure that nothing happens until the whole system is setup
         _bnbToUnbond = 0;
         _bnbUnbonding = 0;
         _claimReserve = 0;
@@ -409,10 +409,10 @@ contract StakePool is
         );
 
         // mint the tokens for appropriate accounts
-        IStakedBNBToken stkBNB = IStakedBNBToken(addressStore.getStkBNB());
+        IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
         stkBNB.mint(msg.sender, poolTokensUser, "", "");
         if (poolTokensDepositFee > 0) {
-            stkBNB.mint(addressStore.getFeeVault(), poolTokensDepositFee, "", "");
+            stkBNB.mint(_addressStore.getFeeVault(), poolTokensDepositFee, "", "");
         }
 
         emit Deposit(msg.sender, msg.value, poolTokensUser, block.timestamp);
@@ -454,7 +454,7 @@ contract StakePool is
         checkMinAndDust("Withdrawal", config.minTokenWithdrawal, amount)
     {
         // checks
-        if (msg.sender != addressStore.getStkBNB()) {
+        if (msg.sender != _addressStore.getStkBNB()) {
             revert UnknownSender();
         }
         if (from == address(0)) {
@@ -483,10 +483,10 @@ contract StakePool is
 
         while (i < claimRequestCount) {
             if (_claim(i)) {
-                claimRequestCount--;
+                --claimRequestCount;
                 continue;
             }
-            i++;
+            ++i;
         }
     }
 
@@ -557,7 +557,7 @@ contract StakePool is
             // successfully able to satisfy the claim requests.
 
             uint256 shortCircuitAmount;
-            if (_bnbToUnbond > int256(excessBNB)) {
+            if (_bnbToUnbond > excessBNB.toInt256()) {
                 // all the excessBNB we have in the contract will be used up to satisfy claims. The remaining
                 // _bnbToUnbond will be made available to the contract by the bot via the unstaking operations.
                 shortCircuitAmount = excessBNB;
@@ -566,7 +566,7 @@ contract StakePool is
                 // needs to be moved to _claimReserve.
                 shortCircuitAmount = uint256(_bnbToUnbond);
             }
-            _bnbToUnbond -= int256(shortCircuitAmount);
+            _bnbToUnbond -= shortCircuitAmount.toInt256();
             _claimReserve += shortCircuitAmount;
 
             emit InitiateDelegation_ShortCircuit(shortCircuitAmount);
@@ -592,8 +592,8 @@ contract StakePool is
         exchangeRate._update(ExchangeRate.Data(bnbRewards, feeTokens), ExchangeRate.UpdateOp.Add);
 
         // mint the fee tokens to FeeVault
-        IStakedBNBToken(addressStore.getStkBNB()).mint(
-            addressStore.getFeeVault(),
+        IStakedBNBToken(_addressStore.getStkBNB()).mint(
+            _addressStore.getFeeVault(),
             feeTokens,
             "",
             ""
@@ -618,7 +618,7 @@ contract StakePool is
         whenNotPaused
         onlyRole(BOT_ROLE)
     {
-        _bnbToUnbond -= int256(bnbUnbonding_);
+        _bnbToUnbond -= bnbUnbonding_.toInt256();
         _bnbUnbonding += bnbUnbonding_;
 
         emit UnbondingInitiated(bnbUnbonding_);
@@ -636,7 +636,7 @@ contract StakePool is
     function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
         // the unbondedAmount can never be more than _bnbUnbonding. UndelegationHolder takes care of that.
         // So, no need to worry about arithmetic overflows.
-        uint256 unbondedAmount = IUndelegationHolder(payable(addressStore.getUndelegationHolder()))
+        uint256 unbondedAmount = IUndelegationHolder(payable(_addressStore.getUndelegationHolder()))
             .withdrawUnbondedBNB();
         _bnbUnbonding -= unbondedAmount;
         _claimReserve += unbondedAmount;
@@ -648,7 +648,7 @@ contract StakePool is
      * @dev It is called by the UndelegationHolder as part of withdrawUnbondedBNB() during the unbondingFinished() call.
      */
     receive() external payable whenNotPaused {
-        if (msg.sender != addressStore.getUndelegationHolder()) {
+        if (msg.sender != _addressStore.getUndelegationHolder()) {
             revert UnknownSender();
         }
         // do nothing
@@ -658,6 +658,13 @@ contract StakePool is
     /*********************
      * VIEWS
      ********************/
+
+    /**
+     * @return the address store
+     */
+    function addressStore() external view returns (IAddressStore) {
+        return _addressStore;
+    }
 
     /**
      * @return true if the contract is paused, false otherwise.
@@ -719,7 +726,7 @@ contract StakePool is
         }
 
         ClaimRequest[] memory paginatedClaimRequests = new ClaimRequest[](to - from);
-        for (uint256 i = 0; i < to - from; i++) {
+        for (uint256 i = 0; i < to - from; ++i) {
             paginatedClaimRequests[i] = claimReqs[user][from + i];
         }
 
@@ -741,7 +748,7 @@ contract StakePool is
         claimReqs[from].push(ClaimRequest(weiToReturn, block.timestamp));
 
         // update the _bnbToUnbond
-        _bnbToUnbond += int256(weiToReturn);
+        _bnbToUnbond += weiToReturn.toInt256();
 
         // update the exchange rate to reflect the balance changes
         exchangeRate._update(
@@ -749,12 +756,12 @@ contract StakePool is
             ExchangeRate.UpdateOp.Subtract
         );
 
-        IStakedBNBToken stkBNB = IStakedBNBToken(addressStore.getStkBNB());
+        IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
         // burn the non-fee tokens
         stkBNB.burn(poolTokensToBurn, "");
         if (poolTokensFee > 0) {
             // transfer the fee to FeeVault, if any
-            stkBNB.send(addressStore.getFeeVault(), poolTokensFee, "");
+            stkBNB.send(_addressStore.getFeeVault(), poolTokensFee, "");
         }
 
         emit Withdraw(from, amount, weiToReturn, block.timestamp);
@@ -778,8 +785,13 @@ contract StakePool is
         if (!_canBeClaimed(req)) {
             return false;
         }
+        // the contract should have at least as much balance as needed to fulfil the request
         if (address(this).balance < req.weiToReturn) {
             revert InsufficientFundsToSatisfyClaim();
+        }
+        // the _claimReserve should also be at least as much as needed to fulfil the request
+        if (_claimReserve < req.weiToReturn) {
+            revert InsufficientClaimReserve();
         }
 
         // update _claimReserve
@@ -789,8 +801,14 @@ contract StakePool is
         claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
         claimReqs[msg.sender].pop();
 
-        // return BNB back to user
-        payable(msg.sender).transfer(req.weiToReturn);
+        // return BNB back to user (which can be anyone: EOA or a contract)
+        (
+            bool sent, /*memory data*/
+
+        ) = msg.sender.call{ value: req.weiToReturn }("");
+        if (!sent) {
+            revert BNBTransferToUserFailed();
+        }
         emit Claim(msg.sender, req, block.timestamp);
         return true;
     }
