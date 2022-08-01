@@ -11,8 +11,8 @@ const STAKE_POOL_DEPOSIT_EVENT = "event Deposit(address indexed user,uint256 bnb
 const STAKE_POOL_WITHDRAW_EVENT = "event Withdraw(address indexed user,uint256 poolTokenAmount,uint256 bnbAmount,uint256 timestamp)";
 
 // StkBNBToken contract events
-const STAKE_POOL_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
-const STAKE_POOL_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
+const STKBNB_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
+const STKBNB_POOL_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
 
 
 // Contract Addresses
@@ -32,7 +32,7 @@ const handleTransaction = async (txEvent) => {
 
   //////////////////////////////////MINTED/////////////////////////////////////////////////////////
   const stkbnbMintedEvents = txEvent.filterLog(
-       STAKE_POOL_MINT_EVENT,
+       STKBNB_MINT_EVENT,
        STAKEDBNBTOKEN_ADDRESS
      );
   
@@ -99,7 +99,7 @@ const handleTransaction = async (txEvent) => {
 
 
 const stkbnbBurnedEvents = txEvent.filterLog(
-  STAKE_POOL_BURN_EVENT,
+  STKBNB_BURN_EVENT,
   STAKEDBNBTOKEN_ADDRESS
 );
 
@@ -168,13 +168,13 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
 //////////////////////////////////////////DEPOSITS////////////////////////////////////////////
 
   // filter the transaction logs for stkbnb Deposit events
-  const stkbnbDepositEvents = txEvent.filterLog(
+  const bnbDepositEvents = txEvent.filterLog(
     STAKE_POOL_DEPOSIT_EVENT,
     STAKEPOOL_ADDRESS
   );
 
 
-  stkbnbDepositEvents.forEach((depositEvent) => {
+  bnbDepositEvents.forEach((depositEvent) => {
     // extract deposit event arguments
     const { timestamp, bnbAmount } = depositEvent.args;
 
@@ -185,8 +185,8 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
       findings.push(
         Finding.fromObject({
           protocol:"pStake stkBNB",
-          name: "Large stkBNB Deposit",
-          description: `Deposited: ${ethers.utils.formatEther(amount)} stkBNB`,
+          name: "Large BNB Deposit",
+          description: `Deposited: ${ethers.utils.formatEther(amount)} BNB`,
           alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.High,
           type: FindingType.Info,
@@ -204,8 +204,8 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
       findings.push(
         Finding.fromObject({
           protocol:"pStake stkBNB",
-          name: "Large stkBNB Deposit",
-          description: `Deposited: ${ethers.utils.formatEther(amount)} stkBNB`,
+          name: "Large BNB Deposit",
+          description: `Deposited: ${ethers.utils.formatEther(amount)} BNB`,
           alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
@@ -221,8 +221,8 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
       findings.push(
         Finding.fromObject({
           protocol:"pStake stkBNB",
-          name: "Large stkBNB Deposit",
-          description: `Deposited: ${ethers.utils.formatEther(amount)} stkBNB`,
+          name: "Large BNB Deposit",
+          description: `Deposited: ${ethers.utils.formatEther(amount)} BNB`,
           alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
@@ -310,8 +310,8 @@ module.exports = {
   STAKE_POOL_DEPOSIT_EVENT, // exported for unit tests
   STAKE_POOL_WITHDRAW_EVENT, // exported for unit tests
   STAKEPOOL_ADDRESS, // exported for unit tests
-  STAKE_POOL_BURN_EVENT, // exported for unit tests
-  STAKE_POOL_MINT_EVENT, // exported for unit tests
+  STKBNB_BURN_EVENT, // exported for unit tests
+  STKBNB_MINT_EVENT, // exported for unit tests
   STAKEDBNBTOKEN_ADDRESS // exported for unit tests
 
 };
