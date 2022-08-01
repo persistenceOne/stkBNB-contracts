@@ -44,7 +44,7 @@ const handleTransaction = async (txEvent) => {
       // Normalised value bought down from 18 decimals
        normalizedValue= normalizeValue(amount)
 
-      //TODO Create a alert
+      //TODO Create a finding object at that time with the severity as per the variable
       // if more than 1Million stkBNB were minted, report it
       if (normalizedValue.gte(HighThreshold) ) {
         findings.push(
