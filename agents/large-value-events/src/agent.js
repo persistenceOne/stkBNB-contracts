@@ -12,7 +12,7 @@ const STAKE_POOL_WITHDRAW_EVENT = "event Withdraw(address indexed user,uint256 p
 
 // StkBNBToken contract events
 const STKBNB_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
-const STKBNB_POOL_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
+const STKBNB_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
 
 
 // Contract Addresses

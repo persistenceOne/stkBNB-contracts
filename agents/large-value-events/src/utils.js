@@ -1,4 +1,3 @@
 export function normalizeValue(value){
-    value=value.div(ethers.constants.WeiPerEther)
-    return value
+    return value.div(ethers.constants.WeiPerEther)
 }
