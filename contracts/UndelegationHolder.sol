@@ -63,8 +63,9 @@ contract UndelegationHolder is IUndelegationHolder {
         // advance, without hampering protocol's security, and at the same time, be free of worries about claims failing
         // even in the rarest of the rare scenarios.
         uint256 amountToSend = address(this).balance;
-        if (amountToSend > IStakePoolBot(stakePool).bnbUnbonding()) {
-            amountToSend = IStakePoolBot(stakePool).bnbUnbonding();
+        uint256 bnbUnbonding = IStakePoolBot(stakePool).bnbUnbonding();
+        if (amountToSend > bnbUnbonding) {
+            amountToSend = bnbUnbonding;
         }
         // can't use address.transfer() here as it limits the gas to 2300, resulting in failure due to gas exhaustion.
         (
