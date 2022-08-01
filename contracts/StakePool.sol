@@ -17,14 +17,11 @@ import "./interfaces/IUndelegationHolder.sol";
 
 // TODO:
 // * Tests
-// * Optimize Storage layout (both contract size and gas wise)
-//      * Changing something from public to private optimizes contract size, even after adding a public view.
-//      * Changing the location of _paused affects the contract size as well. If kept before addressStore, it increases.
 contract StakePool is
-    Initializable,
+    IStakePoolBot,
     IERC777RecipientUpgradeable,
-    AccessControlEnumerableUpgradeable,
-    IStakePoolBot
+    Initializable,
+    AccessControlEnumerableUpgradeable
 {
     /*********************
      * LIB USAGES
@@ -78,8 +75,8 @@ contract StakePool is
      * STATE VARIABLES
      ********************/
 
-    IAddressStore public addressStore;
-    Config.Data public config;
+    IAddressStore private _addressStore; // Used to fetch addresses of the other contracts in the system.
+    Config.Data public config; // the contract configuration
 
     bool private _paused; // indicates whether this contract is paused or not
     uint256 private _status; // used for reentrancy protection
@@ -319,7 +316,7 @@ contract StakePool is
         onlyInitializing
     {
         // set contract state variables
-        addressStore = addressStore_;
+        _addressStore = addressStore_;
         config._init(config_);
         _paused = true; // to ensure that nothing happens until the whole system is setup
         _status = _NOT_ENTERED;
@@ -412,10 +409,10 @@ contract StakePool is
         );
 
         // mint the tokens for appropriate accounts
-        IStakedBNBToken stkBNB = IStakedBNBToken(addressStore.getStkBNB());
+        IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
         stkBNB.mint(msg.sender, poolTokensUser, "", "");
         if (poolTokensDepositFee > 0) {
-            stkBNB.mint(addressStore.getFeeVault(), poolTokensDepositFee, "", "");
+            stkBNB.mint(_addressStore.getFeeVault(), poolTokensDepositFee, "", "");
         }
 
         emit Deposit(msg.sender, msg.value, poolTokensUser, block.timestamp);
@@ -457,7 +454,7 @@ contract StakePool is
         checkMinAndDust("Withdrawal", config.minTokenWithdrawal, amount)
     {
         // checks
-        if (msg.sender != addressStore.getStkBNB()) {
+        if (msg.sender != _addressStore.getStkBNB()) {
             revert UnknownSender();
         }
         if (from == address(0)) {
@@ -595,8 +592,8 @@ contract StakePool is
         exchangeRate._update(ExchangeRate.Data(bnbRewards, feeTokens), ExchangeRate.UpdateOp.Add);
 
         // mint the fee tokens to FeeVault
-        IStakedBNBToken(addressStore.getStkBNB()).mint(
-            addressStore.getFeeVault(),
+        IStakedBNBToken(_addressStore.getStkBNB()).mint(
+            _addressStore.getFeeVault(),
             feeTokens,
             "",
             ""
@@ -639,7 +636,7 @@ contract StakePool is
     function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
         // the unbondedAmount can never be more than _bnbUnbonding. UndelegationHolder takes care of that.
         // So, no need to worry about arithmetic overflows.
-        uint256 unbondedAmount = IUndelegationHolder(payable(addressStore.getUndelegationHolder()))
+        uint256 unbondedAmount = IUndelegationHolder(payable(_addressStore.getUndelegationHolder()))
             .withdrawUnbondedBNB();
         _bnbUnbonding -= unbondedAmount;
         _claimReserve += unbondedAmount;
@@ -651,7 +648,7 @@ contract StakePool is
      * @dev It is called by the UndelegationHolder as part of withdrawUnbondedBNB() during the unbondingFinished() call.
      */
     receive() external payable whenNotPaused {
-        if (msg.sender != addressStore.getUndelegationHolder()) {
+        if (msg.sender != _addressStore.getUndelegationHolder()) {
             revert UnknownSender();
         }
         // do nothing
@@ -661,6 +658,13 @@ contract StakePool is
     /*********************
      * VIEWS
      ********************/
+
+    /**
+     * @return the address store
+     */
+    function addressStore() external view returns (IAddressStore) {
+        return _addressStore;
+    }
 
     /**
      * @return true if the contract is paused, false otherwise.
@@ -752,12 +756,12 @@ contract StakePool is
             ExchangeRate.UpdateOp.Subtract
         );
 
-        IStakedBNBToken stkBNB = IStakedBNBToken(addressStore.getStkBNB());
+        IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
         // burn the non-fee tokens
         stkBNB.burn(poolTokensToBurn, "");
         if (poolTokensFee > 0) {
             // transfer the fee to FeeVault, if any
-            stkBNB.send(addressStore.getFeeVault(), poolTokensFee, "");
+            stkBNB.send(_addressStore.getFeeVault(), poolTokensFee, "");
         }
 
         emit Withdraw(from, amount, weiToReturn, block.timestamp);
