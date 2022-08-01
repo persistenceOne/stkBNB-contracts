@@ -321,9 +321,8 @@ contract StakePool is
         // set contract state variables
         addressStore = addressStore_;
         config._init(config_);
-        _paused = true;
+        _paused = true; // to ensure that nothing happens until the whole system is setup
         _status = _NOT_ENTERED;
-        // to ensure that nothing happens until the whole system is setup
         _bnbToUnbond = 0;
         _bnbUnbonding = 0;
         _claimReserve = 0;
@@ -487,10 +486,10 @@ contract StakePool is
 
         while (i < claimRequestCount) {
             if (_claim(i)) {
-                claimRequestCount--;
+                --claimRequestCount;
                 continue;
             }
-            i++;
+            ++i;
         }
     }
 
@@ -723,7 +722,7 @@ contract StakePool is
         }
 
         ClaimRequest[] memory paginatedClaimRequests = new ClaimRequest[](to - from);
-        for (uint256 i = 0; i < to - from; i++) {
+        for (uint256 i = 0; i < to - from; ++i) {
             paginatedClaimRequests[i] = claimReqs[user][from + i];
         }
 
