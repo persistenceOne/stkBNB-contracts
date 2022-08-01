@@ -118,7 +118,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
        protocol:"pStake stkBNB",
        name: "Large stkBNB Burn",
        description: `Burned: ${ethers.utils.formatEther(amount)} stkBNB`,
-       alertId: "LARGE_stkBNB_MINT",
+       alertId: "LARGE_stkBNB_BURN",
        severity: FindingSeverity.High,
        type: FindingType.Info,
        metadata: {
@@ -134,7 +134,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
        protocol:"pStake stkBNB",
        name: "Large stkBNB Burn",
        description: `Burned: ${ethers.utils.formatEther(amount)} stkBNB`,
-       alertId: "LARGE_stkBNB_MINT",
+       alertId: "LARGE_stkBNB_BURN",
        severity: FindingSeverity.Medium,
        type: FindingType.Info,
        metadata: {
@@ -150,7 +150,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
        protocol:"pStake stkBNB",
        name: "Large stkBNB Burn",
        description: `Burned: ${ethers.utils.formatEther(amount)} stkBNB`,
-       alertId: "LARGE_stkBNB_MINT",
+       alertId: "LARGE_stkBNB_BURN",
        severity: FindingSeverity.Low,
        type: FindingType.Info,
        metadata: {
@@ -187,7 +187,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
           protocol:"pStake stkBNB",
           name: "Large stkBNB Deposit",
           description: `Deposited: ${ethers.utils.formatEther(amount)} stkBNB`,
-          alertId: "LARGE_stkBNB_MINT",
+          alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.High,
           type: FindingType.Info,
           metadata: {
@@ -206,7 +206,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
           protocol:"pStake stkBNB",
           name: "Large stkBNB Deposit",
           description: `Deposited: ${ethers.utils.formatEther(amount)} stkBNB`,
-          alertId: "LARGE_stkBNB_MINT",
+          alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
           metadata: {
@@ -223,7 +223,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
           protocol:"pStake stkBNB",
           name: "Large stkBNB Deposit",
           description: `Deposited: ${ethers.utils.formatEther(amount)} stkBNB`,
-          alertId: "LARGE_stkBNB_MINT",
+          alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           metadata: {
@@ -255,7 +255,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
           description: `Withdrawn: ${ethers.utils.formatEther(amount)} stkBNB`,
-          alertId: "LARGE_stkBNB_MINT",
+          alertId: "LARGE_stkBNB_WITHDRAWAL",
           severity: FindingSeverity.High,
           type: FindingType.Info,
           metadata: {
@@ -272,7 +272,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
           description: `Withdrawn: ${ethers.utils.formatEther(amount)} stkBNB`,
-          alertId: "LARGE_stkBNB_MINT",
+          alertId: "LARGE_stkBNB_WITHDRAWAL",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
           metadata: {
@@ -289,7 +289,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
           description: `Withdrawn: ${ethers.utils.formatEther(amount)} stkBNB`,
-          alertId: "LARGE_stkBNB_MINT",
+          alertId: "LARGE_stkBNB_WITHDRAWAL",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
           metadata: {
@@ -307,11 +307,11 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
 module.exports = {
   handleTransaction,
  
-  STKBNB_DEPOSIT_EVENT, // exported for unit tests
-  STKBNB_WITHDRAW_EVENT, // exported for unit tests
+  STAKE_POOL_DEPOSIT_EVENT, // exported for unit tests
+  STAKE_POOL_WITHDRAW_EVENT, // exported for unit tests
   STAKEPOOL_ADDRESS, // exported for unit tests
-  STKBNB_BURN_EVENT, // exported for unit tests
-  STKBNB_MINT_EVENT, // exported for unit tests
+  STAKE_POOL_BURN_EVENT, // exported for unit tests
+  STAKE_POOL_MINT_EVENT, // exported for unit tests
   STAKEDBNBTOKEN_ADDRESS // exported for unit tests
 
 };

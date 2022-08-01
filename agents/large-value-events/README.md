@@ -1,26 +1,36 @@
-# Large Tether Transfer Agent
+# Large STKBNB Large Deposit Withdrawals Agent
 
 ## Description
 
-This agent detects transactions with large Tether transfers
+This agent detects transactions with large deposits, withdrawals to the stkBNB stakepool contract, and detects large Mint and Burn events of stkBNB token
 
 ## Supported Chains
 
-- Ethereum
-- List any other chains this agent can support e.g. BSC
+- BNB chain
+
 
 ## Alerts
 
-Describe each of the type of alerts fired by this agent
+- Large stkBNB Deposit
+  - Fired when a transaction deposits over 100,000/500,000,1 Million stkBNB.
+  - Severity is always set to "low" "Medium" "High" based on thresholds
+  - Type is always set to "info" 
 
-- FORTA-1
-  - Fired when a transaction contains a Tether transfer over 10,000 USDT
-  - Severity is always set to "low" (mention any conditions where it could be something else)
-  - Type is always set to "info" (mention any conditions where it could be something else)
-  - Mention any other type of metadata fields included with this alert
+- Large stkBNB Withdrawals
+  - Fired when a transaction withdraws over 100,000/500,000,1 Million stkBNB.
+  - Severity is always set to "low" "Medium" "High" based on thresholds
+  - Type is always set to "info" 
 
-## Test Data
 
-The agent behaviour can be verified with the following transactions:
+- Large stkBNB Mint
+  - Fired when a transaction mints over 100,000/500,000,1 Million stkBNB.
+  - Severity is always set to "low" "Medium" "High" based on thresholds
+  - Type is always set to "info" 
 
-- 0x3a0f757030beec55c22cbc545dd8a844cbbb2e6019461769e1bc3f3a95d10826 (15,000 USDT)
+- Large stkBNB Burn
+  - Fired when a transaction burns over 100,000/500,000,1 Million stkBNB.
+  - Severity is always set to "low" "Medium" "High" based on thresholds
+  - Type is always set to "info" 
+
+
+ 
