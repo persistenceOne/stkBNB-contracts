@@ -173,6 +173,7 @@ contract StakePool is
     error CantClaimBeforeDeadline();
     error InsufficientFundsToSatisfyClaim();
     error InsufficientClaimReserve();
+    error BNBTransferToUserFailed();
     error IndexOutOfBounds(uint256 index);
     error ToIndexMustBeGreaterThanFromIndex(uint256 from, uint256 to);
     error PausablePaused();
@@ -797,8 +798,14 @@ contract StakePool is
         claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
         claimReqs[msg.sender].pop();
 
-        // return BNB back to user
-        payable(msg.sender).transfer(req.weiToReturn);
+        // return BNB back to user (which can be anyone: EOA or a contract)
+        (
+            bool sent, /*memory data*/
+
+        ) = msg.sender.call{ value: req.weiToReturn }("");
+        if (!sent) {
+            revert BNBTransferToUserFailed();
+        }
         emit Claim(msg.sender, req, block.timestamp);
         return true;
     }
