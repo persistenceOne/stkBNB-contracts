@@ -172,6 +172,7 @@ contract StakePool is
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
     error CantClaimBeforeDeadline();
     error InsufficientFundsToSatisfyClaim();
+    error InsufficientClaimReserve();
     error IndexOutOfBounds(uint256 index);
     error ToIndexMustBeGreaterThanFromIndex(uint256 from, uint256 to);
     error PausablePaused();
@@ -780,8 +781,13 @@ contract StakePool is
         if (!_canBeClaimed(req)) {
             return false;
         }
+        // the contract should have at least as much balance as needed to fulfil the request
         if (address(this).balance < req.weiToReturn) {
             revert InsufficientFundsToSatisfyClaim();
+        }
+        // the _claimReserve should also be at least as much as needed to fulfil the request
+        if (_claimReserve < req.weiToReturn) {
+            revert InsufficientClaimReserve();
         }
 
         // update _claimReserve
