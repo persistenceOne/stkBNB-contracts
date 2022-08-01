@@ -32,6 +32,7 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
     /*********************
      * ERRORS
      ********************/
+    error UnstakingFeeTokensIsntSupported();
     error ReceivedUnknownToken();
     error UnexpectedSender(address from);
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
@@ -73,6 +74,11 @@ contract FeeVault is IFeeVault, Initializable, IERC777RecipientUpgradeable, Owna
      * - Only owner can call
      */
     function claimStkBNB(address recipient, uint256 amount) external override onlyOwner {
+        if (recipient == addressStore.getStakePool()) {
+            // No point supporting this, and make things complicated.
+            // One can just send tokens to an EOA address, which can do the unstaking, if needed.
+            revert UnstakingFeeTokensIsntSupported();
+        }
         IStakedBNBToken(addressStore.getStkBNB()).send(recipient, amount, "");
 
         emit Withdraw(msg.sender, recipient, amount);
