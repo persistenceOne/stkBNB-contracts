@@ -12,6 +12,7 @@ const {
   STKBNB_DECIMALS,
 } = require("./agent");
 
+const STKBNB_DECIMALS = 18;
 describe("high tether transfer agent", () => {
   describe("handleTransaction", () => {
     const mockTxEvent = createTransactionEvent({});

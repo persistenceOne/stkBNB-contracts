@@ -2,6 +2,8 @@ FROM node:12-alpine
 ENV NODE_ENV=production
 # Uncomment the following line to enable agent logging
 # LABEL "network.forta.settings.agent-logs.enable"="true"
+#TODO 
+#Fetch all the abi from the contracts repo
 WORKDIR /app
 COPY ./src ./src
 COPY package*.json ./
