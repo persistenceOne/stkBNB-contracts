@@ -5,6 +5,7 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820RegistryUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "./embedded-libs/BasisFee.sol";
 import "./embedded-libs/Config.sol";
 import "./embedded-libs/ExchangeRate.sol";
@@ -32,6 +33,7 @@ contract StakePool is
     using Config for Config.Data;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
+    using SafeCastUpgradeable for uint256;
 
     /*********************
      * STRUCTS
@@ -557,7 +559,7 @@ contract StakePool is
             // successfully able to satisfy the claim requests.
 
             uint256 shortCircuitAmount;
-            if (_bnbToUnbond > int256(excessBNB)) {
+            if (_bnbToUnbond > excessBNB.toInt256()) {
                 // all the excessBNB we have in the contract will be used up to satisfy claims. The remaining
                 // _bnbToUnbond will be made available to the contract by the bot via the unstaking operations.
                 shortCircuitAmount = excessBNB;
@@ -566,7 +568,7 @@ contract StakePool is
                 // needs to be moved to _claimReserve.
                 shortCircuitAmount = uint256(_bnbToUnbond);
             }
-            _bnbToUnbond -= int256(shortCircuitAmount);
+            _bnbToUnbond -= shortCircuitAmount.toInt256();
             _claimReserve += shortCircuitAmount;
 
             emit InitiateDelegation_ShortCircuit(shortCircuitAmount);
@@ -618,7 +620,7 @@ contract StakePool is
         whenNotPaused
         onlyRole(BOT_ROLE)
     {
-        _bnbToUnbond -= int256(bnbUnbonding_);
+        _bnbToUnbond -= bnbUnbonding_.toInt256();
         _bnbUnbonding += bnbUnbonding_;
 
         emit UnbondingInitiated(bnbUnbonding_);
@@ -741,7 +743,7 @@ contract StakePool is
         claimReqs[from].push(ClaimRequest(weiToReturn, block.timestamp));
 
         // update the _bnbToUnbond
-        _bnbToUnbond += int256(weiToReturn);
+        _bnbToUnbond += weiToReturn.toInt256();
 
         // update the exchange rate to reflect the balance changes
         exchangeRate._update(
