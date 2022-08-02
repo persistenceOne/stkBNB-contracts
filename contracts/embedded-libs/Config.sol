@@ -9,6 +9,8 @@ library Config {
     using FeeDistribution for FeeDistribution.Data;
 
     error MinCrossChainTransferMustBeGreaterThanZero();
+    error CantBeMoreThan1e18();
+    error CooldownPeriodCantBeMoreThan30Days();
 
     struct Data {
         // @dev The address of the staking wallet on the BBC chain. It will be used for transferOut transactions.
@@ -25,7 +27,7 @@ library Config {
         // @dev The minimum amount of tokens required to make a withdrawal from the contract.
         uint256 minTokenWithdrawal;
         // @dev The minimum amount of time (in seconds) a user has to wait after unstake to claim their BNB.
-        // It would be 15 days on mainnet. 2 days on testnet.
+        // It would be 15 days on mainnet. 3 days on testnet.
         uint256 cooldownPeriod;
         // @dev The fee distribution to represent different kinds of fee.
         FeeDistribution.Data fee;
@@ -40,6 +42,15 @@ library Config {
         self.fee._checkValid();
         if (self.minCrossChainTransfer == 0) {
             revert MinCrossChainTransferMustBeGreaterThanZero();
+        }
+        if (self.minBNBDeposit > 1e18) {
+            revert CantBeMoreThan1e18();
+        }
+        if (self.minTokenWithdrawal > 1e18) {
+            revert CantBeMoreThan1e18();
+        }
+        if (self.cooldownPeriod > 2592000) {
+            revert CooldownPeriodCantBeMoreThan30Days();
         }
     }
 
