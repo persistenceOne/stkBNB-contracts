@@ -151,6 +151,7 @@ contract StakePool is
     event Claim(address indexed user, ClaimRequest req, uint256 timestamp);
     event InitiateDelegation_TransferOut(uint256 transferOutAmount); // emitted during initiateDelegation
     event InitiateDelegation_ShortCircuit(uint256 shortCircuitAmount); // emitted during initiateDelegation
+    event InitiateDelegation_Success(); // emitted during initiateDelegation
     event EpochUpdate(uint256 bnbRewards, uint256 feeTokens); // emitted on epochUpdate
     event UnbondingInitiated(uint256 bnbUnbonding); // emitted on unbondingInitiated
     event UnbondingFinished(uint256 unbondedAmount); // emitted on unbondingFinished
@@ -176,6 +177,7 @@ contract StakePool is
     error PausablePaused();
     error PausableNotPaused();
     error ReentrancyGuardReentrantCall();
+    error TransferOutFailed();
 
     /*********************
      * MODIFIERS
@@ -536,12 +538,15 @@ contract StakePool is
             // not worry about paying back the fee losses. Also, for us to be economically successful, we must set
             // protocol fee rates in a way so that the rewards we earn via FeeVault are significantly more than the fee
             // we are paying for the protocol operations.
-            _TOKEN_HUB.transferOut{ value: excessBNB }(
+            bool success = _TOKEN_HUB.transferOut{ value: excessBNB }(
                 _ZERO_ADDR,
                 config.bcStakingWallet,
                 transferOutAmount,
                 uint64(block.timestamp + 3600)
             );
+            if (!success) {
+                revert TransferOutFailed();
+            }
 
             emit InitiateDelegation_TransferOut(transferOutAmount);
         } else if (excessBNB > 0 && _bnbToUnbond > 0) {
@@ -571,6 +576,11 @@ contract StakePool is
 
             emit InitiateDelegation_ShortCircuit(shortCircuitAmount);
         }
+        // else there is no excess amount or very small excess amount and no _bnbToUnbond. In these cases, the excess
+        // amount will remain in the contract, and will be delegated the next day.
+
+        // emitted to make the life of off-chain dependencies easy
+        emit InitiateDelegation_Success();
     }
 
     /**
