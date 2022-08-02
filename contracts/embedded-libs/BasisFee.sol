@@ -20,7 +20,7 @@ library BasisFee {
         if (self > _BASIS) {
             revert NumeratorMoreThanBasis();
         }
-        if (self > (_BASIS/100)*30) {
+        if (self > (_BASIS / 100) * 30) {
             revert CantSetMoreThan30PercentFee();
         }
     }
