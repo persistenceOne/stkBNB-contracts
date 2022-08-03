@@ -542,7 +542,7 @@ contract StakePool is
                 _ZERO_ADDR,
                 config.bcStakingWallet,
                 transferOutAmount,
-                uint64(block.timestamp + 3600)
+                uint64(block.timestamp + config.transferOutTimeout)
             );
             if (!success) {
                 revert TransferOutFailed();

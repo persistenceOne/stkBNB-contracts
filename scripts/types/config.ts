@@ -27,6 +27,7 @@ export interface Fee {
 export interface StakePoolConfig {
     bcStakingWallet: string;
     minCrossChainTransfer: BigNumber;
+    transferOutTimeout: BigNumber;
     minBNBDeposit: BigNumber;
     minTokenWithdrawal: BigNumber;
     cooldownPeriod: BigNumber;

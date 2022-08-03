@@ -150,6 +150,10 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "transferOutTimeout": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "minBNBDeposit": {
                   "type": "string",
                   "minLength": 1
@@ -185,6 +189,7 @@
               "required": [
                 "bcStakingWallet",
                 "minCrossChainTransfer",
+                "transferOutTimeout",
                 "minBNBDeposit",
                 "minTokenWithdrawal",
                 "cooldownPeriod",

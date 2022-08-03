@@ -27,14 +27,15 @@ const mockStakePoolContractConfig = {
     init: {
         config: {
             bcStakingWallet: mockAddr,
-            minCrossChainTransfer: BigNumber.from(1),
-            minBNBDeposit: ethers.constants.WeiPerEther,
-            minTokenWithdrawal: ethers.constants.WeiPerEther,
-            cooldownPeriod: BigNumber.from(0),
+            minCrossChainTransfer: ethers.constants.One,
+            transferOutTimeout: ethers.constants.One,
+            minBNBDeposit: ethers.constants.Zero,
+            minTokenWithdrawal: ethers.constants.Zero,
+            cooldownPeriod: ethers.constants.Zero,
             fee: {
-                reward: BigNumber.from(0),
-                deposit: BigNumber.from(0),
-                withdraw: BigNumber.from(0),
+                reward: ethers.constants.Zero,
+                deposit: ethers.constants.Zero,
+                withdraw: ethers.constants.Zero,
             } as Fee,
         } as StakePoolConfig,
     } as StakePoolInit,
