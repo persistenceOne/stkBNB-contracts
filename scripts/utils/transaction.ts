@@ -42,6 +42,8 @@ export function getContractName(address: string): string {
             return 'Empty_Contract_Address';
         case CONFIG.addressStore.address:
             return 'AddressStore';
+        case CONFIG.timelockedAdmin.address:
+            return 'TimelockedAdmin';
         case CONFIG.stkBNB.address:
             return 'stkBNB';
         case CONFIG.undelegationHolder.address:

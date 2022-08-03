@@ -14,6 +14,7 @@ const { singletons } = require('@openzeppelin/test-helpers');
 
 export interface ContractFactories {
     AddressStore: ContractFactory;
+    TimelockedAdmin: ContractFactory;
     StakedBNBToken: ContractFactory;
     UndelegationHolder: ContractFactory;
     FeeVault: ContractFactory;
@@ -21,8 +22,9 @@ export interface ContractFactories {
 }
 
 export class Contracts {
-    private static NUM_CONTRACTS: number = 5;
+    private static NUM_CONTRACTS: number = 6;
     public addressStore: Contract;
+    public timelockedAdmin: Contract;
     public stakedBNBToken: Contract;
     public undelegationHolder: Contract;
     public feeVault: Contract;
@@ -32,10 +34,11 @@ export class Contracts {
     // The constructor should not be used anywhere in the code, except the `new` function.
     private constructor(contracts: Contract[], sys: SysContracts) {
         this.addressStore = contracts[0];
-        this.stakedBNBToken = contracts[1];
-        this.undelegationHolder = contracts[2];
-        this.feeVault = contracts[3];
-        this.stakePool = contracts[4];
+        this.timelockedAdmin = contracts[1];
+        this.stakedBNBToken = contracts[2];
+        this.undelegationHolder = contracts[3];
+        this.feeVault = contracts[4];
+        this.stakePool = contracts[5];
         this.sys = sys;
     }
 
@@ -48,6 +51,7 @@ export class Contracts {
     public static async factories(): Promise<ContractFactories> {
         return {
             AddressStore: await ethers.getContractFactory('AddressStore'),
+            TimelockedAdmin: await ethers.getContractFactory('TimelockedAdmin'),
             StakedBNBToken: await ethers.getContractFactory('StakedBNBToken'),
             UndelegationHolder: await ethers.getContractFactory('UndelegationHolder'),
             FeeVault: await ethers.getContractFactory('FeeVault'),
@@ -60,6 +64,7 @@ export class Contracts {
 
         return Contracts.new([
             factories.AddressStore.attach(config.addressStore.address),
+            factories.TimelockedAdmin.attach(config.timelockedAdmin.address),
             factories.StakedBNBToken.attach(config.stkBNB.address),
             factories.UndelegationHolder.attach(config.undelegationHolder.address),
             factories.FeeVault.attach(config.feeVault.address),
@@ -92,9 +97,29 @@ export class Contracts {
             console.log(`AddressStore attached: ${contracts.addressStore.address}`);
         }
 
+        // deploy timelocked admin
+        if (config.timelockedAdmin.deploy) {
+            contracts.timelockedAdmin = await factories.TimelockedAdmin.deploy(
+                config.timelockedAdmin.init.minDelay,
+                // TODO: move this to transferOwnershipToGnosis() if we don't have both proposers by deployment time
+                [config.gnosisSafeAddr.primary, config.gnosisSafeAddr.secondary], // proposers
+                [ethers.constants.AddressZero], // executor => anyone
+            );
+            await contracts.timelockedAdmin.deployed();
+
+            console.log(`TimelockedAdmin deployed: ${contracts.timelockedAdmin.address}`);
+        } else {
+            contracts.timelockedAdmin = factories.TimelockedAdmin.attach(
+                config.timelockedAdmin.address,
+            );
+            console.log(`TimelockedAdmin attached: ${contracts.timelockedAdmin.address}`);
+        }
+
         // deploy stkBNB
         if (config.stkBNB.deploy) {
-            contracts.stakedBNBToken = await factories.StakedBNBToken.deploy();
+            contracts.stakedBNBToken = await factories.StakedBNBToken.deploy(
+                contracts.addressStore.address,
+            );
             await contracts.stakedBNBToken.deployed();
 
             console.log(`StakedBNBToken deployed: ${contracts.stakedBNBToken.address}`);
@@ -149,6 +174,14 @@ export class Contracts {
         if (config.postDeploySetup) {
             console.log('Starting post-deploy setup...');
 
+            // setup timelocked admin
+            if (config.timelockedAdmin.deploy) {
+                await executeTx(contracts.addressStore, 'setTimelockedAdmin', [
+                    contracts.timelockedAdmin.address,
+                ]);
+                console.log('AddressStore updated with TimelockedAdmin');
+            }
+
             // setup stkBNB
             if (config.stkBNB.deploy) {
                 await executeTx(contracts.addressStore, 'setStkBNB', [
@@ -157,6 +190,7 @@ export class Contracts {
                 console.log('AddressStore updated with stkBNB');
             }
 
+            // setup UndelegationHolder
             if (config.undelegationHolder.deploy) {
                 await executeTx(contracts.addressStore, 'setUndelegationHolder', [
                     contracts.undelegationHolder.address,
@@ -164,6 +198,7 @@ export class Contracts {
                 console.log('AddressStore updated with UndelegationHolder');
             }
 
+            // setup FeeVault
             if (config.feeVault.deploy) {
                 await executeTx(contracts.addressStore, 'setFeeVault', [
                     contracts.feeVault.address,
@@ -177,18 +212,6 @@ export class Contracts {
                     contracts.stakePool.address,
                 ]);
                 console.log('AddressStore updated with StakePool');
-
-                await executeTx(contracts.stakedBNBToken, 'grantRole', [
-                    await contracts.stakedBNBToken.MINTER_ROLE(),
-                    contracts.stakePool.address,
-                ]);
-                console.log('stkBNB MINTER set to StakePool');
-
-                await executeTx(contracts.stakedBNBToken, 'grantRole', [
-                    await contracts.stakedBNBToken.BURNER_ROLE(),
-                    contracts.stakePool.address,
-                ]);
-                console.log('stkBNB BURNER set to StakePool');
 
                 await executeTx(contracts.stakePool, 'grantRole', [
                     await contracts.stakePool.BOT_ROLE(),
@@ -260,29 +283,24 @@ export class Contracts {
         const contracts = await Contracts.attach(config);
         const deployerAddr = await logDeployerInfo();
 
-        // stkBNB: Transfer BEP20 ownership to Gnosis
-        await executeTx(contracts.stakedBNBToken, 'transferOwnership', [config.gnosisSafeAddr]);
-        console.log('Transferred stkBNB BEP20 ownership to Gnosis');
-
-        // stkBNB: Transfer DEFAULT_ADMIN_ROLE to Gnosis and revoke role from deployer account
-        await executeTx(contracts.stakedBNBToken, 'grantRole', [
-            await contracts.stakedBNBToken.DEFAULT_ADMIN_ROLE(),
-            config.gnosisSafeAddr,
+        // stkBNB: Transfer BEP20 ownership to primary Gnosis
+        await executeTx(contracts.stakedBNBToken, 'transferOwnership', [
+            config.gnosisSafeAddr.primary,
         ]);
-        console.log('Granted stkBNB DEFAULT_ADMIN to Gnosis');
-
-        await executeTx(contracts.stakedBNBToken, 'revokeRole', [
-            await contracts.stakedBNBToken.DEFAULT_ADMIN_ROLE(),
-            deployerAddr,
-        ]);
-        console.log('Revoked stkBNB DEFAULT_ADMIN from deployer');
+        console.log('Transferred stkBNB BEP20 ownership from deployer to primary Gnosis');
 
         // StakePool: Transfer DEFAULT_ADMIN_ROLE to Gnosis and revoke role from deployer account
         await executeTx(contracts.stakePool, 'grantRole', [
             await contracts.stakePool.DEFAULT_ADMIN_ROLE(),
-            config.gnosisSafeAddr,
+            config.gnosisSafeAddr.primary,
         ]);
-        console.log('Granted StakePool DEFAULT_ADMIN to Gnosis');
+        console.log('Granted StakePool DEFAULT_ADMIN to primary Gnosis');
+
+        await executeTx(contracts.stakePool, 'grantRole', [
+            await contracts.stakePool.DEFAULT_ADMIN_ROLE(),
+            config.gnosisSafeAddr.secondary,
+        ]);
+        console.log('Granted StakePool DEFAULT_ADMIN to secondary Gnosis');
 
         await executeTx(contracts.stakePool, 'revokeRole', [
             await contracts.stakePool.DEFAULT_ADMIN_ROLE(),
@@ -290,11 +308,25 @@ export class Contracts {
         ]);
         console.log('Revoked StakePool DEFAULT_ADMIN from deployer');
 
-        // FeeVault & AddressStore: Transfer ownership to Gnosis
-        await executeTx(contracts.feeVault, 'transferOwnership', [config.gnosisSafeAddr]);
-        console.log('Transferred FeeVault ownership from deployer to Gnosis');
-        await executeTx(contracts.addressStore, 'transferOwnership', [config.gnosisSafeAddr]);
-        console.log('Transferred AddressStore ownership from deployer to Gnosis');
+        // FeeVault: Transfer ownership to secondary Gnosis
+        await executeTx(contracts.feeVault, 'transferOwnership', [config.gnosisSafeAddr.secondary]);
+        console.log('Transferred FeeVault ownership from deployer to secondary Gnosis');
+
+        // TimelockedAdmin: Revoke TIMELOCK_ADMIN_ROLE from deployer
+        await executeTx(contracts.timelockedAdmin, 'revokeRole', [
+            await contracts.timelockedAdmin.TIMELOCK_ADMIN_ROLE(),
+            deployerAddr,
+        ]);
+        console.log('Revoked TimelockedAdmin TIMELOCK_ADMIN_ROLE from deployer');
+        console.log(
+            '**NOTE**: Any changes to TimelockedAdmin will now have to be scheduled via TimelockedAdmin itself',
+        );
+
+        // AddressStore: Transfer ownership to TimelockedAdmin
+        await executeTx(contracts.addressStore, 'transferOwnership', [
+            config.timelockedAdmin.address,
+        ]);
+        console.log('Transferred AddressStore ownership from deployer to TimelockedAdmin');
     }
 
     public static async updateStakePoolConfig(config: Config) {
@@ -318,10 +350,17 @@ export class Contracts {
         const addressStore: Contract = this.addressStore;
         console.log('=== AddressStore ===');
         console.log('Address: ', addressStore.address);
+        console.log(`getTimelockedAdmin: ${await addressStore.getTimelockedAdmin()}`);
         console.log(`getStkBNB: ${await addressStore.getStkBNB()}`);
         console.log(`getUndelegationHolder: ${await addressStore.getUndelegationHolder()}`);
         console.log(`getFeeVault: ${await addressStore.getFeeVault()}`);
         console.log(`getStakePool: ${await addressStore.getStakePool()}`);
+
+        console.log('\n\n');
+
+        const timelockedAdmin: Contract = this.timelockedAdmin;
+        console.log('=== TimelockedAdmin ===');
+        console.log(`minDelay: ${await timelockedAdmin.getMinDelay()}`);
 
         console.log('\n\n');
 

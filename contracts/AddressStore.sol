@@ -7,6 +7,7 @@ import "./interfaces/IAddressStore.sol";
 
 contract AddressStore is IAddressStore, Ownable {
     // Keys for standard contracts in the system
+    string public constant TIMELOCKED_ADMIN = "TimelockedAdmin";
     string public constant STK_BNB = "stkBNB";
     string public constant FEE_VAULT = "FeeVault";
     string public constant STAKE_POOL = "StakePool";
@@ -24,6 +25,10 @@ contract AddressStore is IAddressStore, Ownable {
         _store[key] = value;
 
         emit SetAddress(key, value);
+    }
+
+    function setTimelockedAdmin(address addr) external override {
+        setAddr(TIMELOCKED_ADMIN, addr);
     }
 
     function setStkBNB(address addr) external override {
@@ -44,6 +49,10 @@ contract AddressStore is IAddressStore, Ownable {
 
     function getAddr(string memory key) public view override returns (address) {
         return _store[key];
+    }
+
+    function getTimelockedAdmin() external view override returns (address) {
+        return getAddr(TIMELOCKED_ADMIN);
     }
 
     function getStkBNB() external view override returns (address) {

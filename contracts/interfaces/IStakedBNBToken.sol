@@ -17,5 +17,5 @@ interface IStakedBNBToken is IERC777, IBEP20 {
 
     function unpause() external;
 
-    function selfDestruct(address addr) external;
+    function selfDestruct() external;
 }

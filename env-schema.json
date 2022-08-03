@@ -16,7 +16,21 @@
       "type": "boolean"
     },
     "gnosisSafeAddr": {
-      "type": "string"
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "secondary": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "primary",
+        "secondary"
+      ]
     },
     "addressStore": {
       "type": "object",
@@ -31,6 +45,34 @@
       "required": [
         "address",
         "deploy"
+      ]
+    },
+    "timelockedAdmin": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        },
+        "init": {
+          "type": "object",
+          "properties": {
+            "minDelay": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "minDelay"
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "deploy",
+        "init"
       ]
     },
     "stkBNB": {
@@ -108,6 +150,10 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "transferOutTimeout": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "minBNBDeposit": {
                   "type": "string",
                   "minLength": 1
@@ -143,6 +189,7 @@
               "required": [
                 "bcStakingWallet",
                 "minCrossChainTransfer",
+                "transferOutTimeout",
                 "minBNBDeposit",
                 "minTokenWithdrawal",
                 "cooldownPeriod",
@@ -170,6 +217,7 @@
     "postDeploySetup",
     "gnosisSafeAddr",
     "addressStore",
+    "timelockedAdmin",
     "stkBNB",
     "undelegationHolder",
     "feeVault",

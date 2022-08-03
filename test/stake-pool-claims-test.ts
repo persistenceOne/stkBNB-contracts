@@ -33,6 +33,7 @@ describe('StakePool Claims', function () {
             {
                 bcStakingWallet: ethers.constants.AddressZero,
                 minCrossChainTransfer: ethers.constants.One,
+                transferOutTimeout: ethers.constants.One,
                 minBNBDeposit: ethers.constants.Zero,
                 minTokenWithdrawal: ethers.constants.Zero,
                 cooldownPeriod: ethers.constants.Zero,
