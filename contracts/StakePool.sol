@@ -521,12 +521,15 @@ contract StakePool is
     function initiateDelegation() external override whenNotPaused onlyRole(BOT_ROLE) {
         // contract will always have at least the _claimReserve, so this should never overflow.
         uint256 excessBNB = address(this).balance - _claimReserve;
+        // token hub expects only 8 decimals in the cross-chain transfer value to avoid any precision loss
+        // so, remove the insignificant 10 decimals
+        uint256 transferOutValue = excessBNB - excessBNB%1e10;
         uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
 
         // Initiate a cross-chain transfer only if we have enough amount.
-        if (excessBNB >= miniRelayFee + config.minCrossChainTransfer) {
+        if (transferOutValue >= miniRelayFee + config.minCrossChainTransfer) {
             // this would always be at least config.minCrossChainTransfer
-            uint256 transferOutAmount = excessBNB - miniRelayFee;
+            uint256 transferOutAmount = transferOutValue - miniRelayFee;
             // We are charging the relay fee from the user funds. Similarly, any other fees on the BBC would be
             // paid from user funds. This will eventually lead to the total BNB with the protocol to be less than what
             // is accounted in the exchangeRate. This might lead to claims not working in case of a black swan event.
@@ -538,7 +541,7 @@ contract StakePool is
             // not worry about paying back the fee losses. Also, for us to be economically successful, we must set
             // protocol fee rates in a way so that the rewards we earn via FeeVault are significantly more than the fee
             // we are paying for the protocol operations.
-            bool success = _TOKEN_HUB.transferOut{ value: excessBNB }(
+            bool success = _TOKEN_HUB.transferOut{ value: transferOutValue }(
                 _ZERO_ADDR,
                 config.bcStakingWallet,
                 transferOutAmount,
