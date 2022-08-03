@@ -16,7 +16,21 @@
       "type": "boolean"
     },
     "gnosisSafeAddr": {
-      "type": "string"
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "secondary": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "primary",
+        "secondary"
+      ]
     },
     "addressStore": {
       "type": "object",
@@ -31,6 +45,34 @@
       "required": [
         "address",
         "deploy"
+      ]
+    },
+    "timelockedAdmin": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "deploy": {
+          "type": "boolean"
+        },
+        "init": {
+          "type": "object",
+          "properties": {
+            "minDelay": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "minDelay"
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "deploy",
+        "init"
       ]
     },
     "stkBNB": {
@@ -170,6 +212,7 @@
     "postDeploySetup",
     "gnosisSafeAddr",
     "addressStore",
+    "timelockedAdmin",
     "stkBNB",
     "undelegationHolder",
     "feeVault",

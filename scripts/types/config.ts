@@ -3,17 +3,22 @@ import fs from 'fs';
 import Ajv from 'ajv-draft-04';
 import { getNetwork, isLocalNetwork } from '../utils/network';
 
-interface ContractConfig<T> {
+export interface ContractConfig<T> {
     address: string;
     deploy: boolean;
     init: T;
 }
 
-interface UpgradableContractConfig<T> extends ContractConfig<T> {
+export interface UpgradableContractConfig<T> extends ContractConfig<T> {
     upgrade: boolean;
 }
 
-interface Fee {
+export interface TimelockedAdminConfig {
+    // in seconds
+    minDelay: BigNumber;
+}
+
+export interface Fee {
     reward: BigNumber;
     deposit: BigNumber;
     withdraw: BigNumber;
@@ -28,8 +33,13 @@ export interface StakePoolConfig {
     fee: Fee;
 }
 
-interface StakePoolInit {
+export interface StakePoolInit {
     config: StakePoolConfig;
+}
+
+export interface GnosisSafeAddr {
+    primary: string;
+    secondary: string;
 }
 
 export interface IConfig {
@@ -37,8 +47,9 @@ export interface IConfig {
     botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
-    gnosisSafeAddr: string;
+    gnosisSafeAddr: GnosisSafeAddr;
     addressStore: ContractConfig<null>;
+    timelockedAdmin: ContractConfig<TimelockedAdminConfig>;
     stkBNB: ContractConfig<null>;
     undelegationHolder: ContractConfig<null>;
     feeVault: UpgradableContractConfig<null>;
@@ -50,8 +61,9 @@ export class Config implements IConfig {
     botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
-    gnosisSafeAddr: string;
+    gnosisSafeAddr: GnosisSafeAddr;
     addressStore: ContractConfig<null>;
+    timelockedAdmin: ContractConfig<TimelockedAdminConfig>;
     stkBNB: ContractConfig<null>;
     undelegationHolder: ContractConfig<null>;
     feeVault: UpgradableContractConfig<null>;
@@ -64,6 +76,7 @@ export class Config implements IConfig {
         this.postDeploySetup = config.postDeploySetup;
         this.gnosisSafeAddr = config.gnosisSafeAddr;
         this.addressStore = config.addressStore;
+        this.timelockedAdmin = config.timelockedAdmin;
         this.stkBNB = config.stkBNB;
         this.undelegationHolder = config.undelegationHolder;
         this.feeVault = config.feeVault;
