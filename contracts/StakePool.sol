@@ -523,7 +523,7 @@ contract StakePool is
         uint256 excessBNB = address(this).balance - _claimReserve;
         // token hub expects only 8 decimals in the cross-chain transfer value to avoid any precision loss
         // so, remove the insignificant 10 decimals
-        uint256 transferOutValue = excessBNB - excessBNB%1e10;
+        uint256 transferOutValue = excessBNB - (excessBNB % 1e10);
         uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
 
         // Initiate a cross-chain transfer only if we have enough amount.
