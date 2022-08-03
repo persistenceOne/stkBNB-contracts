@@ -102,7 +102,7 @@ export class Contracts {
             contracts.timelockedAdmin = await factories.TimelockedAdmin.deploy(
                 config.timelockedAdmin.init.minDelay,
                 // TODO: move this to transferOwnershipToGnosis() if we don't have both proposers by deployment time
-                [config.gnosisSafeAddr.primary, config.gnosisSafeAddr.secondary], // proposers
+                [deployerAddr], // proposers
                 [ethers.constants.AddressZero], // executor => anyone
             );
             await contracts.timelockedAdmin.deployed();
