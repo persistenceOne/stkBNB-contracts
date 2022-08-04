@@ -241,7 +241,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'pStake stkBNB',
-                    name: 'Large stkBNB Withdrawal',
+                    name: 'Large BNB Withdrawal',
                     description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
                     alertId: 'LARGE_stkBNB_WITHDRAWAL',
                     severity: FindingSeverity.High,
@@ -258,7 +258,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'pStake stkBNB',
-                    name: 'Large stkBNB Withdrawal',
+                    name: 'Large BNB Withdrawal',
                     description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
                     alertId: 'LARGE_stkBNB_WITHDRAWAL',
                     severity: FindingSeverity.Medium,
@@ -275,7 +275,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'pStake stkBNB',
-                    name: 'Large stkBNB Withdrawal',
+                    name: 'Large BNB Withdrawal',
                     description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
                     alertId: 'LARGE_stkBNB_WITHDRAWAL',
                     severity: FindingSeverity.Low,
