@@ -152,7 +152,7 @@ invariant weiZeroTokensZero()
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
     getPoolTokenSupply() == stkBNB.totalSupply()
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 
 
@@ -190,16 +190,30 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     require e.msg.value == amount;
     require e.msg.sender == user; 
+    uint256 rewardFee;
+    uint256 depositFee;
+    uint256 withdrawFee;
+    rewardFee, depositFee, withdrawFee = getFee();
+    // assumptions 
+    require rewardFee < 100000000000 && depositFee < 100000000000 && withdrawFee < 100000000000;
 
     uint256 totalSupplyBefore = getTotalWei();
+    uint256 poolTokenBefore = getPoolTokenSupply();
+    // 100 always more than 50 - , 51 - 100
+    // 1:1 to 1:1.999
+    // 
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-
+    require totalSupplyBefore + amount <= 2000000000000000000000000;
+    require getMinBNBDeposit() >= 1000000000000;
+    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
     deposit(e);
 
     uint256 totalSupplyAfter = getTotalWei();
+    uint256 poolTokenAfter = getPoolTokenSupply();
     uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
 
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
+    assert amount != 0  => poolTokenAfter > poolTokenBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
 }
 
@@ -338,11 +352,29 @@ rule withdrawalAtLeastMinToken(env e){
 /*************** NEED MORE WORK *******/
 
 /*** Rules that might not be accurate - they have violations ***/
-/*
-rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+
+rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 {
     env e;
     require user == e.msg.sender && user != currentContract;
+    uint256 rewardFee;
+    uint256 depositFee;
+    uint256 withdrawFee;
+    rewardFee, depositFee, withdrawFee = getFee();
+    // assumptions 
+    require rewardFee == 0 && depositFee < 100000000000 && withdrawFee == 0;
+
+    uint256 totalSupplyBefore = getTotalWei();
+    uint256 poolTokenBefore = getPoolTokenSupply();
+    // 100 always more than 50 - , 51 - 100
+    // 1:1 to 1:1.999
+    // 
+    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+    require totalSupplyBefore <= 2000000000000000000000000;
+    require getMinBNBDeposit() >= 1000000000000;
+    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
+    // require (getClaimRequestLength(e,e.msg.sender)<1000);
+
     
     int256 bnbToUnbondBefore = bnbToUnbond();
     uint256 bnbUnbondingBefore = bnbUnbonding();
@@ -353,30 +385,32 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user) filtered {f-
     int256 bnbToUnbondAfter = bnbToUnbond();
     uint bnbUnbondingAfter = bnbUnbonding();
 
-    assert bnbToUnbondBefore <= bnbToUnbondAfter => bnbUnbondingBefore == bnbUnbondingAfter;
-    assert bnbToUnbondBefore > bnbToUnbondAfter => bnbUnbondingBefore < bnbUnbondingAfter;
+    assert bnbToUnbondBefore == bnbToUnbondAfter && f.selector != unbondingFinished().selector => bnbUnbondingBefore == bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation().selector => bnbUnbondingBefore < bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
+    assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
+    // Issue in claimAll() causing indexOutOfBound exception
 }
-*/
-
-/*
-Need to strength these invariants and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
-
-Also we totalWei is zero probably many other variables are also empty\zero - can be improved
 
 
+// Need to strength these invariants and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
 
-invariant singleUserSolvency(address user, uint256 index)
-    getWeiToReturn(user, index) <= bnbUnbonding() + claimReserve()
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+// Also we totalWei is zero probably many other variables are also empty\zero - can be improved
+
+
+
+// invariant singleUserSolvency(address user, uint256 index)
+//     getWeiToReturn(user, index) <= bnbToUnbound() + bnbUnbonding() + claimReserve()
+//     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 invariant zeroWeiZeroSTK(method f, address user)
     getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 invariant zeroWeiZeroClaims(env e, address user)
     getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-*/
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+
 
 // Not sure that this is correct 
 /*
