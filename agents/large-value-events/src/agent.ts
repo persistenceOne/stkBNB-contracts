@@ -227,11 +227,11 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
     });
     ////////////////////////////////WITHDRWALS////////////////////////////////////////////////////////////////
 
-    const stkbnbWithdrawEvents = txEvent.filterLog(STAKE_POOL_WITHDRAW_EVENT, STAKEPOOL_ADDRESS);
+    const stakePoolWithdrawEvents = txEvent.filterLog(STAKE_POOL_WITHDRAW_EVENT, STAKEPOOL_ADDRESS);
 
-    stkbnbWithdrawEvents.forEach(depositEvent => {
+    stakePoolWithdrawEvents.forEach(withdrawEvent => {
         // extract withdraw event arguments
-        const { timestamp, bnbAmount } = depositEvent.args;
+        const { timestamp, bnbAmount } = withdrawEvent.args;
         // convert 18 decimal places to normal value
 
         var normalizedValue = normalizeValue(bnbAmount);
@@ -242,7 +242,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
                 Finding.fromObject({
                     protocol: 'pStake stkBNB',
                     name: 'Large stkBNB Withdrawal',
-                    description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} stkBNB`,
+                    description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
                     alertId: 'LARGE_stkBNB_WITHDRAWAL',
                     severity: FindingSeverity.High,
                     type: FindingType.Info,
@@ -259,7 +259,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
                 Finding.fromObject({
                     protocol: 'pStake stkBNB',
                     name: 'Large stkBNB Withdrawal',
-                    description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} stkBNB`,
+                    description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
                     alertId: 'LARGE_stkBNB_WITHDRAWAL',
                     severity: FindingSeverity.Medium,
                     type: FindingType.Info,
@@ -276,7 +276,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
                 Finding.fromObject({
                     protocol: 'pStake stkBNB',
                     name: 'Large stkBNB Withdrawal',
-                    description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} stkBNB`,
+                    description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
                     alertId: 'LARGE_stkBNB_WITHDRAWAL',
                     severity: FindingSeverity.Low,
                     type: FindingType.Info,
