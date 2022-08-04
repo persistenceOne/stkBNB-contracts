@@ -7,7 +7,8 @@ import 'solidity-coverage';
 import 'hardhat-contract-sizer';
 import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
 import { CONFIG } from './scripts/types/config';
-import 'hardhat-forta'; //forta
+import 'hardhat-forta'; // forta
+import { ethers } from 'ethers';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -17,6 +18,13 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
     for (const account of accounts) {
         console.log(account.address);
     }
+});
+
+task('gen-keypair', 'Generates a new keypair', async (taskArgs, hre) => {
+    const wallet = ethers.Wallet.createRandom();
+    console.log(`Address: ${wallet.address}`);
+    console.log(`PrivKey: ${wallet.privateKey}`);
+    console.log(`Mnemonic: ${wallet.mnemonic.phrase}`);
 });
 
 // You need to export an object to set up your config
