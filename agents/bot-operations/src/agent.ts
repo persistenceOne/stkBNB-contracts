@@ -99,7 +99,7 @@ if (currenthours == InitiateDelegation_start_hour  && currentmins > InitiateDele
               description: `Delegation did not happen on time`,
               alertId: "Initiate_Delegation_Missed",
               severity: FindingSeverity.Critical,
-              type: FindingType.Info,
+              type: FindingType.Degraded,
               metadata: {},
               })
             );
@@ -138,7 +138,7 @@ if (currenthours == EpochUpdate_start_hour  && currentmins > EpochUpdate_start_m
               description: `Epoch Update did not happen on time`,
               alertId: "Epoch_Update_Missed",
               severity: FindingSeverity.Critical,
-              type: FindingType.Info,
+              type: FindingType.Degraded,
               metadata: {},
               })
             );
@@ -173,7 +173,7 @@ if (currentday==UnbondingInitiated_day_of_week && currenthours == UnbondingIniti
               description: `Unbonding Initiation did not happen on time`,
               alertId: "Unbonding Initiated Missed",
               severity: FindingSeverity.Critical,
-              type: FindingType.Info,
+              type: FindingType.Degraded,
               metadata: {},
               })
             );
@@ -208,7 +208,7 @@ if (currentday==UnbondingFinished_day_of_week && currenthours == UnbondingFinish
               description: `Unbonding Finished did not happen on time`,
               alertId: "Unbonding_Finished_Missed",
               severity: FindingSeverity.Critical,
-              type: FindingType.Info,
+              type: FindingType.Degraded,
               metadata: {},
               })
             );
