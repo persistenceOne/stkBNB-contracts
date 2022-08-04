@@ -1,103 +1,117 @@
-const { Finding, FindingSeverity, FindingType } = require("forta-agent");
-const { after } = require("mocha");
-const config = require('../agent-config.json');
-import {normalizeValue} from './utils.js';
-const { ethers } = require("ethers");
+import { BigNumber } from "ethers";
+import {
+  BlockEvent,
+  Finding,
+  HandleBlock,
+  HandleTransaction,
+  TransactionEvent,
+  FindingSeverity,
+  FindingType,
+  ethers
+} from "forta-agent";
+
+import config from '../agent-config.json' 
 
 
+function normalizeValue( value:BigNumber){
+  return value.div(ethers.constants.WeiPerEther)
+ 
+}
 
 // StakePool contract events
-const STAKE_POOL_DEPOSIT_EVENT = "event Deposit(address indexed user,uint256 bnbAmount,uint256 poolTokenAmount,uint256 timestamp)";
-const STAKE_POOL_WITHDRAW_EVENT = "event Withdraw(address indexed user,uint256 poolTokenAmount,uint256 bnbAmount,uint256 timestamp)";
+export const STAKE_POOL_DEPOSIT_EVENT = "event Deposit(address indexed user,uint256 bnbAmount,uint256 poolTokenAmount,uint256 timestamp)";
+export const STAKE_POOL_WITHDRAW_EVENT = "event Withdraw(address indexed user,uint256 poolTokenAmount,uint256 bnbAmount,uint256 timestamp)";
 
 // StkBNBToken contract events
-const STKBNB_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
-const STKBNB_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
+export const STKBNB_MINT_EVENT = "event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData)";
+export const STKBNB_BURN_EVENT = "event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData)";
 
 
 // Contract Addresses
-const STAKEPOOL_ADDRESS = config.STAKEPOOL_ADDRESS;
-const STAKEDBNBTOKEN_ADDRESS= config.STAKEDBNBTOKEN_ADDRESS
+export const STAKEPOOL_ADDRESS = config.STAKEPOOL_ADDRESS;
+export const STAKEDBNBTOKEN_ADDRESS= config.STAKEDBNBTOKEN_ADDRESS;
 
 // Thresholds 
-const HighThreshold = config.HighThreshold;   // 1 Million 
-const MediumThreshold = config.MediumThreshold;  // 500k 
-const LowThreshold = config.LowThreshold;     // 100k 
+export const HighThreshold = config.HighThreshold;   // 1 Million 
+export const MediumThreshold = config.MediumThreshold;  // 500k 
+export const LowThreshold = config.LowThreshold;     // 100k 
 
 
-const handleTransaction = async (txEvent) => {
+const handleTransaction: HandleTransaction = async (
+  txEvent: TransactionEvent
+) => {
+  const findings: Finding[] = [];
 
-  // Findings are stored
-  const findings = [];
+  // limiting this agent to emit only 5 findings so that the alert feed is not spammed
 
-  //////////////////////////////////MINTED/////////////////////////////////////////////////////////
+
+  // filter the transaction logs for Tether transfer events
   const stkbnbMintedEvents = txEvent.filterLog(
-       STKBNB_MINT_EVENT,
-       STAKEDBNBTOKEN_ADDRESS
-     );
+    STKBNB_MINT_EVENT,
+    STAKEDBNBTOKEN_ADDRESS
+  );
+
   
-     stkbnbMintedEvents.forEach((mintEvent) => {
-      // extract mint event arguments
-      const { amount } = mintEvent.args;
-      
+  stkbnbMintedEvents.forEach((mintEvent) => {
+    // extract mint event arguments
+    const { amount } = mintEvent.args;
+    
 
-      // Normalised value bought down from 18 decimals
-       normalizedValue= normalizeValue(amount)
+    // Normalised value bought down from 18 decimals
+     var normalizedValue= normalizeValue(amount)
 
-      //TODO Create a finding object at that time with the severity as per the variable
-      // if more than 1Million stkBNB were minted, report it
-      if (normalizedValue.gte(HighThreshold) ) {
-        findings.push(
-          Finding.fromObject({
-            protocol:"pStake stkBNB",
-            name: "Large stkBNB Mint",
-            description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
-            alertId: "LARGE_stkBNB_MINT",
-            severity: FindingSeverity.High,
-            type: FindingType.Info,
-            metadata: {
-               amount
-            },
-          })
-        );
-      }
-      // else if more than 500,000 stkBNB but less than 1 Million stkBNB were minted, report it
-      else if (normalizedValue.gte(MediumThreshold) ) {
-        findings.push(
-          Finding.fromObject({
-            protocol:"pStake stkBNB",
-            name: "Large stkBNB Mint",
-            description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
-            alertId: "LARGE_stkBNB_MINT",
-            severity: FindingSeverity.Medium,
-            type: FindingType.Info,
-            metadata: {
+    //TODO Create a finding object at that time with the severity as per the variable
+    // if more than 1Million stkBNB were minted, report it
+    if (normalizedValue.gte(HighThreshold) ) {
+      findings.push(
+        Finding.fromObject({
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Mint",
+          description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
+          alertId: "LARGE_stkBNB_MINT",
+          severity: FindingSeverity.High,
+          type: FindingType.Info,
+          metadata: {
              amount
-            },
-          })
-        );
-      }
-      // else if more than 100,000 stkBNB but less than 500,000 stkBNB were minted, report it
-      else if (normalizedValue.gte(LowThreshold)  ) {
-        findings.push(
-          Finding.fromObject({
-            protocol:"pStake stkBNB",
-            name: "Large stkBNB Mint",
-            description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
-            alertId: "LARGE_stkBNB_MINT",
-            severity: FindingSeverity.Low,
-            type: FindingType.Info,
-            metadata: {
-              amount
-            },
-          })
-        );
-      }
-    });
-   
+          },
+        })
+      );
+    }
+    // else if more than 500,000 stkBNB but less than 1 Million stkBNB were minted, report it
+    else if (normalizedValue.gte(MediumThreshold) ) {
+      findings.push(
+        Finding.fromObject({
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Mint",
+          description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
+          alertId: "LARGE_stkBNB_MINT",
+          severity: FindingSeverity.Medium,
+          type: FindingType.Info,
+          metadata: {
+           amount
+          },
+        })
+      );
+    }
+    // else if more than 100,000 stkBNB but less than 500,000 stkBNB were minted, report it
+    else if (normalizedValue.gte(LowThreshold)  ) {
+      findings.push(
+        Finding.fromObject({
+          protocol:"pStake stkBNB",
+          name: "Large stkBNB Mint",
+          description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
+          alertId: "LARGE_stkBNB_MINT",
+          severity: FindingSeverity.Low,
+          type: FindingType.Info,
+          metadata: {
+            amount
+          },
+        })
+      );
+    }
+  });
+ 
 /////////////////////////////////////////BURNED///////////////////////////////////////////////////////////
-
-
 const stkbnbBurnedEvents = txEvent.filterLog(
   STKBNB_BURN_EVENT,
   STAKEDBNBTOKEN_ADDRESS
@@ -108,7 +122,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
  const { amount } = burnEvent.args;
 
 
- normalizedValue= normalizeValue(amount)
+ var normalizedValue= normalizeValue(amount)
 
 
  // if equal or more than 1 Million stkBNB were burnt, report it
@@ -178,7 +192,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
     // extract deposit event arguments
     const { timestamp, bnbAmount } = depositEvent.args;
 
-    normalizedValue= normalizeValue(bnbAmount)
+    var normalizedValue= normalizeValue(bnbAmount)
 
     // if equal or more than 1 Million stkBNB were deposited, report it
     if (normalizedValue.gte(HighThreshold) ) {
@@ -186,7 +200,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large BNB Deposit",
-          description: `Deposited: ${ethers.utils.formatEther(amount)} BNB`,
+          description: `Deposited: ${ethers.utils.formatEther(bnbAmount)} BNB`,
           alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.High,
           type: FindingType.Info,
@@ -205,7 +219,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large BNB Deposit",
-          description: `Deposited: ${ethers.utils.formatEther(amount)} BNB`,
+          description: `Deposited: ${ethers.utils.formatEther(bnbAmount)} BNB`,
           alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
@@ -222,7 +236,7 @@ stkbnbBurnedEvents.forEach((burnEvent) => {
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large BNB Deposit",
-          description: `Deposited: ${ethers.utils.formatEther(amount)} BNB`,
+          description: `Deposited: ${ethers.utils.formatEther(bnbAmount)} BNB`,
           alertId: "LARGE_stkBNB_DEPOSIT",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
@@ -246,7 +260,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
     const { timestamp, bnbAmount } = depositEvent.args;
     // convert 18 decimal places to normal value
 
-    normalizedValue= normalizeValue(bnbAmount)
+    var normalizedValue= normalizeValue(bnbAmount)
 
     // if equal or more than 1 Million stkBNB were withdrawn, report it
     if (normalizedValue.gte(HighThreshold) ) {
@@ -254,7 +268,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
-          description: `Withdrawn: ${ethers.utils.formatEther(amount)} stkBNB`,
+          description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} stkBNB`,
           alertId: "LARGE_stkBNB_WITHDRAWAL",
           severity: FindingSeverity.High,
           type: FindingType.Info,
@@ -271,7 +285,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
-          description: `Withdrawn: ${ethers.utils.formatEther(amount)} stkBNB`,
+          description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} stkBNB`,
           alertId: "LARGE_stkBNB_WITHDRAWAL",
           severity: FindingSeverity.Medium,
           type: FindingType.Info,
@@ -288,7 +302,7 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
         Finding.fromObject({
           protocol:"pStake stkBNB",
           name: "Large stkBNB Withdrawal",
-          description: `Withdrawn: ${ethers.utils.formatEther(amount)} stkBNB`,
+          description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} stkBNB`,
           alertId: "LARGE_stkBNB_WITHDRAWAL",
           severity: FindingSeverity.Low,
           type: FindingType.Info,
@@ -300,18 +314,18 @@ const stkbnbWithdrawEvents=txEvent.filterLog(
       );
     }
   });
+
+
   return findings;
 };
 
+// const handleBlock: HandleBlock = async (blockEvent: BlockEvent) => {
+//   const findings: Finding[] = [];
+//   // detect some block condition
+//   return findings;
+// }
 
-module.exports = {
+export default {
   handleTransaction,
- 
-  STAKE_POOL_DEPOSIT_EVENT, // exported for unit tests
-  STAKE_POOL_WITHDRAW_EVENT, // exported for unit tests
-  STAKEPOOL_ADDRESS, // exported for unit tests
-  STKBNB_BURN_EVENT, // exported for unit tests
-  STKBNB_MINT_EVENT, // exported for unit tests
-  STAKEDBNBTOKEN_ADDRESS // exported for unit tests
-
+  // handleBlock
 };
