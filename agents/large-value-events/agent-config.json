@@ -1,0 +1,7 @@
+{
+    "HighThreshold": 3,
+    "MediumThreshold":2,
+    "LowThreshold":1,
+    "STAKEPOOL_ADDRESS" : "0xEB6048eE3F39eb701712073936CA76Be774b6e0f",
+    "STAKEDBNBTOKEN_ADDRESS" : "0xCA115d3723A0d36f4984d7CebE69a85ca235CfCA"   
+  }
