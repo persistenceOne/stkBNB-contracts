@@ -8,6 +8,5 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
 --loop_iter 3 \
---settings -optimisticFallback=true --optimistic_loop \
---staging \
---msg "pstake"
+--settings -assumeUnwindCond,-enableStorageAnalysis=true,-ciMode=true,-optimisticFallback=true \
+--msg "pstake" \
