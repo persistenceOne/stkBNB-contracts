@@ -45,12 +45,16 @@ certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/FeeVault.sol \
             contracts/StakedBNBToken.sol \
             contracts/UndelegationHolder.sol \
---link  StakePoolHarness:_addressStore=AddressStore \
+--link  StakePoolHarness:addressStore=AddressStore \
 --verify StakePoolHarness:certora/specs/StakePool.spec \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
+--solc solc8.7 \
 --loop_iter 3 \
 --settings -optimisticFallback=true --optimistic_loop \
+--optimistic_loop --loop_iter 2 \
+--settings -optimisticFallback=true \
+--staging
 $RULE  \
 --msg "pstake -$RULE $MSG"
 

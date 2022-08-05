@@ -269,7 +269,6 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     claim@withrevert(e, index);
     bool reverted = lastReverted;
     assert e.block.timestamp < claimRequestTimestamp + getCooldownPeriod() => reverted;
-    // assert false;
 }
 
 
@@ -390,7 +389,6 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
     assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
     // Issue in claimAll() causing indexOutOfBound exception
-    assert false;
 }
 
 
@@ -412,13 +410,12 @@ invariant zeroWeiZeroClaims(env e, address user)
     getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
-
-// Not sure that this is correct 
-
+/* 
+ Not sure that this is correct 
 invariant integrityOfBoundingValues()
     bnbToUnbond() > 0 => (to_uint256(bnbToUnbond()) <= bnbUnbonding())
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-
+*/
 
 
 /****  rules for info and checking the ghost and tool - expecting to fail ****/
