@@ -16,6 +16,7 @@ methods {
     bnbBalanceOf(address) returns (uint256) envfree
     getFee() returns ( uint256, uint256, uint256) envfree
 
+
     // Getters:
     bnbToUnbond() returns (int256) envfree
     bnbUnbonding() returns (uint256) envfree
@@ -152,7 +153,7 @@ invariant weiZeroTokensZero()
 //Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
     getPoolTokenSupply() == stkBNB.totalSupply()
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 
 
@@ -215,6 +216,7 @@ rule integrityOfDeposit(address user, uint256 amount){
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert amount != 0  => poolTokenAfter > poolTokenBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
+    // vacutity check 
 }
 
 
@@ -353,7 +355,7 @@ rule withdrawalAtLeastMinToken(env e){
 
 /*** Rules that might not be accurate - they have violations ***/
 
-rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 {
     env e;
     require user == e.msg.sender && user != currentContract;
@@ -373,9 +375,7 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     require totalSupplyBefore <= 2000000000000000000000000;
     require getMinBNBDeposit() >= 1000000000000;
     require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
-    // require (getClaimRequestLength(e,e.msg.sender)<1000);
 
-    
     int256 bnbToUnbondBefore = bnbToUnbond();
     uint256 bnbUnbondingBefore = bnbUnbonding();
 
@@ -390,6 +390,7 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
     assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
     // Issue in claimAll() causing indexOutOfBound exception
+    assert false;
 }
 
 
@@ -405,19 +406,19 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
 
 invariant zeroWeiZeroSTK(method f, address user)
     getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 invariant zeroWeiZeroClaims(env e, address user)
     getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
 
 // Not sure that this is correct 
-/*
+
 invariant integrityOfBoundingValues()
     bnbToUnbond() > 0 => (to_uint256(bnbToUnbond()) <= bnbUnbonding())
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-*/
+    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+
 
 
 /****  rules for info and checking the ghost and tool - expecting to fail ****/
@@ -440,4 +441,20 @@ rule whoChangedClaimRequests(method f) {
     assert before == after; 
 }
 */
- 
+
+
+rule unbondingFinished(){
+    env e;
+    require e.msg.sender == stakePoolContract;
+    uint256 bnbUnbondingBefore = bnbUnbonding();
+    uint256 claimReserveBefore = claimReserve();
+    uint256 undelegationHolderBalanceBefore = bnbBalanceOf(delegationHolder);
+
+    unbondingFinished(e);
+
+    uint256 bnbUnbondingAfter = bnbUnbonding();
+    uint256 claimReserveAfter = claimReserve();
+    uint256 undelegationHolderBalanceAfter = bnbBalanceOf(delegationHolder);
+
+    assert bnbUnbondingBefore > bnbUnbondingAfter => claimReserveAfter > claimReserveBefore && bnbUnbondingBefore - bnbUnbondingAfter == claimReserveAfter - claimReserveBefore && undelegationHolderBalanceBefore - undelegationHolderBalanceAfter == claimReserveAfter - claimReserveBefore;
+}   
