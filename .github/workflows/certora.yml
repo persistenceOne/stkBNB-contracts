@@ -53,10 +53,10 @@ jobs:
 
       - name: Prepare
         run: |
-          chmod +x certora/spec/scripts/*.sh
+          chmod +x certora/scripts/*.sh
 
       - name: Verify with Certora - STKBNB-CONTRACTS
         run: |
-          certora/spec/scripts/run.sh
+          certora/scripts/run.sh
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
