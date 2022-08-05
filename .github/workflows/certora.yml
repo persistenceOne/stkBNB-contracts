@@ -57,6 +57,6 @@ jobs:
 
       - name: Verify with Certora - STKBNB-CONTRACTS
         run: |
-          certora/scripts/ci.sh
+          certora/scripts/run.sh
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
