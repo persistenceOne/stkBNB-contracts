@@ -101,8 +101,7 @@ export class Contracts {
         if (config.timelockedAdmin.deploy) {
             contracts.timelockedAdmin = await factories.TimelockedAdmin.deploy(
                 config.timelockedAdmin.init.minDelay,
-                // TODO: move this to transferOwnershipToGnosis() if we don't have both proposers by deployment time
-                [config.gnosisSafeAddr.primary, config.gnosisSafeAddr.secondary], // proposers
+                [], // no proposers initially
                 [ethers.constants.AddressZero], // executor => anyone
             );
             await contracts.timelockedAdmin.deployed();
@@ -312,6 +311,28 @@ export class Contracts {
         await executeTx(contracts.feeVault, 'transferOwnership', [config.gnosisSafeAddr.secondary]);
         console.log('Transferred FeeVault ownership from deployer to secondary Gnosis');
 
+        // TimelockedAdmin: Grant PROPOSER_ROLE to primary & secondary Gnosis
+        await executeTx(contracts.timelockedAdmin, 'grantRole', [
+            await contracts.timelockedAdmin.PROPOSER_ROLE(),
+            config.gnosisSafeAddr.primary,
+        ]);
+        await executeTx(contracts.timelockedAdmin, 'grantRole', [
+            await contracts.timelockedAdmin.PROPOSER_ROLE(),
+            config.gnosisSafeAddr.secondary,
+        ]);
+
+        // TimelockedAdmin: Grant CANCELLER_ROLE to primary & secondary Gnosis
+        await executeTx(contracts.timelockedAdmin, 'grantRole', [
+            await contracts.timelockedAdmin.CANCELLER_ROLE(),
+            config.gnosisSafeAddr.primary,
+        ]);
+        await executeTx(contracts.timelockedAdmin, 'grantRole', [
+            await contracts.timelockedAdmin.CANCELLER_ROLE(),
+            config.gnosisSafeAddr.secondary,
+        ]);
+
+        // TODO: verify once that above grants for proposer and canceller will be executed instantly
+        //  before we revoke this role
         // TimelockedAdmin: Revoke TIMELOCK_ADMIN_ROLE from deployer
         await executeTx(contracts.timelockedAdmin, 'revokeRole', [
             await contracts.timelockedAdmin.TIMELOCK_ADMIN_ROLE(),
