@@ -26,7 +26,7 @@ var EpochUpdateEventFlag = false;
 var UnbondingInitiatedEventFlag = false;
 var UnbondingFinishedEventFlag = false;
 
-const InitiateDelegation_start_hour = config.InitiateDelegation_start_hour; // should happen 10 mins before UTC 00:00
+const InitiateDelegation_start_hour = config.InitiateDelegation_start_hour; // should happen 20 mins before UTC 00:00
 const InitiateDelegation_start_min = config.InitiateDelegation_start_min;
 const InitiateDelegation_end_hour = config.UnbondingInitiated_end_hour;
 const InitiateDelegation_end_min = config.InitiateDelegation_end_min; // 23:48 - 23:59  UTC
@@ -36,7 +36,7 @@ const EpochUpdate_start_min = config.EpochUpdate_start_min;
 const EpochUpdate_end_hour = config.EpochUpdate_end_hour;
 const EpochUpdate_end_min = config.EpochUpdate_end_min; // 00:08 - 00:20  UTC
 
-const UnbondingInitiated_start_hour = config.UnbondingInitiated_start_hour; // should happen 9 mins before UTC 00:00  WEEKLY (DAILY ON TESTNET)
+const UnbondingInitiated_start_hour = config.UnbondingInitiated_start_hour; // should happen 19 mins before UTC 00:00  WEEKLY (DAILY ON TESTNET)
 const UnbondingInitiated_start_min = config.UnbondingInitiated_start_min;
 const UnbondingInitiated_end_hour = config.UnbondingInitiated_end_hour;
 const UnbondingInitiated_end_min = config.UnbondingInitiated_end_min; // 23:48 - 23:59
@@ -46,7 +46,7 @@ const UnbondingFinished_start_hour = config.UnbondingFinished_start_hour; // sho
 const UnbondingFinished_start_min = config.UnbondingFinished_start_min;
 const UnbondingFinished_end_hour = config.UnbondingFinished_end_hour;
 const UnbondingFinished_end_min = config.UnbondingFinished_end_min; // 00:08 - 00:20  UTC
-const UnbondingFinished_day_of_week = config.UnbondingInitiated_day_of_week;
+const UnbondingFinished_day_of_week = config.UnbondingFinished_day_of_week;
 
 const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
