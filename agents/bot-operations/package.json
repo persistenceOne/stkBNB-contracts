@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Forta Agent that monitors and alerts when bot operations do not happen on time",
   "chainIds": [
-    1
+    56
   ],
   "scripts": {
     "build": "tsc",
