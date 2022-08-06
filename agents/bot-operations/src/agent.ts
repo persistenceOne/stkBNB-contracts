@@ -71,13 +71,13 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
         );
 
         initiateDelegationEvent.forEach(delegateEvent => {
-           
             // if any event is found set flag to true
             InitiateDelegationEventFlag = true;
         });
 
         if (
-            InitiateDelegationEventFlag == false && currenthours == InitiateDelegation_end_hour &&
+            InitiateDelegationEventFlag == false &&
+            currenthours == InitiateDelegation_end_hour &&
             currentmins >= InitiateDelegation_end_min - 1 &&
             currentmins < InitiateDelegation_end_min
         ) {
@@ -116,11 +116,11 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
         const epochUpdateEvent = txEvent.filterLog(BOT_EPOCH_UPDATE_EVENT, STAKEPOOL_ADDRESS);
 
         epochUpdateEvent.forEach(epochupdateEvent => {
-            
             EpochUpdateEventFlag = true;
         });
         if (
-            EpochUpdateEventFlag == false && currenthours == EpochUpdate_end_hour &&
+            EpochUpdateEventFlag == false &&
+            currenthours == EpochUpdate_end_hour &&
             currentmins >= EpochUpdate_end_min - 1 &&
             currentmins < EpochUpdate_end_min
         ) {
@@ -158,11 +158,11 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
         );
 
         unbondingInitiatedEvent.forEach(unbondinginitiatedEvent => {
-            
             UnbondingInitiatedEventFlag = true;
         });
         if (
-            UnbondingInitiatedEventFlag == false && currenthours == UnbondingInitiated_end_hour &&
+            UnbondingInitiatedEventFlag == false &&
+            currenthours == UnbondingInitiated_end_hour &&
             currentmins >= UnbondingInitiated_end_min - 1 &&
             currentmins < UnbondingInitiated_end_min
         ) {
@@ -200,11 +200,11 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
         );
 
         initiateDelegationEvent.forEach(unbondingfinishedEvent => {
-            
             UnbondingFinishedEventFlag = true;
         });
         if (
-            UnbondingFinishedEventFlag == false && currenthours == UnbondingFinished_end_hour &&
+            UnbondingFinishedEventFlag == false &&
+            currenthours == UnbondingFinished_end_hour &&
             currentmins >= UnbondingFinished_end_min - 1 &&
             currentmins < UnbondingFinished_end_min
         ) {
