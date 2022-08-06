@@ -1,9 +1,9 @@
 {
  "STAKEPOOL_ADDRESS" : "0xEB6048eE3F39eb701712073936CA76Be774b6e0f" ,
  "InitiateDelegation_start_hour" : 23,   
- "InitiateDelegation_start_min" : 48,
+ "InitiateDelegation_start_min" : 38,
  "InitiateDelegation_end_hour" : 23,
- "InitiateDelegation_end_min" : 59,
+ "InitiateDelegation_end_min" : 45,
 
  "EpochUpdate_start_hour" : 0,
  "EpochUpdate_start_min" : 8,
@@ -11,10 +11,10 @@
  "EpochUpdate_end_min" : 20,  
 
  "UnbondingInitiated_start_hour" : 23,  
- "UnbondingInitiated_start_min" : 47,
+ "UnbondingInitiated_start_min" : 38,
  "UnbondingInitiated_end_hour" : 23,
- "UnbondingInitiated_end_min" : 59,   
- "UnbondingInitiated_day_of_week" : 3,
+ "UnbondingInitiated_end_min" : 45,   
+ "UnbondingInitiated_day_of_week" : 2,
  
  "UnbondingFinished_start_hour" : 0,
  "UnbondingFinished_start_min" : 8,
