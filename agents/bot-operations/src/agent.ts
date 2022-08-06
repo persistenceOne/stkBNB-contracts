@@ -28,7 +28,7 @@ var UnbondingFinishedEventFlag = false;
 
 const InitiateDelegation_start_hour = config.InitiateDelegation_start_hour; // should happen 20 mins before UTC 00:00
 const InitiateDelegation_start_min = config.InitiateDelegation_start_min;
-const InitiateDelegation_end_hour = config.UnbondingInitiated_end_hour;
+const InitiateDelegation_end_hour = config.InitiateDelegation_end_hour;
 const InitiateDelegation_end_min = config.InitiateDelegation_end_min; // 23:48 - 23:59  UTC
 
 const EpochUpdate_start_hour = config.EpochUpdate_start_hour; // should happen 10 mins after UTC 00:00
