@@ -1,3 +1,5 @@
+import { expect } from 'chai';
+import { BigNumber, ethers } from 'ethers';
 import { Contracts } from '../scripts/utils/contracts';
 import {
     Config,
@@ -9,10 +11,10 @@ import {
     TimelockedAdminConfig,
     UpgradableContractConfig,
 } from '../scripts/types/config';
-import { BigNumber, ethers } from 'ethers';
 import { executeTx } from '../scripts/utils/transaction';
 import { getDeployerAddr } from '../scripts/utils/deployer';
-import { expect } from 'chai';
+import { sleep } from '../scripts/utils/util';
+import { exec } from 'child_process';
 
 const timelockDelay = BigNumber.from(30); // 30 seconds
 const mockAddr = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
@@ -82,31 +84,19 @@ describe('System Scripts', function () {
         await Contracts.transferOwnershipToGnosis(conf);
     });
 
-    it('should propose and execute via timelock', async function () {
+    // TODO: keep only script tests in this file, move the below two tests somewhere else
+    it('should update AddressStore via timelock', async function () {
         const calldata = contracts.addressStore.interface.encodeFunctionData('setAddr', [
             'mockKey',
             mockAddr,
         ]);
 
         // schedule a timelocked operation on a contract
-        await executeTx(contracts.timelockedAdmin, 'schedule', [
-            contracts.addressStore.address,
-            0,
-            calldata,
-            ethers.constants.HashZero,
-            ethers.constants.HashZero,
-            timelockDelay,
-        ]);
+        await contracts.scheduleTimelockOp(contracts.addressStore.address, calldata);
 
         // executing it before delay will result in failure
         await expect(
-            executeTx(contracts.timelockedAdmin, 'execute', [
-                contracts.addressStore.address,
-                0,
-                calldata,
-                ethers.constants.HashZero,
-                ethers.constants.HashZero,
-            ]),
+            contracts.executeTmielockOp(contracts.addressStore.address, calldata),
         ).to.be.revertedWith('TimelockController: operation is not ready');
 
         // we can verify that the address store wasn't updated
@@ -115,19 +105,42 @@ describe('System Scripts', function () {
         );
 
         // wait for the timelock delay to pass
-        await new Promise(resolve => setTimeout(resolve, (timelockDelay.toNumber() + 1) * 1000));
+        await sleep(timelockDelay.toNumber() + 1);
 
         // this time it should execute
-        await executeTx(contracts.timelockedAdmin, 'execute', [
-            contracts.addressStore.address,
-            0,
-            calldata,
-            ethers.constants.HashZero,
-            ethers.constants.HashZero,
-        ]);
+        await contracts.executeTmielockOp(contracts.addressStore.address, calldata);
 
         // we can verify the same by querying the address store
         expect(await contracts.addressStore.getAddr('mockKey')).to.equal(mockAddr);
+    }).timeout((timelockDelay.toNumber() + 5) * 1000);
+
+    it('should destroy stkBNB via timelock', async function () {
+        // pause so that we can call selfdestruct
+        await executeTx(contracts.stakedBNBToken, 'pause', []);
+        // pausing again should fail
+        await expect(executeTx(contracts.stakedBNBToken, 'pause', [])).to.be.revertedWith(
+            'Pausable: paused',
+        );
+        // querying something should work
+        expect(await contracts.stakedBNBToken.decimals()).to.eq(18);
+
+        // trying to let the deployer destroy stkBNB shouldn't work
+        await expect(executeTx(contracts.stakedBNBToken, 'selfDestruct', [])).to.be.revertedWith(
+            'UnauthorizedSender',
+        );
+
+        // destroy the contract
+        const calldata = contracts.stakedBNBToken.interface.encodeFunctionData('selfDestruct');
+        await contracts.scheduleTimelockOp(contracts.stakedBNBToken.address, calldata);
+        await sleep(timelockDelay.toNumber() + 1);
+        await contracts.executeTmielockOp(contracts.stakedBNBToken.address, calldata);
+
+        // pausing here shouldn't revert as there is no contract to interact with
+        await executeTx(contracts.stakedBNBToken, 'pause', []);
+        // and we can pause again, it just doesn't matter now
+        await executeTx(contracts.stakedBNBToken, 'pause', []);
+        // querying something should revert
+        await expect(contracts.stakedBNBToken.decimals()).to.be.revertedWith('');
     }).timeout((timelockDelay.toNumber() + 5) * 1000);
 
     it('upgrade', async function () {
