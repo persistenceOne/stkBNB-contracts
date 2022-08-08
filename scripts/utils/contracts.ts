@@ -8,6 +8,7 @@ import { formatEther } from 'ethers/lib/utils';
 import { RoleInfo } from '../types/role-info';
 import { Claims } from '../types/claim';
 import { SysContracts } from './sys-contracts';
+import { TransactionReceipt } from '@ethersproject/abstract-provider';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -340,7 +341,7 @@ export class Contracts {
         ]);
         console.log('Revoked TimelockedAdmin TIMELOCK_ADMIN_ROLE from deployer');
         console.log(
-            '**NOTE**: Any changes to TimelockedAdmin will now have to be scheduled via TimelockedAdmin itself',
+            '**NOTE**: Any changes to TimelockedAdmin will now have to be scheduled via TimelockedAdmin itself, resulting in delay as configured in the TimelockedAdmin',
         );
 
         // AddressStore: Transfer ownership to TimelockedAdmin
@@ -394,12 +395,6 @@ export class Contracts {
         console.log('Decimals: ', await stkBNB.decimals());
         console.log('Granularity: ', await stkBNB.granularity());
         console.log('Owner: ', await stkBNB.getOwner());
-        console.log(
-            'DEFAULT_ADMIN_ROLE: ',
-            await RoleInfo.get(stkBNB, await stkBNB.DEFAULT_ADMIN_ROLE()),
-        );
-        console.log('MINTER_ROLE: ', await RoleInfo.get(stkBNB, await stkBNB.MINTER_ROLE()));
-        console.log('BURNER_ROLE: ', await RoleInfo.get(stkBNB, await stkBNB.BURNER_ROLE()));
 
         console.log('\n\n');
 
@@ -447,6 +442,33 @@ export class Contracts {
 
         console.log('End time: ', new Date());
         console.log(`Total time spent: ${(new Date().getTime() - startTime.getTime()) / 1000}s`);
+    }
+
+    public async scheduleTimelockOp(
+        targetAddr: string,
+        calldata: string,
+    ): Promise<TransactionReceipt> {
+        return executeTx(this.timelockedAdmin, 'schedule', [
+            targetAddr,
+            0,
+            calldata,
+            ethers.constants.HashZero, // predecessor
+            ethers.constants.HashZero, // salt
+            await this.timelockedAdmin.getMinDelay(),
+        ]);
+    }
+
+    public async executeTmielockOp(
+        targetAddr: string,
+        calldata: string,
+    ): Promise<TransactionReceipt> {
+        return executeTx(this.timelockedAdmin, 'execute', [
+            targetAddr,
+            0,
+            calldata,
+            ethers.constants.HashZero, // predecessor
+            ethers.constants.HashZero, // salt
+        ]);
     }
 
     public async mirrorStkBNB() {

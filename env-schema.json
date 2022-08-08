@@ -6,6 +6,9 @@
     "mnemonic": {
       "type": "string"
     },
+    "etherscanApiKey": {
+      "type": "string"
+    },
     "botAddr": {
       "type": "string"
     },
@@ -210,6 +213,7 @@
   },
   "required": [
     "mnemonic",
+    "etherscanApiKey",
     "botAddr",
     "numConfirmBlocks",
     "postDeploySetup",
