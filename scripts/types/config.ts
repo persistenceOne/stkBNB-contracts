@@ -45,6 +45,7 @@ export interface GnosisSafeAddr {
 
 export interface IConfig {
     mnemonic: string;
+    etherscanApiKey: string;
     botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
@@ -59,6 +60,7 @@ export interface IConfig {
 
 export class Config implements IConfig {
     mnemonic: string;
+    etherscanApiKey: string;
     botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
@@ -72,6 +74,7 @@ export class Config implements IConfig {
 
     constructor(config: IConfig) {
         this.mnemonic = config.mnemonic;
+        this.etherscanApiKey = config.etherscanApiKey;
         this.botAddr = config.botAddr;
         this.numConfirmBlocks = config.numConfirmBlocks;
         this.postDeploySetup = config.postDeploySetup;
