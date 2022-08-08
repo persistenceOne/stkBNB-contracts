@@ -14,7 +14,6 @@ import {
 import { executeTx } from '../scripts/utils/transaction';
 import { getDeployerAddr } from '../scripts/utils/deployer';
 import { sleep } from '../scripts/utils/util';
-import { exec } from 'child_process';
 
 const timelockDelay = BigNumber.from(30); // 30 seconds
 const mockAddr = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
