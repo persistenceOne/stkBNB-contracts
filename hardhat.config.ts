@@ -1,6 +1,7 @@
 import { task } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-web3';
+import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
@@ -20,11 +21,51 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
     }
 });
 
+// This generates a random new keypair. One can generate key-pairs this way for testing purposes.
 task('gen-keypair', 'Generates a new keypair', async (taskArgs, hre) => {
     const wallet = ethers.Wallet.createRandom();
     console.log(`Address: ${wallet.address}`);
     console.log(`PrivKey: ${wallet.privateKey}`);
     console.log(`Mnemonic: ${wallet.mnemonic.phrase}`);
+});
+
+// See:
+// * https://forum.openzeppelin.com/t/how-to-verify-a-contract-on-etherscan-bscscan-polygonscan/14225
+// * https://docs.openzeppelin.com/upgrades-plugins/1.x/api-hardhat-upgrades#verify
+// * https://hardhat.org/hardhat-runner/plugins/nomiclabs-hardhat-etherscan#using-programmatically
+task('verify-all', 'Verifies all contracts on Etherscan', async (taskArgs, hre) => {
+    // AddressStore
+    await hre.run('verify:verify', {
+        address: CONFIG.addressStore.address,
+        constructorArguments: [],
+    });
+    // TimelockedAdmin
+    await hre.run('verify:verify', {
+        address: CONFIG.timelockedAdmin.address,
+        constructorArguments: [
+            CONFIG.timelockedAdmin.init.minDelay,
+            [],
+            [ethers.constants.AddressZero],
+        ],
+        contract: 'contracts/TimelockedAdmin.sol:TimelockedAdmin',
+    });
+    // stkBNB
+    await hre.run('verify:verify', {
+        address: CONFIG.stkBNB.address,
+        constructorArguments: [CONFIG.addressStore.address],
+    });
+    // UndelegationHolder
+    await hre.run('verify:verify', {
+        address: CONFIG.undelegationHolder.address,
+        constructorArguments: [CONFIG.addressStore.address],
+    });
+
+    // proxy contracts: no constructor args here, they have initializers. Also,
+    // can't use `verify:verify` as suggested in Etherscan plugin doc for programmatic verification,
+    // as the openzeppelin upgrades plugin overrides only the `verify` task for proxies.
+    // yarn hardhat verify --network <NETWORK> PROXY_CONTRACT_ADDR
+    await hre.run('verify', { address: CONFIG.feeVault.address }); // FeeVault
+    await hre.run('verify', { address: CONFIG.stakePool.address }); // StakePool
 });
 
 // You need to export an object to set up your config
@@ -36,7 +77,6 @@ task('gen-keypair', 'Generates a new keypair', async (taskArgs, hre) => {
 export default {
     gasReporter: {
         token: 'BNB',
-        // TODO: maybe set this based on network
         gasPriceApi: 'https://api.bscscan.com/api?module=proxy&action=eth_gasPrice',
     },
     contractSizer: {
@@ -79,5 +119,8 @@ export default {
             blockGasLimit: 40000000,
             accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
+    },
+    etherscan: {
+        apiKey: CONFIG.etherscanApiKey,
     },
 };
