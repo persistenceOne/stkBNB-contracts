@@ -45,6 +45,7 @@ const mockStakePoolContractConfig = {
 
 const mockDeployConfig = {
     mnemonic: '',
+    etherscanApiKey: '',
     botAddr: mockAddr,
     numConfirmBlocks: 1,
     postDeploySetup: true,
