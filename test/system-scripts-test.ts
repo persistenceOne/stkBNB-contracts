@@ -96,7 +96,7 @@ describe('System Scripts', function () {
 
         // executing it before delay will result in failure
         await expect(
-            contracts.executeTmielockOp(contracts.addressStore.address, calldata),
+            contracts.executeTimelockOp(contracts.addressStore.address, calldata),
         ).to.be.revertedWith('TimelockController: operation is not ready');
 
         // we can verify that the address store wasn't updated
@@ -108,7 +108,7 @@ describe('System Scripts', function () {
         await sleep(timelockDelay.toNumber() + 1);
 
         // this time it should execute
-        await contracts.executeTmielockOp(contracts.addressStore.address, calldata);
+        await contracts.executeTimelockOp(contracts.addressStore.address, calldata);
 
         // we can verify the same by querying the address store
         expect(await contracts.addressStore.getAddr('mockKey')).to.equal(mockAddr);
@@ -133,7 +133,7 @@ describe('System Scripts', function () {
         const calldata = contracts.stakedBNBToken.interface.encodeFunctionData('selfDestruct');
         await contracts.scheduleTimelockOp(contracts.stakedBNBToken.address, calldata);
         await sleep(timelockDelay.toNumber() + 1);
-        await contracts.executeTmielockOp(contracts.stakedBNBToken.address, calldata);
+        await contracts.executeTimelockOp(contracts.stakedBNBToken.address, calldata);
 
         // pausing here shouldn't revert as there is no contract to interact with
         await executeTx(contracts.stakedBNBToken, 'pause', []);
