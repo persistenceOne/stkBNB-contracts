@@ -10,6 +10,7 @@ import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
 import { CONFIG } from './scripts/types/config';
 import 'hardhat-forta'; // forta
 import { ethers } from 'ethers';
+import { string } from 'hardhat/internal/core/params/argumentTypes';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -28,6 +29,17 @@ task('gen-keypair', 'Generates a new keypair', async (taskArgs, hre) => {
     console.log(`PrivKey: ${wallet.privateKey}`);
     console.log(`Mnemonic: ${wallet.mnemonic.phrase}`);
 });
+
+task(
+    'sign',
+    'Signs the given msg using the default signer for the network',
+    async (taskArgs: { msg: string }, hre) => {
+        const signer = (await hre.ethers.getSigners())[0];
+        const sig = await signer.signMessage(taskArgs.msg);
+        console.log(`signer: ${signer.address}`);
+        console.log(`signature: ${sig}`);
+    },
+).addParam('msg', 'the msg to sign', undefined, string, false);
 
 // See:
 // * https://forum.openzeppelin.com/t/how-to-verify-a-contract-on-etherscan-bscscan-polygonscan/14225

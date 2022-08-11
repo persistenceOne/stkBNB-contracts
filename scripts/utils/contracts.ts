@@ -458,7 +458,7 @@ export class Contracts {
         ]);
     }
 
-    public async executeTmielockOp(
+    public async executeTimelockOp(
         targetAddr: string,
         calldata: string,
     ): Promise<TransactionReceipt> {
