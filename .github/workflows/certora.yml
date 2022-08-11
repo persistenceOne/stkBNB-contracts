@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify_StkBNB:
+  verify_stkBNB:
     runs-on: ubuntu-latest
 
     steps:
@@ -55,7 +55,7 @@ jobs:
         run: |
           chmod +x certora/scripts/*.sh
 
-      - name: Verify with Certora - STKBNB-CONTRACTS
+      - name: Verify with Certora
         run: |
           certora/scripts/ci.sh
         env:

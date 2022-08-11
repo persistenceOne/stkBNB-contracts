@@ -3,7 +3,6 @@ using FeeVault as feeVault
 using StakePoolHarness as stakePoolContract
 using UndelegationHolder as delegationHolder
 
-
 methods {
     // Harness methods:
     getWeiToReturn(address user, uint256 index) returns (uint256) envfree
@@ -133,13 +132,9 @@ function getFeeVaultContract() returns address {
     return feeVault;
 }
 
-
 /**************************************************
  *                 VALID STATES                   *
  **************************************************/
-
-
-
 
 invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
@@ -161,9 +156,6 @@ invariant totalTokenSupply()
  *               STATE TRANSITIONS                *
  **************************************************/
 
-
-
-
 rule userDoesNotChangeOtherUserBalance(method f){
     env e;
     address user;
@@ -178,7 +170,6 @@ rule userDoesNotChangeOtherUserBalance(method f){
     uint256 userStkBNBBalanceUserAfter = stkBNB.balanceOf(user);
     assert ((user != e.msg.sender) => userStkBNBBalanceUserBefore == userStkBNBBalanceUserAfter);
 }
-
 
 /**************************************************
  *                METHOD INTEGRITY                *
@@ -200,10 +191,8 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     uint256 totalSupplyBefore = getTotalWei();
     uint256 poolTokenBefore = getPoolTokenSupply();
-    // 100 always more than 50 - , 51 - 100
-    // 1:1 to 1:1.999
-    // 
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+
     require totalSupplyBefore + amount <= 2000000000000000000000000;
     require getMinBNBDeposit() >= 1000000000000;
     require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
@@ -216,11 +205,8 @@ rule integrityOfDeposit(address user, uint256 amount){
     assert amount != 0  => totalSupplyAfter > totalSupplyBefore;
     assert amount != 0  => poolTokenAfter > poolTokenBefore;
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
-    // vacutity check 
 }
 
-
-// rule ifTotalStkTokensIncreaseThenTotalWeiMustIncrease (method f){
 rule correlationPoolTokenSupplyVsTotalWei (method f){
     env e;
     uint256 weiBefore = getTotalWei();
@@ -235,7 +221,7 @@ rule correlationPoolTokenSupplyVsTotalWei (method f){
 // if there is a claim that can NOT be claimed => after claimAll(), there are claims left
 // claimAll() does not delete unclaimable claims
 rule claimAllCorrectness(){ 
-    env e; //env e2;
+    env e;
     uint256 index;
     bool notAllCanBeClaimed  = index < getClaimRequestLength(e,e.msg.sender) && !canBeClaimed(e, index);
     claimAll(e);
@@ -259,9 +245,6 @@ rule claimOnEmpty(){
     assert (lastReverted);
 }
 
-
-
-
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
     uint256 index;
@@ -274,7 +257,8 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 
 /** verifying that one can not gain or lose **/
 /** checking this on a 1 exchange rate and no fee- can be adjusted to more cases **/
-rule totalAssetOfUserPreserved(method f, address user) {
+rule totalAssetOfUserPreserved(method f, address user)  filtered { f -> !f.isView && !f.isFallback}
+ {
     uint256 rewardFee;
     uint256 depositFee;
     uint256 withdrawFee;
@@ -318,7 +302,6 @@ rule totalAssetOfUserPreserved(method f, address user) {
     assert totalBefore == totalAfter;
 }
 
-
 //User should deposit at least minBNBDeposit tokens.
 rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
@@ -349,11 +332,6 @@ rule withdrawalAtLeastMinToken(env e){
     assert reverted;
  }
 
-
-/*************** NEED MORE WORK *******/
-
-/*** Rules that might not be accurate - they have violations ***/
-
 rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 {
     env e;
@@ -367,10 +345,8 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
 
     uint256 totalSupplyBefore = getTotalWei();
     uint256 poolTokenBefore = getPoolTokenSupply();
-    // 100 always more than 50 - , 51 - 100
-    // 1:1 to 1:1.999
-    // 
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+
     require totalSupplyBefore <= 2000000000000000000000000;
     require getMinBNBDeposit() >= 1000000000000;
     require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
@@ -388,27 +364,79 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation().selector => bnbUnbondingBefore < bnbUnbondingAfter;
     assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
     assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
-    // Issue in claimAll() causing indexOutOfBound exception
 }
 
 
-// Need to strength these invariants and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
+/*
+    Need to strength these invariants and prove that the sum of all weiToReturn or similar to totalAssetOfUserPreserved
+    Also we totalWei is zero probably many other variables are also empty\zero - can be improved
+ invariant singleUserSolvency(address user, uint256 index)
+     getWeiToReturn(user, index) <= bnbToUnbound() + bnbUnbonding() + claimReserve()
+     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+*/
 
-// Also we totalWei is zero probably many other variables are also empty\zero - can be improved
 
+rule verifyZeroWeiZeroSTK(method f, address user) filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+ {
+    env e;
+    require user == e.msg.sender && user != currentContract;
 
+    uint256 totalSupplyBefore = getTotalWei();
+    uint256 poolTokenBefore = getPoolTokenSupply();
+    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
-// invariant singleUserSolvency(address user, uint256 index)
-//     getWeiToReturn(user, index) <= bnbToUnbound() + bnbUnbonding() + claimReserve()
-//     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
+    require userStkBNBBalanceBefore <= poolTokenBefore;
 
-invariant zeroWeiZeroSTK(method f, address user)
-    getTotalWei() == 0 => stkBNB.balanceOf(user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+        if (f.selector ==  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector) {
+        env eSend;
+        uint256 amount;
+        bytes data;
+        require amount <=poolTokenBefore;
+        require eSend.msg.sender == user;
+        stkBNB.send(eSend, currentContract, amount, data);
+        env eRec;
+        tokensReceived(eRec, _, user, getStakePoolAddress(), amount, _, _ );
+    }
+    else {
+        calldataarg args;
+        f(e,args);
+    }
+    assert getTotalWei() == 0 => stkBNB.balanceOf(user) == 0;
+ }
 
-invariant zeroWeiZeroClaims(env e, address user)
-    getTotalWei() == 0 => getClaimRequestLength(e,user) == 0
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+rule verifyZeroWeiZeroClaims(method f, address user) filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
+ {
+    env e;
+    require user == e.msg.sender && user != currentContract;
+
+    uint256 totalSupplyBefore = getTotalWei();
+    uint256 poolTokenBefore = getPoolTokenSupply();
+    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
+
+    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
+    require userStkBNBBalanceBefore <= poolTokenBefore;
+
+        if (f.selector ==  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector) {
+        env eSend;
+        uint256 amount;
+        bytes data;
+        require amount <=poolTokenBefore;
+        require eSend.msg.sender == user;
+        stkBNB.send(eSend, currentContract, amount, data);
+        env eRec;
+        uint256 claimReqLenBefore = getClaimRequestLength(eRec,user);
+        require claimReqLenBefore < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+        tokensReceived(eRec, _, user, getStakePoolAddress(), amount, _, _ );
+        // exception on withdraw of wei also, the totalWei could be 0 but it create claimRequest;
+        assert getTotalWei() == 0 => getClaimRequestLength(eRec,user) == claimReqLenBefore +1;
+    }
+    else {
+        calldataarg args;
+        f(e,args);
+        assert getTotalWei() == 0 => getClaimRequestLength(e,user) == 0;
+    }
+ }
 
 /* 
  Not sure that this is correct 
@@ -438,7 +466,6 @@ rule whoChangedClaimRequests(method f) {
     assert before == after; 
 }
 */
-
 
 rule unbondingFinished(){
     env e;
