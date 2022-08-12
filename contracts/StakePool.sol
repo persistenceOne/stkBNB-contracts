@@ -675,7 +675,7 @@ contract StakePool is
     /**
      * @return the address store
      */
-    function addressStore() public view returns (IAddressStore) {
+    function addressStore() internal view returns (IAddressStore) {
         return _addressStore;
     }
 
