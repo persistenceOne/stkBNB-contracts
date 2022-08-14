@@ -2,9 +2,13 @@ name: Certora
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - release/**
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - release/**
 
   workflow_dispatch:
 
@@ -13,8 +17,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Get Diff Action
+        uses: technote-space/get-diff-action@v4.0.1
+        id: git-diff # via outputs
+        with:
+          PATTERNS: |
+            +(contracts)/*.sol
+            +(contracts|certora)/**/*.sol
 
+    
+      - uses: actions/checkout@v2
       - name: Use Node.js 14 LTS
         uses: actions/setup-node@v2
         with:
@@ -60,3 +73,4 @@ jobs:
           certora/scripts/ci.sh
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
+        if: steps.git-diff.outputs.diff

@@ -182,19 +182,23 @@ rule integrityOfDeposit(address user, uint256 amount){
 
     require e.msg.value == amount;
     require e.msg.sender == user; 
+    uint256 maxBNB = 2000000000000000000000000;
+    uint256 maxFee = 100000000000;
+    uint256 microBNB = 1000000000000;  
     uint256 rewardFee;
     uint256 depositFee;
     uint256 withdrawFee;
     rewardFee, depositFee, withdrawFee = getFee();
     // assumptions 
-    require rewardFee < 100000000000 && depositFee < 100000000000 && withdrawFee < 100000000000;
+    require rewardFee < maxFee && depositFee < maxFee && withdrawFee < maxFee;
 
     uint256 totalSupplyBefore = getTotalWei();
     uint256 poolTokenBefore = getPoolTokenSupply();
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
-    require totalSupplyBefore + amount <= 2000000000000000000000000;
-    require getMinBNBDeposit() >= 1000000000000;
+    require totalSupplyBefore + amount <= maxBNB;
+    require getMinBNBDeposit() >= microBNB;
+    // total pool tokens and total wei supply ratio should lies between 1:1 to 1:1.999.
     require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
     deposit(e);
 
@@ -322,19 +326,24 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
 {
     env e;
     require user == e.msg.sender && user != currentContract;
+    uint256 maxBNB = 2000000000000000000000000;
+    uint256 maxFee = 100000000000;
+    uint256 microBNB = 1000000000000;  
     uint256 rewardFee;
     uint256 depositFee;
     uint256 withdrawFee;
+    
     rewardFee, depositFee, withdrawFee = getFee();
     // assumptions 
-    require rewardFee == 0 && depositFee < 100000000000 && withdrawFee == 0;
+    require rewardFee == 0 && depositFee < maxFee && withdrawFee == 0;
 
     uint256 totalSupplyBefore = getTotalWei();
     uint256 poolTokenBefore = getPoolTokenSupply();
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
-    require totalSupplyBefore <= 2000000000000000000000000;
-    require getMinBNBDeposit() >= 1000000000000;
+    require totalSupplyBefore <= maxBNB;
+    require getMinBNBDeposit() >= microBNB;
+    // total pool tokens and total wei supply ratio should lies between 1:1 to 1:1.999.
     require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
 
     int256 bnbToUnbondBefore = bnbToUnbond();
