@@ -9,3 +9,6 @@
 * UndelegationHolder: [`0x3C0Fc52c7de41363C14a63EA09Ba4202d15Dc298`](https://bscscan.com/address/0x3C0Fc52c7de41363C14a63EA09Ba4202d15Dc298)
 * AddressStore: [`0x4a6b3127A1D295878d8790F6ece0776F65FEc121`](https://bscscan.com/address/0x4a6b3127A1D295878d8790F6ece0776F65FEc121)
 * TimelockedAdmin: [`0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607`](https://bscscan.com/address/0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607)
+
+* Primary multi-sig: [`0x30dcAB6c01c1Aa2f1DC5648b78a57fD5D0F3BBDB`](https://bscscan.com/address/0x30dcAB6c01c1Aa2f1DC5648b78a57fD5D0F3BBDB)
+* Secondary multi-sig: [`0xA0F880E7AB8B2bBA47d8dEA48843cc43d68065CB`](https://bscscan.com/address/0xA0F880E7AB8B2bBA47d8dEA48843cc43d68065CB)

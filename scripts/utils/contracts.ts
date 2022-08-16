@@ -9,6 +9,9 @@ import { RoleInfo } from '../types/role-info';
 import { Claims } from '../types/claim';
 import { SysContracts } from './sys-contracts';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
+import { getAdminAddress } from '@openzeppelin/upgrades-core';
+import * as assert from 'assert';
+import { sleep } from './util';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -332,8 +335,6 @@ export class Contracts {
             config.gnosisSafeAddr.secondary,
         ]);
 
-        // TODO: verify once that above grants for proposer and canceller will be executed instantly
-        //  before we revoke this role
         // TimelockedAdmin: Revoke TIMELOCK_ADMIN_ROLE from deployer
         await executeTx(contracts.timelockedAdmin, 'revokeRole', [
             await contracts.timelockedAdmin.TIMELOCK_ADMIN_ROLE(),
@@ -349,6 +350,13 @@ export class Contracts {
             config.timelockedAdmin.address,
         ]);
         console.log('Transferred AddressStore ownership from deployer to TimelockedAdmin');
+
+        // ProxyAdmin: Transfer ownership to TimelockedAdmin
+        // should be transferred back when needed for upgrade
+        await executeTx(await contracts.proxyAdmin(), 'transferOwnership', [
+            config.timelockedAdmin.address,
+        ]);
+        console.log('Transferred ProxyAdmin ownership from deployer to TimelockedAdmin');
     }
 
     public static async updateStakePoolConfig(config: Config) {
@@ -405,9 +413,17 @@ export class Contracts {
 
         console.log('\n\n');
 
+        const proxyAdmin: Contract = await this.proxyAdmin();
+        console.log('=== ProxyAdmin ===');
+        console.log('Address: ', proxyAdmin.address);
+        console.log(`Owner: ${await proxyAdmin.owner()}`);
+
+        console.log('\n\n');
+
         const feeVault: Contract = this.feeVault;
         console.log('=== FeeVault ===');
-        console.log('Address: ', feeVault.address);
+        console.log('Address (proxy): ', feeVault.address);
+        console.log(`Address (impl): ${await proxyAdmin.getProxyImplementation(feeVault.address)}`);
         console.log(
             `Balance: ${formatEther(await ethers.provider.getBalance(feeVault.address))} BNB`,
         );
@@ -421,7 +437,10 @@ export class Contracts {
         const balance: BigNumber = await ethers.provider.getBalance(stakePool.address);
         const claimReserve: BigNumber = await stakePool.claimReserve();
         console.log('=== StakePool ===');
-        console.log('Address: ', stakePool.address);
+        console.log('Address (proxy): ', stakePool.address);
+        console.log(
+            `Address (impl): ${await proxyAdmin.getProxyImplementation(stakePool.address)}`,
+        );
         console.log(`Balance: ${formatEther(balance)} BNB`);
         console.log(
             'DEFAULT_ADMIN_ROLE: ',
@@ -442,6 +461,31 @@ export class Contracts {
 
         console.log('End time: ', new Date());
         console.log(`Total time spent: ${(new Date().getTime() - startTime.getTime()) / 1000}s`);
+    }
+
+    public async proxyAdmin(): Promise<Contract> {
+        const feeVaultProxyAdmin: string = await getAdminAddress(
+            ethers.provider,
+            this.feeVault.address,
+        );
+        const stakePoolProxyAdmin: string = await getAdminAddress(
+            ethers.provider,
+            this.stakePool.address,
+        );
+        assert.strictEqual<string>(feeVaultProxyAdmin, stakePoolProxyAdmin);
+
+        return ethers.getContractAt('IProxyAdmin', feeVaultProxyAdmin);
+    }
+
+    public async scheduleAndExecuteTimelockOp(
+        targetAddr: string,
+        calldata: string,
+    ): Promise<{ schedule: TransactionReceipt; execute: TransactionReceipt }> {
+        const schedule = await this.scheduleTimelockOp(targetAddr, calldata);
+        await sleep((await this.timelockedAdmin.getMinDelay()).toNumber() + 1);
+        const execute = await this.executeTimelockOp(targetAddr, calldata);
+
+        return { schedule, execute };
     }
 
     public async scheduleTimelockOp(
