@@ -320,20 +320,26 @@ export class Contracts {
             await contracts.timelockedAdmin.PROPOSER_ROLE(),
             config.gnosisSafeAddr.primary,
         ]);
+        console.log('Granted TimelockedAdmin PROPOSER_ROLE to primary Gnosis');
+
         await executeTx(contracts.timelockedAdmin, 'grantRole', [
             await contracts.timelockedAdmin.PROPOSER_ROLE(),
             config.gnosisSafeAddr.secondary,
         ]);
+        console.log('Granted TimelockedAdmin PROPOSER_ROLE to secondary Gnosis');
 
         // TimelockedAdmin: Grant CANCELLER_ROLE to primary & secondary Gnosis
         await executeTx(contracts.timelockedAdmin, 'grantRole', [
             await contracts.timelockedAdmin.CANCELLER_ROLE(),
             config.gnosisSafeAddr.primary,
         ]);
+        console.log('Granted TimelockedAdmin CANCELLER_ROLE to primary Gnosis');
+
         await executeTx(contracts.timelockedAdmin, 'grantRole', [
             await contracts.timelockedAdmin.CANCELLER_ROLE(),
             config.gnosisSafeAddr.secondary,
         ]);
+        console.log('Granted TimelockedAdmin CANCELLER_ROLE to secondary Gnosis');
 
         // TimelockedAdmin: Revoke TIMELOCK_ADMIN_ROLE from deployer
         await executeTx(contracts.timelockedAdmin, 'revokeRole', [
