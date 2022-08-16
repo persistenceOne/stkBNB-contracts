@@ -20,10 +20,10 @@ contract StakePoolHarness is StakePool {
 
     /* Address Store Params */
     function getStkBnbAddress() public view returns (address){
-        return addressStore().getStkBNB();
+        return _addressStore.getStkBNB();
     }
      function getStakePoolAddress() public view returns (address){
-        return addressStore().getStakePool();
+        return _addressStore.getStakePool();
     }
 
     /* Claim Request Params */
