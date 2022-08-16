@@ -147,6 +147,16 @@ function validateExchangeRate(address user) {
     require userStkBNBBalance <= poolToken;
 }
 
+function feeValidation(uint256 reward, uint256 deposit, uint256 withdraw) {
+    uint256 rewardFee;
+    uint256 depositFee;
+    uint256 withdrawFee;
+    
+    rewardFee, depositFee, withdrawFee = getFee();
+    // assumptions 
+    require rewardFee < reward && depositFee < deposit && withdrawFee < withdraw;
+}
+
 /**************************************************
  *                 VALID STATES                   *
  **************************************************/
@@ -196,12 +206,7 @@ rule integrityOfDeposit(address user, uint256 amount){
     require e.msg.value == amount;
     require e.msg.sender == user;
 
-    uint256 rewardFee;
-    uint256 depositFee;
-    uint256 withdrawFee;
-    rewardFee, depositFee, withdrawFee = getFee();
-    // assumptions 
-    require rewardFee < MAX_FEE() && depositFee < MAX_FEE() && withdrawFee < MAX_FEE();
+    feeValidation(MAX_FEE(), MAX_FEE() ,MAX_FEE());
 
     uint256 totalSupplyBefore = getTotalWei();
     uint256 poolTokenBefore = getPoolTokenSupply();
@@ -277,12 +282,8 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 /** TODO Add check for tokensReceived which is failing due to hook (Sstore claimReqs) old value. **/
 rule totalAssetOfUserPreserved(method f, address user)  filtered { f -> !f.isView && !f.isFallback && f.selector !=  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector}
  {
-    uint256 rewardFee;
-    uint256 depositFee;
-    uint256 withdrawFee;
-    rewardFee, depositFee, withdrawFee = getFee();
-    // assumptions 
-    require rewardFee == 0 && depositFee == 0 && withdrawFee == 0;
+    // Consider all fees 0 %
+    feeValidation(1, 1, 1);
     require getTotalWei() == getPoolTokenSupply();
     // safe assumption - as rule breaks on this cases 
     require user != currentContract && user != delegationHolder; 
@@ -342,13 +343,7 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     env e;
     require user == e.msg.sender && user != currentContract;
  
-    uint256 rewardFee;
-    uint256 depositFee;
-    uint256 withdrawFee;
-    
-    rewardFee, depositFee, withdrawFee = getFee();
-    // assumptions 
-    require rewardFee == 0 && depositFee < MAX_FEE() && withdrawFee == 0;
+    feeValidation(MAX_FEE(), MAX_FEE() ,MAX_FEE());
     // assumption for minimum deposit BNB for user
     require getMinBNBDeposit() >= MICRO_BNB();
 
