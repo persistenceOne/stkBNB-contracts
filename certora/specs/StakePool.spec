@@ -32,9 +32,9 @@ methods {
     getStkBNB() => getStkBNBContract()
     getFeeVault() => getFeeVaultContract()
 
-    //receiver - we might want to have an implementation of this. for now we assume an empty implementation 
+    // receiver - we might want to have an implementation of this. for now we assume an empty implementation 
     // this summarization applies only to calls from ERC777:_callTokensReceived 
-    //however calls directly to StakePool:tokensReceived are not summarized 
+    // however calls directly to StakePool:tokensReceived are not summarized 
     tokensReceived(
         address, /*operator*/
         address from,
@@ -124,12 +124,27 @@ hook Sstore claimReqs[KEY address user][INDEX uint256 i].weiToReturn uint256 amo
  *               CVL FUNCS & DEFS                 *
  **************************************************/
 
+definition MAX_BNB() returns uint256 = 2000000000000000000000000;
+definition MAX_FEE() returns uint256 = 100000000000;
+definition MICRO_BNB() returns uint256 = 1000000000000;
+
 function getStkBNBContract() returns address {
     return stkBNB;
 }
 
 function getFeeVaultContract() returns address {
     return feeVault;
+}
+
+// total pool tokens and total wei supply ratio should lies between 1:1 to 1:1.999 
+// and user stkBalance should be less than or  equal to total Pool Tokens .
+function validateExchangeRate(address user) {
+    uint256 totalSupply = getTotalWei();
+    uint256 poolToken = getPoolTokenSupply();
+    uint256 userStkBNBBalance = stkBNB.balanceOf(user);
+    require totalSupply <= MAX_BNB();
+    require 2 * poolToken > totalSupply && poolToken <= totalSupply;
+    require userStkBNBBalance <= poolToken;
 }
 
 /**************************************************
@@ -145,17 +160,15 @@ invariant weiZeroTokensZero()
     }
 
 
-//Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
+// Token total supply should be the same as stakePool exchangeRate poolTokenSupply.
 invariant totalTokenSupply()
     getPoolTokenSupply() == stkBNB.totalSupply()
     filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 
-
-
 /**************************************************
  *               STATE TRANSITIONS                *
  **************************************************/
-
+// User should not be able to change other user balance
 rule userDoesNotChangeOtherUserBalance(method f){
     env e;
     address user;
@@ -181,25 +194,23 @@ rule integrityOfDeposit(address user, uint256 amount){
     env e;
 
     require e.msg.value == amount;
-    require e.msg.sender == user; 
-    uint256 maxBNB = 2000000000000000000000000;
-    uint256 maxFee = 100000000000;
-    uint256 microBNB = 1000000000000;  
+    require e.msg.sender == user;
+
     uint256 rewardFee;
     uint256 depositFee;
     uint256 withdrawFee;
     rewardFee, depositFee, withdrawFee = getFee();
     // assumptions 
-    require rewardFee < maxFee && depositFee < maxFee && withdrawFee < maxFee;
+    require rewardFee < MAX_FEE() && depositFee < MAX_FEE() && withdrawFee < MAX_FEE();
 
     uint256 totalSupplyBefore = getTotalWei();
     uint256 poolTokenBefore = getPoolTokenSupply();
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
-    require totalSupplyBefore + amount <= maxBNB;
-    require getMinBNBDeposit() >= microBNB;
-    // total pool tokens and total wei supply ratio should lies between 1:1 to 1:1.999.
-    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
+    require totalSupplyBefore + amount <= MAX_BNB();
+    require getMinBNBDeposit() >= MICRO_BNB();
+
+    validateExchangeRate(user);
     deposit(e);
 
     uint256 totalSupplyAfter = getTotalWei();
@@ -211,6 +222,8 @@ rule integrityOfDeposit(address user, uint256 amount){
     assert amount != 0  => userStkBNBBalanceAfter > userStkBNBBalanceBefore;
 }
 
+// if there is increament in stakePool Balance 
+// then there should be increament in wei also in exchangeRate
 rule correlationPoolTokenSupplyVsTotalWei (method f){
     env e;
     uint256 weiBefore = getTotalWei();
@@ -248,7 +261,7 @@ rule claimOnEmpty(){
     claim@withrevert(e,index);
     assert (lastReverted);
 }
-
+// if user claims before coolDownPeriod it will revert
 rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     env e;
     uint256 index;
@@ -313,38 +326,33 @@ rule withdrawalAtLeastMinToken(env e){
     assert amount < minWithdrawal => lastReverted;
 }
 
- rule initAllowedOnlyOnce(method f){
+ // Should be initialize once only.
+rule initAllowedOnlyOnce(method f){
     env e; env e1;
     calldataarg args; calldataarg args1;
     initialize(e,args);
     initialize@withrevert(e1,args1);
     bool reverted = lastReverted;
     assert reverted;
- }
+}
 
+// The change in bnbToUnbond should impact on bnbUnbonding
 rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f-> f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 {
     env e;
     require user == e.msg.sender && user != currentContract;
-    uint256 maxBNB = 2000000000000000000000000;
-    uint256 maxFee = 100000000000;
-    uint256 microBNB = 1000000000000;  
+ 
     uint256 rewardFee;
     uint256 depositFee;
     uint256 withdrawFee;
     
     rewardFee, depositFee, withdrawFee = getFee();
     // assumptions 
-    require rewardFee == 0 && depositFee < maxFee && withdrawFee == 0;
+    require rewardFee == 0 && depositFee < MAX_FEE() && withdrawFee == 0;
+    // assumption for minimum deposit BNB for user
+    require getMinBNBDeposit() >= MICRO_BNB();
 
-    uint256 totalSupplyBefore = getTotalWei();
-    uint256 poolTokenBefore = getPoolTokenSupply();
-    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-
-    require totalSupplyBefore <= maxBNB;
-    require getMinBNBDeposit() >= microBNB;
-    // total pool tokens and total wei supply ratio should lies between 1:1 to 1:1.999.
-    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
+    validateExchangeRate(user);
 
     int256 bnbToUnbondBefore = bnbToUnbond();
     uint256 bnbUnbondingBefore = bnbUnbonding();
@@ -355,9 +363,13 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     int256 bnbToUnbondAfter = bnbToUnbond();
     uint bnbUnbondingAfter = bnbUnbonding();
 
+    // if there is no change in bnbToUnbond then bnbUnbonding should also be not changed except unbondingFinished method call.
     assert bnbToUnbondBefore == bnbToUnbondAfter && f.selector != unbondingFinished().selector => bnbUnbondingBefore == bnbUnbondingAfter;
+    // bnbToUnbond decreament except initiateDelegation should increase the bnbUnbonding
     assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation().selector => bnbUnbondingBefore < bnbUnbondingAfter;
+    // initiateDelegation with bnbToUnbond decreament should not affect bnbUnbonding
     assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
+    // unbondingFinished() with bnbUnbonding increament the bnbToUnbound should not be affected
     assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
 }
 
@@ -370,24 +382,20 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
      filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
 */
 
-
+// if total wei is 0 then any user stkBNB balance should be 0.
 rule verifyZeroWeiZeroSTK(method f, address user) filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
  {
     env e;
     require user == e.msg.sender && user != currentContract;
 
-    uint256 totalSupplyBefore = getTotalWei();
-    uint256 poolTokenBefore = getPoolTokenSupply();
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-
-    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
-    require userStkBNBBalanceBefore <= poolTokenBefore;
+    validateExchangeRate(user);
 
     if (f.selector ==  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector) {
         env eSend;
         uint256 amount;
         bytes data;
-        require amount <=poolTokenBefore;
+        require amount <= userStkBNBBalanceBefore;
         require eSend.msg.sender == user;
         stkBNB.send(eSend, currentContract, amount, data);
         env eRec;
@@ -400,31 +408,30 @@ rule verifyZeroWeiZeroSTK(method f, address user) filtered { f -> !f.isView && !
     assert getTotalWei() == 0 => stkBNB.balanceOf(user) == 0;
  }
 
+// if total wei is 0 then any user Claim Request Array Length for user should be 0 except tokensReceived method.
+// on tokensRecieved method call, the caim request array length will be increased by 1 for the user
 rule verifyZeroWeiZeroClaims(method f, address user) filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
  {
     env e;
     require user == e.msg.sender && user != currentContract;
 
-    uint256 totalSupplyBefore = getTotalWei();
-    uint256 poolTokenBefore = getPoolTokenSupply();
     uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
 
-    require 2 * poolTokenBefore > totalSupplyBefore && poolTokenBefore <= totalSupplyBefore;
-    require userStkBNBBalanceBefore <= poolTokenBefore;
+    validateExchangeRate(user);
 
     if (f.selector ==  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector) {
         env eSend;
         uint256 amount;
         bytes data;
-        require amount <=poolTokenBefore;
+        require amount <=userStkBNBBalanceBefore;
         require eSend.msg.sender == user;
         stkBNB.send(eSend, currentContract, amount, data);
         env eRec;
         uint256 claimReqLenBefore = getClaimRequestLength(eRec,user);
-        require claimReqLenBefore < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+        require claimReqLenBefore < max_uint256;
         tokensReceived(eRec, _, user, getStakePoolAddress(), amount, _, _ );
         // exception on withdraw of wei also, the totalWei could be 0 but it create claimRequest;
-        assert getTotalWei() == 0 => getClaimRequestLength(eRec,user) == claimReqLenBefore +1;
+        assert getTotalWei() == 0 => getClaimRequestLength(eRec,user) == claimReqLenBefore + 1;
     }
     else {
         calldataarg args;
@@ -432,14 +439,6 @@ rule verifyZeroWeiZeroClaims(method f, address user) filtered { f -> !f.isView &
         assert getTotalWei() == 0 => getClaimRequestLength(e,user) == 0;
     }
  }
-
-/* 
- Not sure that this is correct 
-invariant integrityOfBoundingValues()
-    bnbToUnbond() > 0 => (to_uint256(bnbToUnbond()) <= bnbUnbonding())
-    filtered { f -> !f.isView && !f.isFallback && f.selector != initialize(address,(address,uint256,uint256,uint256,uint256,uint256,(uint256,uint256,uint256))).selector }
-*/
-
 
 /****  rules for info and checking the ghost and tool - expecting to fail ****/
 /* 
@@ -462,9 +461,9 @@ rule whoChangedClaimRequests(method f) {
 }
 */
 
+// On unbondingFinished the amount of decreament in bnbUnbonding should be equal to the amount increament in claimReserve
 rule unbondingFinished(){
     env e;
-    require e.msg.sender == stakePoolContract;
     uint256 bnbUnbondingBefore = bnbUnbonding();
     uint256 claimReserveBefore = claimReserve();
     uint256 undelegationHolderBalanceBefore = bnbBalanceOf(delegationHolder);
@@ -475,8 +474,7 @@ rule unbondingFinished(){
     uint256 claimReserveAfter = claimReserve();
     uint256 undelegationHolderBalanceAfter = bnbBalanceOf(delegationHolder);
 
-    assert bnbUnbondingBefore > bnbUnbondingAfter => claimReserveAfter > claimReserveBefore && bnbUnbondingBefore - bnbUnbondingAfter == claimReserveAfter - claimReserveBefore && undelegationHolderBalanceBefore - undelegationHolderBalanceAfter == claimReserveAfter - claimReserveBefore;
+    assert bnbUnbondingBefore >= bnbUnbondingAfter;
+    assert bnbUnbondingBefore - bnbUnbondingAfter == claimReserveAfter - claimReserveBefore;
+    assert undelegationHolderBalanceBefore - undelegationHolderBalanceAfter == claimReserveAfter - claimReserveBefore;
 }
-
-
-
