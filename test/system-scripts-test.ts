@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { BigNumber, ethers } from 'ethers';
+import { BigNumber, Contract, ethers } from 'ethers';
 import { Contracts } from '../scripts/utils/contracts';
 import {
     Config,
@@ -131,9 +131,7 @@ describe('System Scripts', function () {
 
         // destroy the contract
         const calldata = contracts.stakedBNBToken.interface.encodeFunctionData('selfDestruct');
-        await contracts.scheduleTimelockOp(contracts.stakedBNBToken.address, calldata);
-        await sleep(timelockDelay.toNumber() + 1);
-        await contracts.executeTimelockOp(contracts.stakedBNBToken.address, calldata);
+        await contracts.scheduleAndExecuteTimelockOp(contracts.stakedBNBToken.address, calldata);
 
         // pausing here shouldn't revert as there is no contract to interact with
         await executeTx(contracts.stakedBNBToken, 'pause', []);
@@ -147,6 +145,13 @@ describe('System Scripts', function () {
         const upgradeConf = JSON.parse(JSON.stringify(conf)) as IConfig;
         upgradeConf.stakePool.upgrade = true;
         upgradeConf.feeVault.upgrade = true;
+
+        // transfer ProxyAdmin ownership back to deployer
+        const proxyAdmin: Contract = await contracts.proxyAdmin();
+        const calldata = proxyAdmin.interface.encodeFunctionData('transferOwnership', [
+            deployerAddr,
+        ]);
+        await contracts.scheduleAndExecuteTimelockOp(proxyAdmin.address, calldata);
 
         contracts = await Contracts.upgrade(upgradeConf);
     });
