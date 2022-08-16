@@ -130,7 +130,27 @@
         }
 
       }
-    }
+    },
+    "TimelockedAdmin": {
+      "address": "0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607",
+      "abiFile": "../abi/TimelockedAdmin.json",
+      "events": {
+
+        "CallExecuted": {
+          "type": 1,
+          "severity": "Info"
+        },
+        "Cancelled": {
+          "type": 1,
+          "severity": "Info"
+        },
+        "MinDelayChange": {
+          "type": 1,
+          "severity": "Info"
+        }
+
+      }
+    
      
   }
 
