@@ -1,7 +1,7 @@
 {
-  "name": "forta-pstake-stkbnb-largevalue-events",
+  "name": "pstake-stkbnb-large-deposit-withdraw-bot",
   "version": "1.0.0",
-  "description": "Forta Agent that monitors and alerts when large value deposit, withdrawals, mints, burns occur",
+  "description": "Forta bot that monitors large value deposits, withdrawals, mints and burns",
   "chainIds": [
     56
   ],

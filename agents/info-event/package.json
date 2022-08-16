@@ -1,7 +1,7 @@
 {
-  "name": "forta-pstake-stkbnb-admin-events",
+  "name": "pstake-stkbnb-admin-event-bot",
   "version": "1.0.0",
-  "description": "This agent monitors events emitted from Liquid Stake BNB contracts.",
+  "description": "Forta bot that monitors all the admin events emitted from stkBNB contracts",
   "chainIds":[56],
   "scripts": {
     "start": "npm run start:dev",

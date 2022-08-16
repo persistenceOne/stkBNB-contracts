@@ -1,7 +1,7 @@
 import { BigNumber } from 'ethers';
 const { ethers } = require('ethers');
 
-export function normalizedValue(value: BigNumber) {
-    value = value.div(ethers.constants.WeiPerEther);
-    return value;
+// normalizeValue converts a value with decimals to just the integer part without decimals
+export function normalizeValue(value: BigNumber) {
+    return value.div(ethers.constants.WeiPerEther);
 }

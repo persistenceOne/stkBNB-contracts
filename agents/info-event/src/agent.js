@@ -207,9 +207,9 @@ function provideHandleTransaction(data) {
 }
 
 module.exports = {
-    provideInitialize,
     initialize: provideInitialize(initializeData),
-    provideHandleTransaction,
     handleTransaction: provideHandleTransaction(initializeData),
-    createAlert,
+    // exported for use in tests
+    provideInitialize,
+    provideHandleTransaction,
 };

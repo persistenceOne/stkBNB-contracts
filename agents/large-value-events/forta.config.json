@@ -1,3 +1,4 @@
-{"agentId":"0x9e0cc349142f5ddcc0ea090621cfdee7cfb06d7f2f44c79b7339a65121c4df3a",
- "jsonRpcUrl":"https://data-seed-prebsc-1-s1.binance.org:8545/"
+{
+  "agentId": "0x9e0cc349142f5ddcc0ea090621cfdee7cfb06d7f2f44c79b7339a65121c4df3a",
+  "jsonRpcUrl": "https://data-seed-prebsc-1-s1.binance.org:8545/"
 }
