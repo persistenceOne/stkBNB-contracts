@@ -75,7 +75,7 @@ contract StakePool is
      * STATE VARIABLES
      ********************/
 
-    IAddressStore private _addressStore; // Used to fetch addresses of the other contracts in the system.
+    IAddressStore internal _addressStore; // Used to fetch addresses of the other contracts in the system.
     Config.Data public config; // the contract configuration
 
     bool private _paused; // indicates whether this contract is paused or not
