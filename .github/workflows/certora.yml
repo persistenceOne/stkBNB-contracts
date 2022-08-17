@@ -24,7 +24,7 @@ jobs:
 
       - name: Get Diff Action
         uses: technote-space/get-diff-action@v4.0.1
-        id: git-diff # via outputs
+        id: get-diff-action # via outputs
         with:
           PATTERNS: |
             +(contracts)/*.sol
@@ -32,7 +32,7 @@ jobs:
 
       - id: certora
         run: echo "::set-output name=run::true"
-        if: steps.git-diff.outputs.diff
+        if: steps.get-diff-action.outputs.diff
 
   verify_stkBNB:
     runs-on: ubuntu-latest
