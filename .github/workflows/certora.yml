@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     # Map a step output to a job output
     outputs:
-      output1: ${{ steps.git-diff.outputs.run }}
+      output1: ${{ steps.certora.outputs.run }}
     
     steps:
       - uses: actions/checkout@v3
