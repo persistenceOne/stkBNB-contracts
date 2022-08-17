@@ -13,9 +13,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify_stkBNB:
+  get-diff:
     runs-on: ubuntu-latest
-
+    # Map a step output to a job output
+    outputs:
+      output1: ${{ steps.git-diff.outputs.run }}
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -26,6 +29,18 @@ jobs:
           PATTERNS: |
             +(contracts)/*.sol
             +(contracts|certora)/**/*.sol
+
+      - id: certora
+        run: echo "::set-output name=run::true"
+        if: steps.git-diff.outputs.diff
+
+  verify_stkBNB:
+    runs-on: ubuntu-latest
+    if: needs.get-diff.outputs.output1 == 'true'
+    needs: get-diff
+
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Use Node.js 14 LTS
         uses: actions/setup-node@v2
@@ -61,4 +76,4 @@ jobs:
           certora/scripts/ci.sh
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
-        if: steps.git-diff.outputs.diff
+        
