@@ -164,7 +164,7 @@ jobs:
     name: Linter
     runs-on: ubuntu-latest
     needs: generate-json-schema
-    if: needs.get-diff.outputs.output-contract == 'true' || needs.get-diff.outputs.output-scripts == 'true' || needs.get-diff.agents.output-scripts == 'true'
+    if: needs.get-diff.outputs.output-contract == 'true' || needs.get-diff.outputs.output-certora-contract == 'true' || needs.get-diff.outputs.output-scripts == 'true' || needs.get-diff.agents.output-scripts == 'true'
 
     steps:
       - name: Check out Git repository
