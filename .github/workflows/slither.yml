@@ -11,9 +11,31 @@ on:
       - release/**
 
 jobs:
+  get-diff:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      output-contract: ${{ steps.contract.outputs.run }}
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get diff for contract
+        uses: technote-space/get-diff-action@v4.0.1
+        id: get-diff-contract # via outputs
+        with:
+          PATTERNS: |
+            +(contracts)/*.sol
+
+      - id: contract
+        run: echo "::set-output name=run::true"
+        if: steps.get-diff-contract.outputs.diff
+  
   slither-analyze:
     name: Slither Analysis
     runs-on: ubuntu-latest
+    needs: get-diff
+    if: needs.get-diff.outputs.output-contract == 'true'
     permissions:
       contents: read
       actions: read
