@@ -1,0 +1,5 @@
+{
+  "agentId":"0x5f798596b2c37dabfdbd66313eede4b025fadd3ae37241f6fc645f8af8e7ea1a",
+  "jsonRpcUrl":"https://data-seed-prebsc-1-s1.binance.org:8545/",
+  "keyfile": "agent-admin"
+}
