@@ -14,7 +14,7 @@ WORKDIR /app
 # else if using unobfuscated code:
 
 # Uncomment the following line to enable agent logging
-# LABEL "network.forta.settings.agent-logs.enable"="true"
+LABEL "network.forta.settings.agent-logs.enable"="true"
 COPY ./src ./src
 COPY ../../abis/ui ./abi
 COPY agent-config.json ./
