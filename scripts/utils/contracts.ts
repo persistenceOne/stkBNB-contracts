@@ -1,5 +1,5 @@
 import { ethers, upgrades, web3 } from 'hardhat';
-import { BigNumber, Contract, ContractFactory } from 'ethers';
+import { BigNumber, Contract, ContractFactory, Event, EventFilter } from 'ethers';
 import { Config } from '../types/config';
 import { getNetwork, isLocalNetwork } from './network';
 import { executeTx } from './transaction';
@@ -12,6 +12,7 @@ import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { getAdminAddress } from '@openzeppelin/upgrades-core';
 import * as assert from 'assert';
 import { sleep } from './util';
+import { ExchangeRate } from '../types/exchange-rate';
 
 require('@openzeppelin/test-helpers/configure')({ web3 });
 const { singletons } = require('@openzeppelin/test-helpers');
@@ -481,6 +482,40 @@ export class Contracts {
         assert.strictEqual<string>(feeVaultProxyAdmin, stakePoolProxyAdmin);
 
         return ethers.getContractAt('IProxyAdmin', feeVaultProxyAdmin);
+    }
+
+    public static async getApy(config: Config) {
+        await (await this.attach(config)).apy();
+    }
+
+    public async apy() {
+        let toBlock: number = await ethers.provider.getBlockNumber();
+        let fromBlock = toBlock - 5000;
+
+        const filter: EventFilter = this.stakePool.filters.EpochUpdate();
+        let event: Event;
+        while (true) {
+            console.log(`Searching for EpochUpdate event in [${fromBlock},${toBlock}) ...`);
+            const events: Event[] = await this.stakePool.queryFilter(filter, fromBlock, toBlock);
+            if (events.length > 0) {
+                event = events[0];
+                break;
+            }
+            toBlock = fromBlock;
+            fromBlock -= 5000;
+        }
+        console.log(
+            `Found event: EpochUpdate(bnbRewards: ${formatEther(
+                event.args?.bnbRewards,
+            )}, feeTokens: ${formatEther(event.args?.feeTokens)}) at block: ${event.blockNumber}`,
+        );
+
+        const currExchangeRate = await ExchangeRate.get(this.stakePool);
+        const prevEpochExchangeRate = await ExchangeRate.get(this.stakePool, event.blockNumber - 1);
+
+        console.log(`CurrExchangeRate: ${currExchangeRate.value()}`);
+        console.log(`PrevExchangeRate: ${prevEpochExchangeRate.value()}`);
+        console.log(`APY: ${currExchangeRate.apy(prevEpochExchangeRate).toPrecision(3)}%`);
     }
 
     public async scheduleAndExecuteTimelockOp(

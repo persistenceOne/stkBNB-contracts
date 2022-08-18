@@ -24,6 +24,9 @@ async function main() {
         case 'stakePool:updateConfig':
             await Contracts.updateStakePoolConfig(CONFIG);
             break;
+        case 'apy':
+            await Contracts.getApy(CONFIG);
+            break;
         default:
             throw new Error(`Unknown task: ${process.env.TASK}`);
     }
