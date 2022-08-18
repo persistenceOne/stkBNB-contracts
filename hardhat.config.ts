@@ -1,16 +1,17 @@
-import { task } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-web3';
 import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
+import 'hardhat-contract-sizer';
+import 'hardhat-forta'; // forta
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
-import 'hardhat-contract-sizer';
+import { task } from 'hardhat/config';
 import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
-import { CONFIG } from './scripts/types/config';
-import 'hardhat-forta'; // forta
-import { ethers } from 'ethers';
 import { string } from 'hardhat/internal/core/params/argumentTypes';
+import { ethers } from 'ethers';
+import { CONFIG } from './scripts/types/config';
+import { logAndExportWallet } from './scripts/utils/util';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -23,12 +24,17 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
 });
 
 // This generates a random new keypair. One can generate key-pairs this way for testing purposes.
-task('gen-keypair', 'Generates a new keypair', async (taskArgs, hre) => {
-    const wallet = ethers.Wallet.createRandom();
-    console.log(`Address: ${wallet.address}`);
-    console.log(`PrivKey: ${wallet.privateKey}`);
-    console.log(`Mnemonic: ${wallet.mnemonic.phrase}`);
-});
+task('gen-keypair', 'Generates a new keypair', async (taskArgs: { export: boolean }, hre) => {
+    await logAndExportWallet(ethers.Wallet.createRandom(), taskArgs.export);
+}).addFlag('export', 'Export the keypair to a keystore file');
+
+task(
+    'restore-keypair',
+    'Restores the keypair from the mnemonic configured in network env file',
+    async (taskArgs, hre) => {
+        await logAndExportWallet(ethers.Wallet.fromMnemonic(CONFIG.mnemonic), true);
+    },
+);
 
 task(
     'sign',
@@ -125,7 +131,8 @@ export default {
             accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
         mainnet: {
-            url: 'https://bsc-dataseed.binance.org/',
+            // url: 'https://bsc-dataseed.binance.org/',
+            url: 'https://rpc.ankr.com/bsc',
             chainId: 56,
             gasPrice: 20000000000,
             blockGasLimit: 40000000,
