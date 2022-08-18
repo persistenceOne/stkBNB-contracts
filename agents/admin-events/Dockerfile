@@ -16,7 +16,7 @@ WORKDIR /app
 # Uncomment the following line to enable agent logging
 LABEL "network.forta.settings.agent-logs.enable"="true"
 COPY ./src ./src
-COPY ../../abis/ui ./abi
+COPY ./abi ./abi
 COPY agent-config.json ./
 COPY package*.json ./
 RUN npm ci --production

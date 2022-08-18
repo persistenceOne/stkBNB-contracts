@@ -5,7 +5,7 @@
   "contracts": {
     "StakePool": {
       "address": "0xC228CefDF841dEfDbD5B3a18dFD414cC0dbfa0D8",
-      "abiFile": "../../../abis/ui/StakePool.json",
+      "abiFile": "StakePool.json",
       "events": {
         "ConfigUpdated": {
           "type": "Info",
@@ -39,23 +39,21 @@
     },
     "AddressStore": {
       "address": "0x4a6b3127A1D295878d8790F6ece0776F65FEc121",
-      "abiFile": "../../../abis/ui/AddressStore.json",
+      "abiFile": "AddressStore.json",
       "events": {
         "SetAddress": {
-          "SetAddress": {
-            "type": "Info",
-            "severity": "Info"
-          },
-          "OwnershipTransferred": {
-            "type": "Info",
-            "severity": "Critical"
-          }
+          "type": "Info",
+          "severity": "Info"
+        },
+        "OwnershipTransferred": {
+          "type": "Info",
+          "severity": "Critical"
         }
       }
     },
     "FeeVault": {
       "address": "0x2FC80E731C40ec6590783bb11Eede9dd43fC69bf",
-      "abiFile": "../../../abis/ui/FeeVault.json",
+      "abiFile": "FeeVault.json",
       "events": {
         "Initialized": {
           "type": "Info",
@@ -69,7 +67,7 @@
     },
     "StakedBNBToken": {
       "address": "0xc2E9d07F66A89c44062459A47a0D2Dc038E4fb16",
-      "abiFile": "../../../abis/ui/StakedBNBToken.json",
+      "abiFile": "StakedBNBToken.json",
       "events": {
         "OwnershipTransferred": {
           "type": "Info",
@@ -87,7 +85,7 @@
     },
     "TimelockedAdmin": {
       "address": "0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607",
-      "abiFile": "../../../abis/ui/TimelockedAdmin.json",
+      "abiFile": "TimelockedAdmin.json",
       "events": {
         "CallScheduled": {
           "type": "Info",
