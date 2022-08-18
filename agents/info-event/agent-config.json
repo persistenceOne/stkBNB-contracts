@@ -1,77 +1,59 @@
 {
-  "developerAbbreviation": "pSTAKE",
-  "protocolName": "stkBNB",
+  "developerAbbreviation": "pstake",
+  "protocolName": "pStake stkBNB",
   "protocolAbbreviation": "stkBNB",
   "contracts": {
     "StakePool": {
       "address": "0xC228CefDF841dEfDbD5B3a18dFD414cC0dbfa0D8",
       "abiFile": "../../../abis/ui/StakePool.json",
+
       "events": {
         "ConfigUpdated": {
-          "type": 4,
-          "severity": 3
-        },
-        "InitiateDelegation_TransferOut": {
-          "type": 4,
-          "severity": 1
-        },
-        "InitiateDelegation_ShortCircuit": {
-          "type": 4,
-          "severity": 1
-        },
-        "InitiateDelegation_Success": {
-          "type": 4,
-          "severity": 1
-        },
-        "EpochUpdate": {
-          "type": 4,
-          "severity": 1
-        },
-        "UnbondingInitiated": {
-          "type": 4,
-          "severity": 1
-        },
-        "UnbondingFinished": {
-          "type": 4,
-          "severity": 1
+          "type": "Info",
+          "severity": "Info"
         },
         "Paused": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "Unpaused": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "Initialized": {
-          "type": 4,
-          "severity": 4
+          "type": "Info",
+          "severity": "High"
         },
         "RoleAdminChanged": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "RoleGranted": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "RoleRevoked": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         }
+        
       }
+     
     },
+
     "AddressStore": {
       "address": "0x4a6b3127A1D295878d8790F6ece0776F65FEc121",
       "abiFile": "../../../abis/ui/AddressStore.json",
       "events": {
         "SetAddress": {
-          "type": 4,
-          "severity": 1
-        },
-        "OwnershipTransferred": {
-          "type": 4,
-          "severity": 5
+          "SetAddress": {
+            "type": "Info",
+            "severity": "Info"
+          },
+          "OwnershipTransferred": {
+            "type": "Info",
+            "severity": "Critical"
+          }
         }
       }
     },
@@ -79,21 +61,14 @@
       "address": "0x2FC80E731C40ec6590783bb11Eede9dd43fC69bf",
       "abiFile": "../../../abis/ui/FeeVault.json",
       "events": {
-        "Deposit": {
-          "type": 4,
-          "severity": 1
-        },
-        "Withdraw": {
-          "type": 4,
-          "severity": 1
-        },
+
         "Initialized": {
-          "type": 4,
-          "severity": 4
+          "type": "Info",
+          "severity": "High"
         },
         "OwnershipTransferred": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         }
       }
     },
@@ -102,62 +77,56 @@
       "abiFile": "../../../abis/ui/StakedBNBToken.json",
       "events": {
         "OwnershipTransferred": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "Paused": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "Unpaused": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         }
       }
     },
-    "UndelegationHolder": {
-      "address": "0x3C0Fc52c7de41363C14a63EA09Ba4202d15Dc298",
-      "abiFile": "../../../abis/ui/UndelegationHolder.json",
-      "events": {
-        "Received": {
-          "type": 4,
-          "severity": 1
-        }
-      }
-    },
+
     "TimelockedAdmin": {
       "address": "0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607",
       "abiFile": "../../../abis/ui/TimelockedAdmin.json",
       "events": {
         "CallScheduled": {
-          "type": 4,
-          "severity": 1
+          "type": "Info",
+          "severity": "Info"
         },
         "CallExecuted": {
-          "type": 4,
-          "severity": 4
+          "type": "Info",
+          "severity": "High"
         },
         "Cancelled": {
-          "type": 4,
-          "severity": 1
+          "type": "Info",
+          "severity": "Info"
         },
         "MinDelayChange": {
-          "type": 4,
-          "severity": 4
+          "type": "Info",
+          "severity": "High"
         },
         "RoleAdminChanged": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "RoleGranted": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         },
         "RoleRevoked": {
-          "type": 4,
-          "severity": 5
+          "type": "Info",
+          "severity": "Critical"
         }
       }
     }
+    
+     
   }
+
 }
