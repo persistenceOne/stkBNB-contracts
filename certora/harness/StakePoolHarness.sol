@@ -5,11 +5,11 @@ pragma solidity ^0.8.7;
 import "../../contracts/StakePool.sol";
 
 contract StakePoolHarness is StakePool {
-
     /* Exchange Rate Params */
     function getTotalWei() public view returns (uint256) {
         return exchangeRate.totalWei;
-    }   
+    }
+
     function getPoolTokenSupply() public view returns (uint256) {
         return exchangeRate.poolTokenSupply;
     }
@@ -19,10 +19,11 @@ contract StakePoolHarness is StakePool {
     }*/
 
     /* Address Store Params */
-    function getStkBnbAddress() public view returns (address){
+    function getStkBnbAddress() public view returns (address) {
         return _addressStore.getStkBNB();
     }
-     function getStakePoolAddress() public view returns (address){
+
+    function getStakePoolAddress() public view returns (address) {
         return _addressStore.getStakePool();
     }
 
@@ -35,15 +36,15 @@ contract StakePoolHarness is StakePool {
         return claimReqs[user].length;
     }
 
-     function getClaimRequestTimestamp(address user, uint256 index) public view returns (uint256) {
+    function getClaimRequestTimestamp(address user, uint256 index) public view returns (uint256) {
         return claimReqs[user][index].createdAt;
     }
-    
 
     /* CONFIG Params */
     function getCooldownPeriod() public view returns (uint256) {
         return config.cooldownPeriod;
     }
+
     function getbcStakingWallet() public view returns (address) {
         return config.bcStakingWallet;
     }
@@ -51,23 +52,29 @@ contract StakePoolHarness is StakePool {
     function getMinBNBDeposit() public view returns (uint256) {
         return config.minBNBDeposit;
     }
-    
+
     function getMinTokenWithdrawal() public view returns (uint256) {
         return config.minTokenWithdrawal;
     }
 
-    function getFee() public view returns ( uint256, uint256, uint256) {
-        return ( config.fee.reward, config.fee.deposit, config.fee.withdraw) ;
+    function getFee()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (config.fee.reward, config.fee.deposit, config.fee.withdraw);
     }
-
 
     function bnbBalanceOf(address user) public view returns (uint256) {
         return user.balance;
     }
 
     function canBeClaimed(uint256 index) public view returns (bool) {
-            ClaimRequest memory req = claimReqs[msg.sender][index];
+        ClaimRequest memory req = claimReqs[msg.sender][index];
         return _canBeClaimed(req);
     }
-
 }
