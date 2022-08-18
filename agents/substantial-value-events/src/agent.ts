@@ -55,10 +55,10 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'stkBNB',
-                    name: 'Large stkBNB Mint',
+                    name: 'Substantial stkBNB Mint',
                     description: `Minted: ${ethers.utils.formatEther(amount)} stkBNB`,
-                    alertId: 'LARGE_stkBNB_MINT',
-                    severity: FindingSeverity.High,
+                    alertId: 'pSTAKE-stkBNB-SUBSTANTIAL-MINT',
+                    severity,
                     type: FindingType.Info,
                     metadata: {
                         amount,
@@ -89,10 +89,10 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'stkBNB',
-                    name: 'Large stkBNB Burn',
+                    name: 'Substantial stkBNB Burn',
                     description: `Burned: ${ethers.utils.formatEther(amount)} stkBNB`,
-                    alertId: 'LARGE_stkBNB_BURN',
-                    severity: FindingSeverity.Low,
+                    alertId: 'pSTAKE-stkBNB-SUBSTANTIAL-BURN',
+                    severity,
                     type: FindingType.Info,
                     metadata: {
                         amount,
@@ -109,7 +109,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
 
     bnbDepositEvents.forEach(depositEvent => {
         // extract deposit event arguments
-        const { timestamp, bnbAmount } = depositEvent.args;
+        const { bnbAmount } = depositEvent.args;
         const normalizedValue = normalizeValue(bnbAmount);
 
         let severity: FindingSeverity | undefined;
@@ -125,14 +125,13 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'stkBNB',
-                    name: 'Large BNB Deposit',
+                    name: 'Substantial BNB Deposit',
                     description: `Deposited: ${ethers.utils.formatEther(bnbAmount)} BNB`,
-                    alertId: 'LARGE_stkBNB_DEPOSIT',
-                    severity: FindingSeverity.High,
+                    alertId: 'pSTAKE-stkBNB-SUBSTANTIAL-DEPOSIT',
+                    severity,
                     type: FindingType.Info,
                     metadata: {
                         bnbAmount,
-                        timestamp,
                     },
                 }),
             );
@@ -144,7 +143,7 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
 
     stakePoolWithdrawEvents.forEach(withdrawEvent => {
         // extract withdraw event arguments
-        const { timestamp, bnbAmount } = withdrawEvent.args;
+        const { bnbAmount } = withdrawEvent.args;
         // convert 18 decimal places to normal value
         const normalizedValue = normalizeValue(bnbAmount);
 
@@ -161,14 +160,13 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
             findings.push(
                 Finding.fromObject({
                     protocol: 'stkBNB',
-                    name: 'Large BNB Withdrawal',
+                    name: 'Substantial BNB Withdrawal',
                     description: `Withdrawn: ${ethers.utils.formatEther(bnbAmount)} BNB`,
-                    alertId: 'LARGE_stkBNB_WITHDRAWAL',
-                    severity: FindingSeverity.High,
+                    alertId: 'pSTAKE-stkBNB-SUBSTANTIAL-WITHDRAWAL',
+                    severity,
                     type: FindingType.Info,
                     metadata: {
                         bnbAmount,
-                        timestamp,
                     },
                 }),
             );

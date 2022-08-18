@@ -1,16 +1,15 @@
 {
-  "developerAbbreviation": "pstake",
-  "protocolName": "pStake stkBNB",
+  "developerAbbreviation": "pSTAKE",
+  "protocolName": "Staked BNB",
   "protocolAbbreviation": "stkBNB",
   "contracts": {
     "StakePool": {
       "address": "0xC228CefDF841dEfDbD5B3a18dFD414cC0dbfa0D8",
       "abiFile": "../../../abis/ui/StakePool.json",
-
       "events": {
         "ConfigUpdated": {
           "type": "Info",
-          "severity": "Info"
+          "severity": "Medium"
         },
         "Paused": {
           "type": "Info",
@@ -36,11 +35,8 @@
           "type": "Info",
           "severity": "Critical"
         }
-        
       }
-     
     },
-
     "AddressStore": {
       "address": "0x4a6b3127A1D295878d8790F6ece0776F65FEc121",
       "abiFile": "../../../abis/ui/AddressStore.json",
@@ -61,7 +57,6 @@
       "address": "0x2FC80E731C40ec6590783bb11Eede9dd43fC69bf",
       "abiFile": "../../../abis/ui/FeeVault.json",
       "events": {
-
         "Initialized": {
           "type": "Info",
           "severity": "High"
@@ -90,7 +85,6 @@
         }
       }
     },
-
     "TimelockedAdmin": {
       "address": "0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607",
       "abiFile": "../../../abis/ui/TimelockedAdmin.json",
@@ -125,8 +119,5 @@
         }
       }
     }
-    
-     
   }
-
 }

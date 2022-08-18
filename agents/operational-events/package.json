@@ -1,8 +1,15 @@
 {
-  "name": "forta-pstake-stkbnb-operational-events",
+  "name": "pstake-stkbnb-operational-event-bot",
   "version": "1.0.0",
-  "description": "This agent monitors operational events emitted from Liquid Stake BNB contracts.",
-  "chainIds":[56],
+  "description": "This agent monitors operational events emitted from stkBNB contracts",
+  "repository": {
+    "url": "https://github.com/persistenceOne/stkBNB-contracts.git",
+    "directory": "agents/operational-events",
+    "type": "git"
+  },
+  "chainIds": [
+    56
+  ],
   "scripts": {
     "start": "npm run start:dev",
     "start:dev": "nodemon --watch src --watch forta.config.json -e js,json --exec 'forta-agent run'",
