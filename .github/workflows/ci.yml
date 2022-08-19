@@ -40,9 +40,7 @@ jobs:
         id: get-diff-certora # via outputs
         with:
           PATTERNS: |
-            +certora/harness/*.sol
-            +certora/specs/*.spec
-            +certora/scripts/ci.sh
+            +(certora)/**/*.+(sol|spec|sh)
       
       - name: Get diff for scripts/test
         uses: technote-space/get-diff-action@v4.0.1
