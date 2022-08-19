@@ -265,7 +265,7 @@ jobs:
 
   certora:
     runs-on: ubuntu-latest
-    if: needs.get-diff.outputs.certora-contract
+    if: needs.get-diff.outputs.certora-contract || needs.get-diff.outputs.contract
     needs: get-diff
 
     steps:
