@@ -195,6 +195,7 @@ jobs:
       - name: Setup Environment
         run: |
           yarn install
+
       - name: Run Solhint
         run: |
           yarn solhint   
@@ -264,7 +265,7 @@ jobs:
 
   certora:
     runs-on: ubuntu-latest
-    if: needs.get-diff.outputs.contract
+    if: needs.get-diff.outputs.certora-contract
     needs: get-diff
 
     steps:
