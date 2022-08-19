@@ -65,7 +65,7 @@ jobs:
           wget https://github.com/ethereum/solidity/releases/download/v0.8.7/solc-static-linux
           chmod +x solc-static-linux
           sudo mv solc-static-linux /usr/local/bin/solc          
-          pip3 install certora-cli==3.3.2
+          pip3 install certora-cli
 
       - name: Prepare
         run: |

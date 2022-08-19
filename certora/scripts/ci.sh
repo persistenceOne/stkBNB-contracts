@@ -9,5 +9,6 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --path . \
 --loop_iter 3 \
 --staging \
+--debug \
 --settings -assumeUnwindCond,-enableStorageAnalysis=true,-ciMode=true,-optimisticFallback=true \
 --msg "pstake"
