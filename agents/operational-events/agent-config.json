@@ -1,0 +1,61 @@
+{
+  "developerAbbreviation": "pSTAKE",
+  "protocolName": "Staked BNB",
+  "protocolAbbreviation": "stkBNB",
+  "contracts": {
+    "StakePool": {
+      "address": "0xC228CefDF841dEfDbD5B3a18dFD414cC0dbfa0D8",
+      "abiFile": "StakePool.json",
+      "events": {
+        "InitiateDelegation_TransferOut": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "InitiateDelegation_ShortCircuit": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "InitiateDelegation_Success": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "EpochUpdate": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "UnbondingInitiated": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "UnbondingFinished": {
+          "type": "Info",
+          "severity": "Info"
+        }
+      }
+    },
+    "FeeVault": {
+      "address": "0x2FC80E731C40ec6590783bb11Eede9dd43fC69bf",
+      "abiFile": "FeeVault.json",
+      "events": {
+        "Deposit": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "Withdraw": {
+          "type": "Info",
+          "severity": "Info"
+        }
+      }
+    },
+    "UndelegationHolder": {
+      "address": "0x3C0Fc52c7de41363C14a63EA09Ba4202d15Dc298",
+      "abiFile": "UndelegationHolder.json",
+      "events": {
+        "Received": {
+          "type": "Info",
+          "severity": "Info"
+        }
+      }
+    }
+  }
+}

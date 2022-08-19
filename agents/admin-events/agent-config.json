@@ -1,0 +1,121 @@
+{
+  "developerAbbreviation": "pSTAKE",
+  "protocolName": "Staked BNB",
+  "protocolAbbreviation": "stkBNB",
+  "contracts": {
+    "StakePool": {
+      "address": "0xC228CefDF841dEfDbD5B3a18dFD414cC0dbfa0D8",
+      "abiFile": "StakePool.json",
+      "events": {
+        "ConfigUpdated": {
+          "type": "Info",
+          "severity": "Medium"
+        },
+        "Paused": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "Unpaused": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "Initialized": {
+          "type": "Info",
+          "severity": "High"
+        },
+        "RoleAdminChanged": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "RoleGranted": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "RoleRevoked": {
+          "type": "Info",
+          "severity": "Critical"
+        }
+      }
+    },
+    "AddressStore": {
+      "address": "0x4a6b3127A1D295878d8790F6ece0776F65FEc121",
+      "abiFile": "AddressStore.json",
+      "events": {
+        "SetAddress": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "OwnershipTransferred": {
+          "type": "Info",
+          "severity": "Critical"
+        }
+      }
+    },
+    "FeeVault": {
+      "address": "0x2FC80E731C40ec6590783bb11Eede9dd43fC69bf",
+      "abiFile": "FeeVault.json",
+      "events": {
+        "Initialized": {
+          "type": "Info",
+          "severity": "High"
+        },
+        "OwnershipTransferred": {
+          "type": "Info",
+          "severity": "Critical"
+        }
+      }
+    },
+    "StakedBNBToken": {
+      "address": "0xc2E9d07F66A89c44062459A47a0D2Dc038E4fb16",
+      "abiFile": "StakedBNBToken.json",
+      "events": {
+        "OwnershipTransferred": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "Paused": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "Unpaused": {
+          "type": "Info",
+          "severity": "Critical"
+        }
+      }
+    },
+    "TimelockedAdmin": {
+      "address": "0xc1F861FBE4AA730ba19DFA1b1e75ec030E54B607",
+      "abiFile": "TimelockedAdmin.json",
+      "events": {
+        "CallScheduled": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "CallExecuted": {
+          "type": "Info",
+          "severity": "High"
+        },
+        "Cancelled": {
+          "type": "Info",
+          "severity": "Info"
+        },
+        "MinDelayChange": {
+          "type": "Info",
+          "severity": "High"
+        },
+        "RoleAdminChanged": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "RoleGranted": {
+          "type": "Info",
+          "severity": "Critical"
+        },
+        "RoleRevoked": {
+          "type": "Info",
+          "severity": "Critical"
+        }
+      }
+    }
+  }
+}

@@ -32,3 +32,12 @@
   * Revoked TIMELOCK_ADMIN_ROLE from deployer: [`0x65f644f07f4aee664a2093d6ce4a636ae4c9301f3daef97e255ec1de0222093a`](https://bscscan.com/tx/0x65f644f07f4aee664a2093d6ce4a636ae4c9301f3daef97e255ec1de0222093a)
 * Transferred AddressStore ownership from deployer to TimelockedAdmin: [`0x14b29d2fde6ffb5cf48b0339b9f2cfe4c18f49824ab4749fbd8ad6c26413886a`](https://bscscan.com/tx/0x14b29d2fde6ffb5cf48b0339b9f2cfe4c18f49824ab4749fbd8ad6c26413886a)
 * Transferred ProxyAdmin ownership from deployer to TimelockedAdmin: [`0x936a06cb1278fd3756cd6faa2ca2f22ab20e003131c615038d2904f739c3902a`](https://bscscan.com/tx/0x936a06cb1278fd3756cd6faa2ca2f22ab20e003131c615038d2904f739c3902a)
+
+
+#### Forta Bot IDs:
+ * pstake-stkbnb-admin-event-bot:
+ [`0x5f798596b2c37dabfdbd66313eede4b025fadd3ae37241f6fc645f8af8e7ea1a`](https://explorer.forta.network/bot/0x5f798596b2c37dabfdbd66313eede4b025fadd3ae37241f6fc645f8af8e7ea1a)
+ * pstake-stkbnb-operational-event-bot:
+ [`0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab`](https://explorer.forta.network/bot/0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab)
+ * pstake-stkbnb-substantial-event-bot:
+ [`0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8`](https://explorer.forta.network/bot/0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8)

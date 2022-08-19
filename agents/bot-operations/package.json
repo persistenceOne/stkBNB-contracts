@@ -1,6 +1,6 @@
 {
   "name": "forta-pstake-stkbnb-bot-operations-monitoring",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Forta Agent that monitors and alerts when bot operations do not happen on time",
   "chainIds": [
     56

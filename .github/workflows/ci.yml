@@ -182,6 +182,7 @@ jobs:
           cp artifacts/contracts/StakedBNBToken.sol/StakedBNBToken.json abis/ui/
           cp artifacts/contracts/StakePool.sol/StakePool.json abis/ui/
           cp artifacts/contracts/UndelegationHolder.sol/UndelegationHolder.json abis/ui/
+          cp artifacts/contracts/TimelockedAdmin.sol/TimelockedAdmin.json abis/ui/
 
       - name: Extract info for Go ABIs
         run: |

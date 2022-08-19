@@ -1,7 +1,12 @@
 {
-  "name": "forta-pstake-stkbnb-largevalue-events",
-  "version": "0.0.1",
-  "description": "Forta Agent that monitors and alerts when large value deposit, withdrawals, mints, burns occur",
+  "name": "pstake-stkbnb-substantial-value-bot",
+  "version": "1.0.0",
+  "description": "Forta bot that monitors substantial value deposits, withdrawals, mints and burns",
+  "repository": {
+    "url": "https://github.com/persistenceOne/stkBNB-contracts.git",
+    "directory": "agents/substantial-value-events",
+    "type": "git"
+  },
   "chainIds": [
     56
   ],

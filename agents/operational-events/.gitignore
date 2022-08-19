@@ -1,0 +1,6 @@
+*.swp
+node_modules
+dist
+package-lock.json
+forta.config.json
+abi

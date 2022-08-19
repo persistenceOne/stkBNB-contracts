@@ -93,9 +93,9 @@ function createAlert(
 ) {
     const eventArgs = extractEventArgs(args);
     const finding = Finding.fromObject({
-        name: `${protocolName} Admin Event`,
+        name: `${protocolName} Operational Event`,
         description: `The ${eventName} event was emitted by the ${contractName} contract`,
-        alertId: `${developerAbbreviation}-${protocolAbbreviation}-ADMIN-EVENT`,
+        alertId: `${developerAbbreviation}-${protocolAbbreviation}-OPERATIONAL-EVENT`,
         type: FindingType[eventType],
         severity: FindingSeverity[eventSeverity],
         protocol: protocolName,
@@ -207,9 +207,9 @@ function provideHandleTransaction(data) {
 }
 
 module.exports = {
-    provideInitialize,
     initialize: provideInitialize(initializeData),
-    provideHandleTransaction,
     handleTransaction: provideHandleTransaction(initializeData),
-    createAlert,
+    // used by tests
+    provideInitialize,
+    provideHandleTransaction,
 };

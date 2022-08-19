@@ -12,9 +12,11 @@ WORKDIR /app
 # if using obfuscated code from build stage:
 # COPY --from=builder /app/dist ./src
 # else if using unobfuscated code:
+
+# Uncomment the following line to enable agent logging
 LABEL "network.forta.settings.agent-logs.enable"="true"
 COPY ./src ./src
-COPY ../../abis/ui ./abi
+COPY ./abi ./abi
 COPY agent-config.json ./
 COPY package*.json ./
 RUN npm ci --production
