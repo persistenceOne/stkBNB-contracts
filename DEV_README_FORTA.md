@@ -43,3 +43,15 @@ docker run testbuild
 npm WARN prepare removing existing node_modules/ before installation
 ```
 * Tests have to be added properly.
+
+
+## Slack Integration
+* Navigate to the bot dashboard page.
+
+  Eg: Substantial event bot
+  (https://explorer.forta.network/bot/0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8)
+
+* Navigate & click the 'Subscribe to this bot' button.
+* In the 'Add Subscription' pop up select 'Slack' as the integration.
+* This will prompt to select subscription type which should be set to 'Single Bot', 'Bot to watch' should be set to the bot ID's (Present in the README.md) 
+* Finally the slack webhook url should be entered which can be generated using the (https://slack.com/help/articles/115005265063-Incoming-webhooks-for-Slack) guide. This link is to be pasted into the slack webhook placeholder in the  'Add Subscription' pop up.
