@@ -19,7 +19,7 @@ jobs:
     # Map a step output to a job output
     outputs:
       contract: ${{ steps.get-diff-contract.outputs.diff }}
-      certora-contract: ${{ steps.get-diff-certora-contract.outputs.diff }}
+      certora-contract: ${{ steps.get-diff-certora.outputs.diff }}
       scripts: ${{ steps.get-diff-scripts.outputs.diff }}
       agents: ${{ steps.get-diff-agents.outputs.diff }}
       env: ${{ steps.get-diff-env.outputs.diff }}
@@ -35,9 +35,9 @@ jobs:
             +(contracts)/*.sol
             +(contracts/**/*.sol
 
-      - name: Get diff for certora contract
+      - name: Get diff for certora
         uses: technote-space/get-diff-action@v4.0.1
-        id: get-diff-certora-contract # via outputs
+        id: get-diff-certora # via outputs
         with:
           PATTERNS: |
             +certora/harness/*.sol
