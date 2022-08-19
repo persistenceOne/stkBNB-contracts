@@ -22,6 +22,7 @@ jobs:
       certora-contract: ${{ steps.get-diff-certora-contract.outputs.diff }}
       scripts: ${{ steps.get-diff-scripts.outputs.diff }}
       agents: ${{ steps.get-diff-agents.outputs.diff }}
+      env: ${{ steps.get-diff-env.outputs.diff }}
     
     steps:
       - uses: actions/checkout@v3
@@ -58,10 +59,18 @@ jobs:
             +(agents)/**/*.+(js|ts)
             +.eslintrc.js
 
+      - name: Get diff for example env
+        uses: technote-space/get-diff-action@v4.0.1
+        id: get-diff-env # via outputs
+        with:
+          PATTERNS: |
+            +.env.example.json
+
   generate-json-schema:
     name: .env JSON Schema Generator
     runs-on: ubuntu-latest
     needs: get-diff
+    if: needs.get-diff.outputs.env
 
     steps:
       - name: Check out Git repository
