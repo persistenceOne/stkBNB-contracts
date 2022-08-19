@@ -38,6 +38,6 @@
  * pstake-stkbnb-admin-event-bot:
  [`0x5f798596b2c37dabfdbd66313eede4b025fadd3ae37241f6fc645f8af8e7ea1a`](https://explorer.forta.network/bot/0x5f798596b2c37dabfdbd66313eede4b025fadd3ae37241f6fc645f8af8e7ea1a)
  * pstake-stkbnb-operational-event-bot:
- [`bafybeiadughp6nj575zd7vwegtwl6zogntyewntno3fd5ieyfquy5m5vtq@sha256:377d2188f9c16157cb7c687ee99da00f61fd969b5e8b6b5db7733ce099e01722`](https://explorer.forta.network/bot/0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab)
+ [`0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab`](https://explorer.forta.network/bot/0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab)
  * pstake-stkbnb-substantial-event-bot:
  [`0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8`](https://explorer.forta.network/bot/0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8)
