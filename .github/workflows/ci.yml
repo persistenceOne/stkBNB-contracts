@@ -33,22 +33,26 @@ jobs:
         with:
           PATTERNS: |
             +(contracts)/*.sol
+            +(contracts/**/*.sol
 
       - name: Get diff for certora contract
         uses: technote-space/get-diff-action@v4.0.1
         id: get-diff-certora-contract # via outputs
         with:
           PATTERNS: |
-            +(certora)/**/*.sol
+            +certora/harness/*.sol
+            +certora/specs/*.spec
+            +certora/scripts/ci.sh
       
       - name: Get diff for scripts/test
         uses: technote-space/get-diff-action@v4.0.1
         id: get-diff-scripts # via outputs
         with:
           PATTERNS: |
-            +(scripts/test)/*.+(js|ts)
-            +(scripts/test)/**/*.+(js|ts)
+            +(scripts|test)/*.+(js|ts)
+            +(scripts|test)/**/*.+(js|ts)
             +hardhat.config.ts
+            +.eslintrc.js
 
       - name: Get diff for agents
         uses: technote-space/get-diff-action@v4.0.1
