@@ -1,5 +1,5 @@
 {
-  "name": "cake-3",
+  "name": "forta-pstake-stkbnb-pcs-substantial-lp-deposit-withdrawal",
   "version": "0.0.1",
   "description": "Detects large LP deposits/withdrawals to/from stkbnb-bnb Pancakeswap pool",
   "repository": "https://github.com/persistenceOne/stkBNB-contracts",
