@@ -1,8 +1,8 @@
 {
   "name": "cake-3",
   "version": "0.0.1",
-  "description": "Detects large LP deposits/withdrawals to/from a Pancakeswap pool",
-  "repository": "https://github.com/NethermindEth/Forta-Agents/tree/main/PancakeSwap-Bots/Large-LP-Deposit-Withdrawal",
+  "description": "Detects large LP deposits/withdrawals to/from stkbnb-bnb Pancakeswap pool",
+  "repository": "https://github.com/persistenceOne/stkBNB-contracts",
   "chainIds": [
     56
   ],
