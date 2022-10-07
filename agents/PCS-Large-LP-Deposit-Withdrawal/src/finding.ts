@@ -13,22 +13,22 @@ export const createFinding = (log: LogDescription, token0: string, token1: strin
 
   if (log.name === "Mint") {
     return Finding.fromObject({
-      name: "Large LP Deposit in Pancakeswap pool",
-      description: `${log.name} event with large amounts emitted from a Pancakeswap pool`,
-      alertId: "CAKE-3-1",
+      name: "Large LP Deposit in stkBNB-BNB Pancakeswap pool",
+      description: `${log.name} event with large amounts emitted from stkBNB-BNB Pancakeswap pool`,
+      alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-Deposit",
       severity: FindingSeverity.Info,
       type: FindingType.Info,
-      protocol: "Pancakeswap",
+      protocol: "stkBNB",
       metadata,
     });
   } else
     return Finding.fromObject({
-      name: "Large LP Withdrawal from Pancakeswap pool",
-      description: `${log.name} event with large amount emitted from a Pancakeswap pool`,
-      alertId: "CAKE-3-2",
+      name: "Large LP Withdrawal from stkBNB-BNB Pancakeswap pool",
+      description: `${log.name} event with large amount emitted from stkBNB-BNB Pancakeswap pool`,
+      alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-Withdrawal",
       severity: FindingSeverity.Info,
       type: FindingType.Info,
-      protocol: "Pancakeswap",
+      protocol: "stkBNB",
       metadata,
     });
 };
