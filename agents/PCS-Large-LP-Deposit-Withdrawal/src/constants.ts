@@ -2,7 +2,7 @@ import { BigNumber } from "ethers";
 import { Interface } from "@ethersproject/abi";
 
 export const FACTORY: string = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
-// export const FACTORY: string = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+
 
 export const PAIR_INIT_CODE_HASH: string = "0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a3fa3f4a84f69bd5";
 export const POOL_SUPPLY_THRESHOLD: BigNumber = BigNumber.from("0");
