@@ -113,7 +113,7 @@ const mockCreateFinding = (
     return Finding.fromObject({
       name: "Large LP Deposit in Pancakeswap pool",
       description: `${event} event with large amounts emitted from a Pancakeswap pool`,
-      alertId: "CAKE-3-1",
+      alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-Deposit",
       severity: FindingSeverity.Info,
       type: FindingType.Info,
       protocol: "Pancakeswap",
@@ -123,7 +123,7 @@ const mockCreateFinding = (
   return Finding.fromObject({
     name: "Large LP Withdrawal from Pancakeswap pool",
     description: `${event} event with large amount emitted from a Pancakeswap pool`,
-    alertId: "CAKE-3-2",
+    alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-Withdrawal",
     severity: FindingSeverity.Info,
     type: FindingType.Info,
     protocol: "Pancakeswap",
@@ -203,24 +203,6 @@ describe("Large LP Deposit/Withdraw Test Suite", () => {
     expect(findings).toStrictEqual([]);
   });
 
-  it("should ignore large deposits to small Pancakeswap pools", async () => {
-    const pool = mockCreatePair(FAIL_CASES[1][1], FAIL_CASES[1][2]);
-    when(mockGetPoolData)
-      .calledWith(TESTBLOCKS[1], pool)
-      .mockReturnValue([FAIL_CASES[1][0], FAIL_CASES[1][1], FAIL_CASES[1][2], FAIL_CASES[1][5]]);
-
-    when(mockGetPoolBalance)
-      .calledWith(TESTBLOCKS[1], pool, FAIL_CASES[1][1], FAIL_CASES[1][2])
-      .mockReturnValue([BALANCES[1][0], BALANCES[1][1]]);
-
-    const event: utils.EventFragment = MOCK_IFACE.getEvent("Mint");
-    const eventLog = MOCK_IFACE.encodeEventLog(event, [pool, FAIL_CASES[1][3], FAIL_CASES[1][4]]);
-    txEvent = new TestTransactionEvent()
-      .setBlock(TESTBLOCKS[2])
-      .addAnonymousEventLog(pool, eventLog.data, ...eventLog.topics);
-    findings = await handleTransaction(txEvent);
-    expect(findings).toStrictEqual([]);
-  });
 
   it("should return a finding when there is large deposit to Pancakeswap pool", async () => {
     const pool: string = mockCreatePair(CASES[1][1], CASES[1][2]);
