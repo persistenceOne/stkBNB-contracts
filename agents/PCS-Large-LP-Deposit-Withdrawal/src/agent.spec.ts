@@ -203,7 +203,6 @@ describe("Large LP Deposit/Withdraw Test Suite", () => {
     expect(findings).toStrictEqual([]);
   });
 
-
   it("should return a finding when there is large deposit to Pancakeswap pool", async () => {
     const pool: string = mockCreatePair(CASES[1][1], CASES[1][2]);
     when(mockGetPoolData)
