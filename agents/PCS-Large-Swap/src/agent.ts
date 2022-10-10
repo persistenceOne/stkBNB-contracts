@@ -2,8 +2,17 @@ import { Finding, HandleTransaction, TransactionEvent, getEthersProvider } from 
 import { BigNumber } from "ethers";
 import DataFetcher from "./data.fetcher";
 import { createFinding } from "./utils";
-import { SWAP_EVENT, LARGE_THRESHOLD, PANCAKE_FACTORY_ADDRESS, INIT_CODE_PAIR_HASH, STKBNB_POOL_ADDRESS ,STKBNB_TOKEN_ADDRESS, WBNB_TOKEN_ADDRESS, TOKEN_0, TOKEN_1 } from "./constants";
-
+import {
+  SWAP_EVENT,
+  LARGE_THRESHOLD,
+  PANCAKE_FACTORY_ADDRESS,
+  INIT_CODE_PAIR_HASH,
+  STKBNB_POOL_ADDRESS,
+  STKBNB_TOKEN_ADDRESS,
+  WBNB_TOKEN_ADDRESS,
+  TOKEN_0,
+  TOKEN_1,
+} from "./constants";
 
 export const provideBotHandler = (
   largePercentage: BigNumber,
@@ -15,16 +24,11 @@ export const provideBotHandler = (
     const findings: Finding[] = [];
 
     // filter the transaction logs for swap events
-    const swapEvents = txEvent.filterLog(SWAP_EVENT,STKBNB_POOL_ADDRESS);
+    const swapEvents = txEvent.filterLog(SWAP_EVENT, STKBNB_POOL_ADDRESS);
     await Promise.all(
       swapEvents.map(async (event) => {
         const pairAddress = event.address;
-        const [isValid] = await fetcher.isValidPancakePair(
-          pairAddress,
-          txEvent.blockNumber,
-          pancakeFactory,
-          initCode
-        );
+        const [isValid] = await fetcher.isValidPancakePair(pairAddress, txEvent.blockNumber, pancakeFactory, initCode);
         if (isValid) {
           const [token0Balance, token1Balance] = await Promise.all([
             fetcher.getERC20Balance(WBNB_TOKEN_ADDRESS, pairAddress, txEvent.blockNumber - 1),
@@ -40,15 +44,7 @@ export const provideBotHandler = (
             const percentageToken1In = amount1In.mul(100).div(token1Balance);
             if (percentageToken0Out.gte(largePercentage) || percentageToken1In.gte(largePercentage)) {
               findings.push(
-                createFinding(
-                  TOKEN_1,
-                  TOKEN_0,
-                  amount1In,
-                  amount0Out,
-                  percentageToken1In,
-                  percentageToken0Out,
-                  to
-                )
+                createFinding(TOKEN_1, TOKEN_0, amount1In, amount0Out, percentageToken1In, percentageToken0Out, to)
               );
             }
           }
@@ -57,15 +53,7 @@ export const provideBotHandler = (
             const percentageToken0In = amount0In.mul(100).div(token0Balance);
             if (percentageToken1Out.gte(largePercentage) || percentageToken0In.gte(largePercentage)) {
               findings.push(
-                createFinding(
-                  TOKEN_0,
-                  TOKEN_1,
-                  amount0In,
-                  amount1Out,
-                  percentageToken0In,
-                  percentageToken1Out,
-                  to
-                )
+                createFinding(TOKEN_0, TOKEN_1, amount0In, amount1Out, percentageToken0In, percentageToken1Out, to)
               );
             }
           }

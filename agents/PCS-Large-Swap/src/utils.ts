@@ -23,9 +23,9 @@ const createFinding = (
 ): Finding => {
   return Finding.from({
     name: "Large Swap in stkBNB-BNB Pancakeswap pool",
-    description:  `${ethers.utils.formatEther(swapAmountIn.toString())} ${swapTokenIn} swapped for ${ethers.utils.formatEther(
-      swapAmountOut.toString()
-    )} ${swapTokenOut}`,
+    description: `${ethers.utils.formatEther(
+      swapAmountIn.toString()
+    )} ${swapTokenIn} swapped for ${ethers.utils.formatEther(swapAmountOut.toString())} ${swapTokenOut}`,
     alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-Pool-Swap",
     protocol: "stkBNB",
     type: FindingType.Info,
