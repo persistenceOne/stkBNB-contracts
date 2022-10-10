@@ -84,12 +84,12 @@ describe("Pancakeswap Pool Fetcher Test Suite", () => {
         outputs: [supply],
       });
 
-      const [valid, t0, t1, sup] = await testFetcher.getPoolData(block, pool);
-      expect([valid, t0, t1, sup]).toStrictEqual([true, token0, token1, supply]);
+      const [valid, sup] = await testFetcher.getPoolData(block, pool);
+      expect([valid, sup]).toStrictEqual([true, token0, token1, supply]);
 
       //Use cached values
       mockProvider.clear();
-      expect([valid, t0, t1, sup]).toStrictEqual([true, token0, token1, supply]);
+      expect([valid, sup]).toStrictEqual([true, token0, token1, supply]);
     }
   });
 
