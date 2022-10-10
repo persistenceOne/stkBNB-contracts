@@ -24,20 +24,23 @@ export const provideHandleTransaction =
     await Promise.all(
       logs.map(async (log) => {
         const { amount0, amount1 } = log.args;
-        const [valid,totalSupply] = await fetcher.getPoolData(block - 1, log.address);
-        
-        const createdPair = createPair( WBNB_TOKEN_ADDRESS, STKBNB_TOKEN_ADDRESS, factory);
+        const [valid, totalSupply] = await fetcher.getPoolData(block - 1, log.address);
+
+        const createdPair = createPair(WBNB_TOKEN_ADDRESS, STKBNB_TOKEN_ADDRESS, factory);
         if (valid && log.address === createdPair) {
-          
-          const [balance0, balance1] = await fetcher.getPoolBalance(block - 1, log.address, WBNB_TOKEN_ADDRESS, STKBNB_TOKEN_ADDRESS);
+          const [balance0, balance1] = await fetcher.getPoolBalance(
+            block - 1,
+            log.address,
+            WBNB_TOKEN_ADDRESS,
+            STKBNB_TOKEN_ADDRESS
+          );
           if (
             log.address == STKBNB_POOL_ADDRESS &&
             totalSupply.gt(poolSupplyThreshold) &&
             (amount0.mul(100).gt(balance0.mul(thresholdPercentage)) ||
               amount1.mul(100).gt(balance1.mul(thresholdPercentage)))
           ) {
-            
-            findings.push(createFinding(log,totalSupply));
+            findings.push(createFinding(log, totalSupply));
           }
         }
       })
