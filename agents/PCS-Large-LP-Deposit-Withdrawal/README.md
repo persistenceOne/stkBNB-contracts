@@ -12,7 +12,7 @@ This bot detects large addition/removal of liquidity in stkBNB-BNB PancakeSwap p
 
 ## Alerts
 
-- pSTAKE-stkBNB-PCS-SUBSTANTIAL-Deposit
+- pSTAKE-stkBNB-PCS-SUBSTANTIAL-Pool-Deposit
   - Fired when large liquidity is deposited to a Pancakeswap stkBNB-BNB pool as `Mint` event is emitted with a `totalSuppply` that exceeds the pool's `poolSupplyThreshold` and `amount0`/`amount1` that exceeds `token0`/`token1` `thresholdPercentage`
   - Severity is always set to "Info"
   - Type is always set to "Info"
@@ -25,7 +25,7 @@ This bot detects large addition/removal of liquidity in stkBNB-BNB PancakeSwap p
     - `totalSupply`: The total supply of the pool before the deposit transaction at the preceeding block
 
 
-- pSTAKE-stkBNB-PCS-SUBSTANTIAL-Withdrawal
+- pSTAKE-stkBNB-PCS-SUBSTANTIAL-Pool-Withdrawal
   - Fired when large liquidity is withdrawn from a Pancakeswap stkBNB-BNB pool as `Burn` event is emitted with a `totalSuppply` that exceeds the pool's `poolSupplyThreshold` threshold and `amount0`/`amount1` that exceeds `token0`/`token1` `thresholdPercentage`
   - Severity is always set to "Info"
   - Type is always set to "Info"

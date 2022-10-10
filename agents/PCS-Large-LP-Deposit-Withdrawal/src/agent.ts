@@ -4,7 +4,7 @@ import { EVENTS_ABI, POOL_SUPPLY_THRESHOLD, THRESHOLD_PERCENTAGE, FACTORY } from
 import { createPair } from "./utils";
 import { createFinding } from "./finding";
 import PoolFetcher from "./pool.fetcher";
-const STKBNBPOOLADDRESS = "0xaa2527ff1893e0d40d4a454623d362b79e8bb7f1";
+const STKBNB_POOL_ADDRESS = "0xaa2527ff1893e0d40d4a454623d362b79e8bb7f1";
 
 export const provideHandleTransaction =
   (
@@ -17,7 +17,7 @@ export const provideHandleTransaction =
   async (txEvent: TransactionEvent): Promise<Finding[]> => {
     const findings: Finding[] = [];
     const block: number = txEvent.blockNumber;
-    const logs: LogDescription[] = txEvent.filterLog(EVENTS_ABI);
+    const logs: LogDescription[] = txEvent.filterLog(EVENTS_ABI,STKBNB_POOL_ADDRESS);
     if (!logs) return findings;
     await Promise.all(
       logs.map(async (log) => {
@@ -27,7 +27,6 @@ export const provideHandleTransaction =
         if (valid && log.address === createdPair) {
           const [balance0, balance1] = await fetcher.getPoolBalance(block - 1, log.address, token0, token1);
           if (
-            log.address == STKBNBPOOLADDRESS &&
             totalSupply.gt(poolSupplyThreshold) &&
             (amount0.mul(100).gt(balance0.mul(thresholdPercentage)) ||
               amount1.mul(100).gt(balance1.mul(thresholdPercentage)))
