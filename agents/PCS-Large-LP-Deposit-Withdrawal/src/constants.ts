@@ -4,8 +4,8 @@ import { Interface } from "@ethersproject/abi";
 export const FACTORY: string = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
 
 export const PAIR_INIT_CODE_HASH: string = "0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a3fa3f4a84f69bd5";
-export const POOL_SUPPLY_THRESHOLD: BigNumber = BigNumber.from("0");
-export const THRESHOLD_PERCENTAGE: BigNumber = BigNumber.from(0);
+export const POOL_SUPPLY_THRESHOLD: BigNumber = BigNumber.from("1");
+export const THRESHOLD_PERCENTAGE: BigNumber = BigNumber.from(1);
 
 export const EVENTS_ABI: string[] = [
   "event Mint(address indexed sender, uint amount0, uint amount1)",
