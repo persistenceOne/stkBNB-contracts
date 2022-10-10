@@ -17,7 +17,7 @@ export const provideHandleTransaction =
   async (txEvent: TransactionEvent): Promise<Finding[]> => {
     const findings: Finding[] = [];
     const block: number = txEvent.blockNumber;
-    const logs: LogDescription[] = txEvent.filterLog(EVENTS_ABI,STKBNB_POOL_ADDRESS);
+    const logs: LogDescription[] = txEvent.filterLog(EVENTS_ABI, STKBNB_POOL_ADDRESS);
     if (!logs) return findings;
     await Promise.all(
       logs.map(async (log) => {
