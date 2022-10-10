@@ -10,7 +10,6 @@ export default class PoolFetcher {
 
   public async getPoolData(block: number, poolAddress: string): Promise<[boolean, string, string, BigNumber]> {
     let returnedValues: [boolean, string, string, BigNumber];
-    
 
     const pool = new Contract(poolAddress, FUNCTIONS_ABI, this.provider);
     try {
@@ -33,8 +32,6 @@ export default class PoolFetcher {
     token0: string,
     token1: string
   ): Promise<[BigNumber, BigNumber]> {
-    
-
     const token0Contract = new Contract(token0, FUNCTIONS_ABI, this.provider);
     const token1Contract = new Contract(token1, FUNCTIONS_ABI, this.provider);
     let returnedValues: [BigNumber, BigNumber];
