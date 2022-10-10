@@ -2,7 +2,7 @@ import { Finding, FindingSeverity, FindingType, LogDescription } from "forta-age
 import { BigNumber } from "ethers";
 import { ethers } from "forta-agent";
 
-export const createFinding = (log: LogDescription, token0: string, token1: string, totalSupply: BigNumber): Finding => {
+export const createFinding = (log: LogDescription, totalSupply: BigNumber): Finding => {
   const metadata = {
     amount0: ethers.utils.formatEther(log.args.amount0.toString()),
     amount1: ethers.utils.formatEther(log.args.amount1.toString()),
