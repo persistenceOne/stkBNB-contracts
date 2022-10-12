@@ -1,7 +1,7 @@
 import DataFetcher from "./data.fetcher";
 import { BigNumber, utils } from "ethers";
 import { createAddress, MockEthersProvider } from "forta-agent-tools/lib/tests";
-import { PANCAKE_FACTORY_ADDRESS, INIT_CODE_PAIR_HASH, PANCAKE_PAIR_ABI, ERC20ABI } from "./constants";
+import { ERC20_ABI } from "./constants";
 
 //pair, token0, token1, block
 const PAIRS: any[][] = [
@@ -39,7 +39,7 @@ const BALANCES: any[][] = [
   [createAddress("0xd84a"), createAddress("0x271b"), BigNumber.from(62432423423), 9870659999],
 ];
 
-describe("PancakeSwap Data Fetcher Test Suite", () => {
+ describe("PancakeSwap Data Fetcher Test Suite", () => {
   const mockProvider: MockEthersProvider = new MockEthersProvider();
   const testFetcher: DataFetcher = new DataFetcher(mockProvider as any);
 
@@ -47,52 +47,10 @@ describe("PancakeSwap Data Fetcher Test Suite", () => {
     mockProvider.clear();
   });
 
-  it("should return false for non valid pairs", async () => {
-    const invalidPairs: [string, number][] = [
-      [createAddress("0xaaab"), 101],
-      [createAddress("0xaaac"), 99],
-      [createAddress("0xaaad"), 103],
-      [createAddress("0xaaae"), 97],
-    ];
-
-    for (let [pair, block] of invalidPairs) {
-      const [valid, ,] = await testFetcher.isValidPancakePair(
-        pair,
-        block,
-        PANCAKE_FACTORY_ADDRESS,
-        INIT_CODE_PAIR_HASH
-      );
-      expect(valid).toStrictEqual(false);
-    }
-  });
-
-  it("should return data of correct pairs", async () => {
-    for (let [pair, token0, token1, block] of PAIRS) {
-      mockProvider.addCallTo(pair, block, new utils.Interface(PANCAKE_PAIR_ABI), "token0", {
-        inputs: [],
-        outputs: [token0],
-      });
-      mockProvider.addCallTo(pair, block, new utils.Interface(PANCAKE_PAIR_ABI), "token1", {
-        inputs: [],
-        outputs: [token1],
-      });
-      const [valid, t0, t1] = await testFetcher.isValidPancakePair(
-        pair,
-        block,
-        PANCAKE_FACTORY_ADDRESS,
-        INIT_CODE_PAIR_HASH
-      );
-      expect([valid, t0, t1]).toStrictEqual([true, token0, token1]);
-
-      //Use cached values
-      mockProvider.clear();
-      expect([valid, t0, t1]).toStrictEqual([true, token0, token1]);
-    }
-  });
 
   it("should return the called pair's tokens balance", async () => {
     for (let [pair, token, balance, block] of BALANCES) {
-      mockProvider.addCallTo(token, block, new utils.Interface(ERC20ABI), "balanceOf", {
+      mockProvider.addCallTo(token, block, new utils.Interface(ERC20_ABI), "balanceOf", {
         inputs: [pair],
         outputs: [balance],
       });

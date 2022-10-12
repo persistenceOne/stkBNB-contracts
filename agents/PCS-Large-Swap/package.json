@@ -2,7 +2,7 @@
   "name": "forta-pstake-stkbnb-pcs-substantial-swap",
   "version": "1.0.0",
   "description": "Forta bot that detects large swaps in stk-bnb PancakeSwap pool",
-  "repository": "",
+  "repository": "https://github.com/persistenceOne/stkBNB-contracts",
   "chainIds": [
     56
   ],

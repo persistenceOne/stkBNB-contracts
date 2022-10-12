@@ -10,7 +10,7 @@ const LARGE_THRESHOLD = BigNumber.from("0"); // percent
 
 const SWAP_EVENT =
   "event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out,uint amount1Out,address indexed to)";
-const ERC20ABI = ["function balanceOf(address account) public view returns (uint256)"];
+const ERC20_ABI = ["function balanceOf(address account) public view returns (uint256)"];
 const PANCAKE_PAIR_ABI = [
   "function token0() external view returns (address)",
   "function token1() external view returns (address)",
@@ -21,7 +21,7 @@ const INIT_CODE_PAIR_HASH = "0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a
 export {
   SWAP_EVENT,
   LARGE_THRESHOLD,
-  ERC20ABI,
+  ERC20_ABI,
   PANCAKE_PAIR_ABI,
   PANCAKE_FACTORY_ADDRESS,
   INIT_CODE_PAIR_HASH,

@@ -28,8 +28,8 @@ export const provideBotHandler = (
     await Promise.all(
       swapEvents.map(async (event) => {
         const pairAddress = event.address;
-        const [isValid] = await fetcher.isValidPancakePair(pairAddress, txEvent.blockNumber, pancakeFactory, initCode);
-        if (isValid) {
+        //const [isValid] = await fetcher.isValidPancakePair(pairAddress, txEvent.blockNumber, pancakeFactory, initCode);
+        //if (isValid) {
           const [token0Balance, token1Balance] = await Promise.all([
             fetcher.getERC20Balance(WBNB_TOKEN_ADDRESS, pairAddress, txEvent.blockNumber - 1),
             fetcher.getERC20Balance(STKBNB_TOKEN_ADDRESS, pairAddress, txEvent.blockNumber - 1),
@@ -57,7 +57,7 @@ export const provideBotHandler = (
               );
             }
           }
-        }
+      //  }
       })
     );
 

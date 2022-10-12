@@ -2,49 +2,18 @@ import { ethers, Finding, FindingSeverity, FindingType, HandleTransaction } from
 import { provideBotHandler } from "./agent";
 import { encodeParameter } from "forta-agent-tools/lib/utils";
 import { TestTransactionEvent, createAddress, MockEthersProvider } from "forta-agent-tools/lib/tests";
-import { getPancakePairCreate2Address } from "./utils";
-import { ERC20ABI, PANCAKE_PAIR_ABI } from "./constants";
+import { getPancakePairCreate2Address, createFinding } from "./utils";
+import { ERC20_ABI, PANCAKE_PAIR_ABI } from "./constants";
 import { BigNumber } from "ethers";
 import DataFetcher from "./data.fetcher";
 
-const createFinding = (
-  pairAddress: string,
-  swapTokenIn: string,
-  swapTokenOut: string,
-  swapAmountIn: BigNumber,
-  swapAmountOut: BigNumber,
-  percentageTokenIn: BigNumber,
-  percentageTokenOut: BigNumber,
-  swap_recipient: string
-): Finding => {
-  return Finding.from({
-    name: "Large Swap in stkBNB-BNB Pancakeswap pool",
-    description: "A swap that involved a significant percentage of a pool's liquidity was detected",
-    alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-Pool-Swap",
-    protocol: "stkBNB",
-    type: FindingType.Info,
-    severity: FindingSeverity.Info,
-    metadata: {
-      pancakePair: pairAddress,
-      tokenIn: swapTokenIn,
-      tokenOut: swapTokenOut,
-      amountIn: swapAmountIn.toString(),
-      amountOut: swapAmountOut.toString(),
-      percentageIn: percentageTokenIn.toString(),
-      percentageOut: percentageTokenOut.toString(),
-      swapRecipient: swap_recipient,
-    },
-  });
-};
 
 const PAIR_IFACE = new ethers.utils.Interface(PANCAKE_PAIR_ABI);
-const TOKEN_IFACE = new ethers.utils.Interface(ERC20ABI);
+const TOKEN_IFACE = new ethers.utils.Interface(ERC20_ABI);
 const TEST_PANCAKE_FACTORY = createAddress("0x32");
-const [token0, token1, token2, token3] = [
+const [token0, token1] = [
   createAddress("0x01"),
   createAddress("0x02"),
-  createAddress("0x03"),
-  createAddress("0x04"),
 ];
 const INIT_CODE = ethers.utils.keccak256("0x");
 const TEST_PAIR_ADDRESS = getPancakePairCreate2Address(TEST_PANCAKE_FACTORY, token0, token1, INIT_CODE).toLowerCase();
@@ -138,7 +107,6 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("1800"));
     expect(await handleTransaction(txEvent)).toStrictEqual([
       createFinding(
-        TEST_PAIR_ADDRESS,
         token1,
         token0,
         toEbn("200"),
@@ -177,7 +145,6 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     setBalanceOf(309, token1, TEST_PAIR_ADDRESS, toEbn("12500"));
     expect(await handleTransaction(txEvent)).toStrictEqual([
       createFinding(
-        TEST_PAIR_ADDRESS,
         token1,
         token0,
         toEbn("1500"),
@@ -188,7 +155,6 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
       ),
 
       createFinding(
-        TEST_PAIR_ADDRESS,
         token0,
         token1,
         toEbn("4000"),

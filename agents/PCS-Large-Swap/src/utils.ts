@@ -31,8 +31,8 @@ const createFinding = (
     type: FindingType.Info,
     severity: FindingSeverity.Info,
     metadata: {
-      amountIn: swapAmountIn.toString(),
-      amountOut: swapAmountOut.toString(),
+      amountIn: ethers.utils.formatEther(swapAmountIn.toString()),
+      amountOut: ethers.utils.formatEther(swapAmountOut.toString()),
       percentageIn: percentageTokenIn.toString(),
       percentageOut: percentageTokenOut.toString(),
       swapRecipient: swap_recipient,
