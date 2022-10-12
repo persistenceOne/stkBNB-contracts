@@ -7,14 +7,10 @@ import { ERC20_ABI, PANCAKE_PAIR_ABI } from "./constants";
 import { BigNumber } from "ethers";
 import DataFetcher from "./data.fetcher";
 
-
 const PAIR_IFACE = new ethers.utils.Interface(PANCAKE_PAIR_ABI);
 const TOKEN_IFACE = new ethers.utils.Interface(ERC20_ABI);
 const TEST_PANCAKE_FACTORY = createAddress("0x32");
-const [token0, token1] = [
-  createAddress("0x01"),
-  createAddress("0x02"),
-];
+const [token0, token1] = [createAddress("0x01"), createAddress("0x02")];
 const INIT_CODE = ethers.utils.keccak256("0x");
 const TEST_PAIR_ADDRESS = getPancakePairCreate2Address(TEST_PANCAKE_FACTORY, token0, token1, INIT_CODE).toLowerCase();
 const TEST_LARGE_THRESHOLD = BigNumber.from("10"); // percent

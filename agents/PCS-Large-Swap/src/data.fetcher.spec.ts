@@ -39,14 +39,13 @@ const BALANCES: any[][] = [
   [createAddress("0xd84a"), createAddress("0x271b"), BigNumber.from(62432423423), 9870659999],
 ];
 
- describe("PancakeSwap Data Fetcher Test Suite", () => {
+describe("PancakeSwap Data Fetcher Test Suite", () => {
   const mockProvider: MockEthersProvider = new MockEthersProvider();
   const testFetcher: DataFetcher = new DataFetcher(mockProvider as any);
 
   beforeEach(() => {
     mockProvider.clear();
   });
-
 
   it("should return the called pair's tokens balance", async () => {
     for (let [pair, token, balance, block] of BALANCES) {
