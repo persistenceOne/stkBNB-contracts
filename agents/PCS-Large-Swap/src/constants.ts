@@ -6,7 +6,7 @@ const WBNB_TOKEN_ADDRESS = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 const TOKEN_0 = "WBNB";
 const TOKEN_1 = "stkBNB";
 
-const LARGE_THRESHOLD = BigNumber.from("0"); // percent
+const LARGE_THRESHOLD = BigNumber.from("1"); // percent
 
 const SWAP_EVENT =
   "event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out,uint amount1Out,address indexed to)";
