@@ -6,7 +6,7 @@ const WBNB_TOKEN_ADDRESS = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 const TOKEN_0 = "WBNB";
 const TOKEN_1 = "stkBNB";
 
-const LARGE_THRESHOLD = BigNumber.from("1"); // set to 1 percent to receive alerts for swaps in 70-150 BNB range.
+const LARGE_THRESHOLD = BigNumber.from("1"); // set to 1 percent to receive alerts for swaps in 70-150 BNB range. Can be set to 0%-99% theoretically, realistically should be set to 1-20%.
 
 const SWAP_EVENT =
   "event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out,uint amount1Out,address indexed to)";
