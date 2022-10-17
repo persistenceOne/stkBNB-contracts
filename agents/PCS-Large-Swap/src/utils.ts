@@ -19,7 +19,7 @@ const createFinding = (
   swapAmountOut: BigNumber,
   percentageTokenIn: BigNumber,
   percentageTokenOut: BigNumber,
-  swap_recipient: string
+  swapRecipient: string
 ): Finding => {
   return Finding.from({
     name: "Large Swap in stkBNB-BNB Pancakeswap pool",
@@ -35,7 +35,7 @@ const createFinding = (
       amountOut: ethers.utils.formatEther(swapAmountOut.toString()),
       percentageIn: percentageTokenIn.toString(),
       percentageOut: percentageTokenOut.toString(),
-      swapRecipient: swap_recipient,
+      swapRecipient: swapRecipient,
     },
   });
 };
