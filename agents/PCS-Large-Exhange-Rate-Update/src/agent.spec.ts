@@ -7,15 +7,12 @@ import { ERC20ABI, ER_THRESHOLD, PANCAKE_PAIR_ABI } from "./constants";
 import { BigNumber } from "ethers";
 import DataFetcher from "./data.fetcher";
 
-const createFinding = (
-  exchangerateOld: Number,
-  exchangerateNew: Number,
-): Finding => {
+const createFinding = (exchangerateOld: Number, exchangerateNew: Number): Finding => {
   return Finding.from({
     name: "Large exchangeRate change",
-    description:  `Old exchange rate ${ethers.utils.formatEther(exchangerateOld.toString())} & ${ethers.utils.formatEther(
-      exchangerateNew.toString()
-    )}`,
+    description: `Old exchange rate ${ethers.utils.formatEther(
+      exchangerateOld.toString()
+    )} & ${ethers.utils.formatEther(exchangerateNew.toString())}`,
     alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-ExchangeRate-Update",
     protocol: "stkBNB",
     type: FindingType.Info,
@@ -26,7 +23,6 @@ const createFinding = (
     },
   });
 };
-
 
 const PAIR_IFACE = new ethers.utils.Interface(PANCAKE_PAIR_ABI);
 const TOKEN_IFACE = new ethers.utils.Interface(ERC20ABI);
@@ -66,10 +62,7 @@ const createSwapEvent = (
 describe("PancakeSwap Large Swap Bot Test Suite", () => {
   const mockProvider: MockEthersProvider = new MockEthersProvider();
   const mockFetcher: DataFetcher = new DataFetcher(mockProvider as any);
-  const handleTransaction: HandleTransaction = provideBotHandler(
-    ER_THRESHOLD,
-    mockFetcher,
-  );
+  const handleTransaction: HandleTransaction = provideBotHandler(ER_THRESHOLD, mockFetcher);
 
   const setBalanceOf = (block: number, tokenAddress: string, account: string, balance: ethers.BigNumber) => {
     mockProvider.addCallTo(tokenAddress, block, TOKEN_IFACE, "balanceOf", {
@@ -110,6 +103,4 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     setBalanceOf(100, token1, TEST_PAIR_ADDRESS, toEbn("4000")); // swap not large
     expect(await handleTransaction(txEvent)).toStrictEqual([]);
   });
-
-
 });
