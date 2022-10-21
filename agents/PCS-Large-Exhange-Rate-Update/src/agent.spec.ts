@@ -2,30 +2,15 @@ import { ethers, Finding, FindingSeverity, FindingType, HandleTransaction } from
 import { provideBotHandler } from "./agent";
 import { encodeParameter } from "forta-agent-tools/lib/utils";
 import { TestTransactionEvent, createAddress, MockEthersProvider } from "forta-agent-tools/lib/tests";
-import { getPancakePairCreate2Address } from "./utils";
-import { ERC20ABI, ER_THRESHOLD, PANCAKE_PAIR_ABI } from "./constants";
+import { getPancakePairCreate2Address, createFinding } from "./utils";
+import { ERC20_ABI, ER_THRESHOLD, PANCAKE_PAIR_ABI } from "./constants";
 import { BigNumber } from "ethers";
 import DataFetcher from "./data.fetcher";
 
-const createFinding = (exchangerateOld: Number, exchangerateNew: Number): Finding => {
-  return Finding.from({
-    name: "Large exchangeRate change",
-    description: `Old exchange rate ${ethers.utils.formatEther(
-      exchangerateOld.toString()
-    )} & ${ethers.utils.formatEther(exchangerateNew.toString())}`,
-    alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-ExchangeRate-Update",
-    protocol: "stkBNB",
-    type: FindingType.Info,
-    severity: FindingSeverity.Info,
-    metadata: {
-      exchangerateOld: exchangerateOld.toString(),
-      exchangerateNew: exchangerateNew.toString(),
-    },
-  });
-};
+
 
 const PAIR_IFACE = new ethers.utils.Interface(PANCAKE_PAIR_ABI);
-const TOKEN_IFACE = new ethers.utils.Interface(ERC20ABI);
+const TOKEN_IFACE = new ethers.utils.Interface(ERC20_ABI);
 const TEST_PANCAKE_FACTORY = createAddress("0x32");
 const [token0, token1, token2, token3] = [
   createAddress("0x01"),
@@ -41,6 +26,7 @@ export const SWAP_EVENT =
 const SENDER = createAddress("0x12");
 
 const toEbn = (num: string) => ethers.BigNumber.from(num);
+const er = (num: string) => Number(num);
 
 const createSwapEvent = (
   pairAddress: string,
@@ -102,5 +88,28 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     setBalanceOf(100, token0, TEST_PAIR_ADDRESS, toEbn("2000")); // swap not large
     setBalanceOf(100, token1, TEST_PAIR_ADDRESS, toEbn("4000")); // swap not large
     expect(await handleTransaction(txEvent)).toStrictEqual([]);
+  });
+
+  it("should return findings for exchange rate updates that are equal or large", async () => {
+    const swapEventLog = createSwapEvent(
+      TEST_PAIR_ADDRESS,
+      toEbn("0"),
+      toEbn("200"),
+      toEbn("100"),
+      toEbn("0"),
+      createAddress("0x9")
+    );
+    const txEvent = new TestTransactionEvent().setBlock(210).addEventLog(...swapEventLog);
+    setTokenPair(210, TEST_PAIR_ADDRESS, token0, "token0");
+    setTokenPair(210, TEST_PAIR_ADDRESS, token1, "token1");
+    setBalanceOf(209, token0, TEST_PAIR_ADDRESS, toEbn("900")); // swap is large relative to pair's token balance
+    setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("1800"));
+    expect(await handleTransaction(txEvent)).toStrictEqual([
+      createFinding(
+        er("1"),
+        er("2"),
+        er("100")
+      ),
+    ]);
   });
 });
