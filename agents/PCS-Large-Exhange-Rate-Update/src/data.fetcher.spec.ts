@@ -47,8 +47,6 @@ describe("PancakeSwap Data Fetcher Test Suite", () => {
     mockProvider.clear();
   });
 
-
-
   it("should return the called pair's tokens balance", async () => {
     for (let [pair, token, balance, block] of BALANCES) {
       mockProvider.addCallTo(token, block, new utils.Interface(ERC20_ABI), "balanceOf", {

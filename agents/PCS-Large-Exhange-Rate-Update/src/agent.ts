@@ -31,7 +31,6 @@ export const provideBotHandler = (erThreshold: Number, fetcher: DataFetcher): Ha
         // calculate old exchange rate
         const exchangerateOld: Number = Number(token1Balance) / Number(token0Balance);
 
-     
         // Fetch exchange rate from current block
         const [token0Balancenew, token1Balancenew] = await Promise.all([
           fetcher.getERC20Balance(WBNB_TOKEN_ADDRESS, pairAddress, txEvent.blockNumber),
@@ -41,11 +40,11 @@ export const provideBotHandler = (erThreshold: Number, fetcher: DataFetcher): Ha
         // calculate new exchange rate
         const exchangerateNew: Number = Number(token1Balancenew) / Number(token0Balancenew);
 
-        const percentChange : Number = Math.abs((Number(exchangerateOld) - Number(exchangerateNew) / Number(exchangerateOld)) * 100)
+        const percentChange: Number = Math.abs(
+          (Number(exchangerateOld) - Number(exchangerateNew) / Number(exchangerateOld)) * 100
+        );
 
-        if (
-          percentChange >= erThreshold
-        ) {
+        if (percentChange >= erThreshold) {
           findings.push(createFinding(exchangerateOld, exchangerateNew, percentChange));
         }
       })

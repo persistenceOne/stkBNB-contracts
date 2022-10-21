@@ -7,8 +7,6 @@ import { ERC20_ABI, ER_THRESHOLD, PANCAKE_PAIR_ABI } from "./constants";
 import { BigNumber } from "ethers";
 import DataFetcher from "./data.fetcher";
 
-
-
 const PAIR_IFACE = new ethers.utils.Interface(PANCAKE_PAIR_ABI);
 const TOKEN_IFACE = new ethers.utils.Interface(ERC20_ABI);
 const TEST_PANCAKE_FACTORY = createAddress("0x32");
@@ -104,12 +102,6 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     setTokenPair(210, TEST_PAIR_ADDRESS, token1, "token1");
     setBalanceOf(209, token0, TEST_PAIR_ADDRESS, toEbn("900")); // swap is large relative to pair's token balance
     setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("1800"));
-    expect(await handleTransaction(txEvent)).toStrictEqual([
-      createFinding(
-        er("1"),
-        er("2"),
-        er("100")
-      ),
-    ]);
+    expect(await handleTransaction(txEvent)).toStrictEqual([createFinding(er("1"), er("2"), er("100"))]);
   });
 });

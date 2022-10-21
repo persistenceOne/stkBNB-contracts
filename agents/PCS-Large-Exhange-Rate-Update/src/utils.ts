@@ -17,7 +17,9 @@ const createFinding = (exchangerateOld: Number, exchangerateNew: Number, percent
     name: "Large exchangeRate change",
     description: `Old exchange rate ${ethers.utils.formatEther(
       exchangerateOld.toString()
-    )} & New exchange rate ${ethers.utils.formatEther(exchangerateNew.toString())} : Percent Change ${ethers.utils.formatEther(percentChange.toString())} `,
+    )} & New exchange rate ${ethers.utils.formatEther(
+      exchangerateNew.toString()
+    )} : Percent Change ${ethers.utils.formatEther(percentChange.toString())} `,
     alertId: "pSTAKE-stkBNB-PCS-SUBSTANTIAL-ExchangeRate-Update",
     protocol: "stkBNB",
     type: FindingType.Info,
