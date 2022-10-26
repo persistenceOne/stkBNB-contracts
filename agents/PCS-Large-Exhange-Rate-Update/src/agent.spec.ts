@@ -114,4 +114,22 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     exchangerateNew = 2;
     expect(await handleTransaction(txEvent)).toStrictEqual([createFinding(er("1"), er("2"), er("100"))]);
   });
+  it("should return findings for exchange rate updates that over threshold and in negative", async () => {
+    const swapEventLog = createSwapEvent(
+      TEST_PAIR_ADDRESS,
+      toEbn("0"),
+      toEbn("200"),
+      toEbn("100"),
+      toEbn("0"),
+      createAddress("0x9")
+    );
+    const txEvent = new TestTransactionEvent().setBlock(101).addEventLog(...swapEventLog);
+    setTokenPair(210, TEST_PAIR_ADDRESS, token0, "token0");
+    setTokenPair(210, TEST_PAIR_ADDRESS, token1, "token1");
+    setBalanceOf(209, token0, TEST_PAIR_ADDRESS, toEbn("2000")); // swap is large relative to pair's token balance
+    setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("1000"));
+    exchangerateOld = 2;
+    exchangerateNew = 1;
+    expect(await handleTransaction(txEvent)).toStrictEqual([createFinding(er("2"), er("1"), er("100"))]);
+  });
 });
