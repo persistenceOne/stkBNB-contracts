@@ -10,6 +10,14 @@ import DataFetcher from "./data.fetcher";
 const PAIR_IFACE = new ethers.utils.Interface(PANCAKE_PAIR_ABI);
 const TOKEN_IFACE = new ethers.utils.Interface(ERC20_ABI);
 const TEST_PANCAKE_FACTORY = createAddress("0x32");
+
+var exchangerateOld: Number = 1;
+var exchangerateNew: Number = 2;
+
+var percentChange: Number = Math.abs(
+  ((Number(exchangerateOld) - Number(exchangerateNew)) / Number(exchangerateOld)) * 100
+);
+
 const [token0, token1, token2, token3] = [
   createAddress("0x01"),
   createAddress("0x02"),
@@ -83,8 +91,8 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     const txEvent = new TestTransactionEvent().setBlock(101).addEventLog(...swapEventLog);
     setTokenPair(101, TEST_PAIR_ADDRESS, token0, "token0");
     setTokenPair(101, TEST_PAIR_ADDRESS, token1, "token1");
-    setBalanceOf(100, token0, TEST_PAIR_ADDRESS, toEbn("2000")); // swap not large
-    setBalanceOf(100, token1, TEST_PAIR_ADDRESS, toEbn("4000")); // swap not large
+    setBalanceOf(100, token0, TEST_PAIR_ADDRESS, toEbn("1000")); // swap not large
+    setBalanceOf(100, token1, TEST_PAIR_ADDRESS, toEbn("1000")); // swap not large
     expect(await handleTransaction(txEvent)).toStrictEqual([]);
   });
 
@@ -97,11 +105,13 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
       toEbn("0"),
       createAddress("0x9")
     );
-    const txEvent = new TestTransactionEvent().setBlock(210).addEventLog(...swapEventLog);
+    const txEvent = new TestTransactionEvent().setBlock(101).addEventLog(...swapEventLog);
     setTokenPair(210, TEST_PAIR_ADDRESS, token0, "token0");
     setTokenPair(210, TEST_PAIR_ADDRESS, token1, "token1");
-    setBalanceOf(209, token0, TEST_PAIR_ADDRESS, toEbn("900")); // swap is large relative to pair's token balance
-    setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("1800"));
+    setBalanceOf(209, token0, TEST_PAIR_ADDRESS, toEbn("1000")); // swap is large relative to pair's token balance
+    setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("2000"));
+    exchangerateOld=1;
+    exchangerateNew=2;
     expect(await handleTransaction(txEvent)).toStrictEqual([createFinding(er("1"), er("2"), er("100"))]);
   });
 });
