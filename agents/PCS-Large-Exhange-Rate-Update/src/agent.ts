@@ -41,7 +41,7 @@ export const provideBotHandler = (erThreshold: Number, fetcher: DataFetcher): Ha
         const exchangerateNew: Number = Number(token1Balancenew) / Number(token0Balancenew);
 
         const percentChange: Number = Math.abs(
-          (Number(exchangerateOld) - Number(exchangerateNew) / Number(exchangerateOld)) * 100
+          ((Number(exchangerateOld) - Number(exchangerateNew)) / Number(exchangerateOld)) * 100
         );
 
         if (percentChange >= erThreshold) {
