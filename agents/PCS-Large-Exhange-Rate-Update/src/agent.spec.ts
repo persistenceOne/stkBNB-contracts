@@ -110,8 +110,8 @@ describe("PancakeSwap Large Swap Bot Test Suite", () => {
     setTokenPair(210, TEST_PAIR_ADDRESS, token1, "token1");
     setBalanceOf(209, token0, TEST_PAIR_ADDRESS, toEbn("1000")); // swap is large relative to pair's token balance
     setBalanceOf(209, token1, TEST_PAIR_ADDRESS, toEbn("2000"));
-    exchangerateOld=1;
-    exchangerateNew=2;
+    exchangerateOld = 1;
+    exchangerateNew = 2;
     expect(await handleTransaction(txEvent)).toStrictEqual([createFinding(er("1"), er("2"), er("100"))]);
   });
 });
