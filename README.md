@@ -41,3 +41,14 @@
  [`0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab`](https://explorer.forta.network/bot/0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab)
  * pstake-stkbnb-substantial-event-bot:
  [`0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8`](https://explorer.forta.network/bot/0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8)
+
+### Testnet
+
+#### Contracts
+* StakePool: [`0x7cdfba1ee6a8d1e688b4b34a56b62287ce400802`](https://testnet.bscscan.com/address/0x7cdfba1ee6a8d1e688b4b34a56b62287ce400802) (proxy)
+* stkBNB Token: [`0xf7ce8444b3b1c62e785a25343a8b4764198a81b8`](https://testnet.bscscan.com/token/0xf7ce8444b3b1c62e785a25343a8b4764198a81b8)
+* FeeVault: [`0xa45d6ef640a52b425324c9bb65b90c6958f3d81d`](https://testnet.bscscan.com/address/0xa45d6ef640a52b425324c9bb65b90c6958f3d81d) (proxy)
+* UndelegationHolder: [`0x6acedcac50a13ac6504498222e02ad415138901f`](https://testnet.bscscan.com/address/0x6acedcac50a13ac6504498222e02ad415138901f)
+* AddressStore: [`0x8bf7bF5945A356106CCbDF9C9c8838eb347Bfb27`](https://testnet.bscscan.com/address/0x8bf7bF5945A356106CCbDF9C9c8838eb347Bfb27)
+* TimelockedAdmin: [`0xd78bcf1fef5f1656494a591d59f5de5b2263118a`](https://testnet.bscscan.com/address/0xd78bcf1fef5f1656494a591d59f5de5b2263118a)
+* ProxyAdmin (admin for proxy contracts): [`0xe298A4C809422249c3770AA114b5BD82062ae9F6`](https://testnet.bscscan.com/address/0xe298A4C809422249c3770AA114b5BD82062ae9F6)
