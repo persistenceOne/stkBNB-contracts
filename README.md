@@ -41,6 +41,12 @@
  [`0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab`](https://explorer.forta.network/bot/0x68a5b098ee8416986bcda0739857bafb071b33eafe715d052d1bd8c1503d67ab)
  * pstake-stkbnb-substantial-event-bot:
  [`0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8`](https://explorer.forta.network/bot/0x65b2580b43899f87c1d347a9ca3d917991c4906305de0c22a969a716eaf6d1a8)
+ * forta-pstake-stkbnb-pcs-substantial-swap:
+ [`0x28ab88d2c338a4aac3828d0dc4294ceea85c43473d294c7cab456a9516587ec1`]
+(https://explorer.forta.network/bot/0x28ab88d2c338a4aac3828d0dc4294ceea85c43473d294c7cab456a9516587ec1)
+ * forta-pstake-stkbnb-pcs-substantial-lp-deposit-withdrawal
+ [`0xb8b0bf89f277c6dc7635e0c3f94e174320baadacc2bef5e86212342587e2a442`]
+(https://explorer.forta.network/bot/0xb8b0bf89f277c6dc7635e0c3f94e174320baadacc2bef5e86212342587e2a442)
 
 ### Testnet
 
