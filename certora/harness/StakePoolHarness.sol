@@ -57,15 +57,7 @@ contract StakePoolHarness is StakePool {
         return config.minTokenWithdrawal;
     }
 
-    function getFee()
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function getFee() public view returns (uint256, uint256, uint256) {
         return (config.fee.reward, config.fee.deposit, config.fee.withdraw);
     }
 
@@ -78,7 +70,12 @@ contract StakePoolHarness is StakePool {
         return _canBeClaimed(req);
     }
 
-    function transferOut(address contractAddr, address recipient, uint256 amount, uint64 expireTime) external payable returns (bool) {
+    function transferOut(
+        address contractAddr,
+        address recipient,
+        uint256 amount,
+        uint64 expireTime
+    ) external payable returns (bool) {
         return true;
     }
 }

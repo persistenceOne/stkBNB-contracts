@@ -93,11 +93,11 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
      * - `to` should always be the address of this contract.
      */
     function tokensReceived(
-        address, /*operator*/
+        address /*operator*/,
         address from,
         address to,
         uint256 amount,
-        bytes calldata, /*userData*/
+        bytes calldata /*userData*/,
         bytes calldata /*operatorData*/
     ) external override {
         if (msg.sender != _addressStore.getStkBNB()) {

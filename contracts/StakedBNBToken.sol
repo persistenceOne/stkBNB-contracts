@@ -51,7 +51,9 @@ contract StakedBNBToken is IStakedBNBToken, ERC777, BEP20, Pausable {
      * CONTRACT LOGIC
      ********************/
 
-    constructor(IAddressStore addressStore_)
+    constructor(
+        IAddressStore addressStore_
+    )
         ERC777("Staked BNB", "stkBNB", new address[](0))
         BEP20(msg.sender) // Make the deployer the BEP20 owner, deployer will later transfer this role to a multi-sig.
     {
@@ -68,12 +70,9 @@ contract StakedBNBToken is IStakedBNBToken, ERC777, BEP20, Pausable {
     /**
      * @dev Returns the amount of tokens owned by an account (`tokenHolder`).
      */
-    function balanceOf(address tokenHolder)
-        public
-        view
-        override(IERC777, ERC777)
-        returns (uint256)
-    {
+    function balanceOf(
+        address tokenHolder
+    ) public view override(IERC777, ERC777) returns (uint256) {
         return ERC777.balanceOf(tokenHolder);
     }
 
@@ -86,12 +85,10 @@ contract StakedBNBToken is IStakedBNBToken, ERC777, BEP20, Pausable {
      *
      * - the caller must be the StakePool contract.
      */
-    function burn(uint256 amount, bytes memory data)
-        public
-        override(IERC777, ERC777)
-        onlySender(_addressStore.getStakePool())
-        whenNotPaused
-    {
+    function burn(
+        uint256 amount,
+        bytes memory data
+    ) public override(IERC777, ERC777) onlySender(_addressStore.getStakePool()) whenNotPaused {
         ERC777.burn(amount, data);
     }
 
