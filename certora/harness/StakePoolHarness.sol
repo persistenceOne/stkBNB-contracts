@@ -77,4 +77,8 @@ contract StakePoolHarness is StakePool {
         ClaimRequest memory req = claimReqs[msg.sender][index];
         return _canBeClaimed(req);
     }
+
+    function transferOut(address contractAddr, address recipient, uint256 amount, uint64 expireTime) external payable returns (bool) {
+        return true;
+    }
 }
