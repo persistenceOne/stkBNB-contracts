@@ -25,7 +25,7 @@ contract StakedBNBToken is IStakedBNBToken, ERC777, BEP20, Pausable {
     /**
      * @dev addressStore: The Address Store. Used to fetch addresses of the other contracts in the system.
      */
-    IAddressStore private _addressStore;
+    IAddressStore internal _addressStore;
 
     /*********************
      * ERRORS
