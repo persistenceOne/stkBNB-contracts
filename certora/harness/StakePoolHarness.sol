@@ -70,6 +70,9 @@ contract StakePoolHarness is StakePool {
         return _canBeClaimed(req);
     }
 
+    /*
+        transferOut is a mock function that replaces the unreachable external contract function call.
+    */
     function transferOut(
         address contractAddr,
         address recipient,
