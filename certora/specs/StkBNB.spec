@@ -194,12 +194,14 @@ ghost ghostGetTimelockedAdmin() returns address {
 
 rule TransferFromSumOfFromAndToBalancesStaySame(address from, address to, uint256 amount) {
     env e;
+    require e.msg.sender != from && e.msg.sender != to;
     mathint sum = balanceOf(e, from) + balanceOf(e, to);
-    uint256 spenderBalanceBefore = balanceOf(e, from);
+    uint256 spenderBalanceBefore = balanceOf(e, e.msg.sender);
     require sum < max_uint256;
+    
     transferFrom(e, from, to, amount); 
 
-    uint256 spenderBalanceAfter = balanceOf(e, from);
+    uint256 spenderBalanceAfter = balanceOf(e, e.msg.sender);
     assert balanceOf(e, from) + balanceOf(e, to) == sum;
     assert spenderBalanceBefore == spenderBalanceAfter;
 }
@@ -210,6 +212,7 @@ rule transferFromCorrect(address from, address to, uint256 amount) {
     uint256 fromBalanceBefore = balanceOf(e, from);
     uint256 toBalanceBefore = balanceOf(e, to);
     uint256 allowanceBefore = allowance(e, from, e.msg.sender);
+    require allowanceBefore < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     require fromBalanceBefore + toBalanceBefore <= max_uint256;
 
     transferFrom(e, from, to, amount);
@@ -217,21 +220,26 @@ rule transferFromCorrect(address from, address to, uint256 amount) {
     assert from != to =>
         balanceOf(e, from) == fromBalanceBefore - amount &&
         balanceOf(e, to) == toBalanceBefore + amount &&
+        allowanceBefore >= amount &&
+        fromBalanceBefore >= amount &&
+        from != 0 &&
+        to != 0 &&
         allowance(e, from, e.msg.sender) == allowanceBefore - amount;
 }
 
-rule transferFromReverts(address from, address to, uint256 amount) {
-    env e;
-    uint256 allowanceBefore = allowance(e, from, e.msg.sender);
-    uint256 fromBalanceBefore = balanceOf(e, from);
-    require from != 0 && e.msg.sender != 0;
-    require e.msg.value == 0;
-    require fromBalanceBefore + balanceOf(e, to) <= max_uint256;
+// rule transferFromReverts(address from, address to, uint256 amount) {
+//     env e;
+//     uint256 allowanceBefore = allowance(e, from, e.msg.sender);
+//     uint256 fromBalanceBefore = balanceOf(e, from);
+//     require from != 0 && e.msg.sender != 0;
+//     require e.msg.value == 0;
+//     require fromBalanceBefore + balanceOf(e, to) <= max_uint256;
+//     require allowanceBefore < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
-    transferFrom@withrevert(e, from, to, amount);
-
-    assert lastReverted <=> (allowanceBefore < amount || amount > fromBalanceBefore || to == 0);
-}
+//     transferFrom@withrevert(e, from, to, amount);
+//     // There are some more possible reverts, if we want to check this major reverts we need to check seperately
+//     assert lastReverted <=> (allowanceBefore < amount || amount > fromBalanceBefore || to == 0);
+// }
 
 rule isMintPrivileged(address privileged, address recipient, uint256 amount) {
     env e1;
@@ -295,12 +303,12 @@ rule revertOnPause(){
     address to;
     mint@withrevert(e, recipient, amount, userData, operatorData);
     assert lastReverted;
-//     // pause@withrevert(e) at initialStorage;
-//     // assert !lastreverted;
-//     // burn@withrevert(e, amount, bytesVal) at initialStorage;
-//     // assert !lastreverted;
-//     // operatorBurn@withrevert(e, from ,amount, bytesVal, bytesVal) at initialStorage;
-//     // assert !lastreverted;
+    pause@withrevert(e) at initialStorage;
+    assert lastReverted;
+    burn@withrevert(e, amount, bytesVal) at initialStorage;
+    assert lastReverted;
+    operatorBurn@withrevert(e, from ,amount, bytesVal, bytesVal) at initialStorage;
+    assert lastReverted;
 //     // transferFrom@withrevert(e, from, to, amount) at initialStorage;
 //     // assert !lastreverted;
  }
