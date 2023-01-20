@@ -57,15 +57,7 @@ contract StakePoolHarness is StakePool {
         return config.minTokenWithdrawal;
     }
 
-    function getFee()
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function getFee() public view returns (uint256, uint256, uint256) {
         return (config.fee.reward, config.fee.deposit, config.fee.withdraw);
     }
 
@@ -76,5 +68,17 @@ contract StakePoolHarness is StakePool {
     function canBeClaimed(uint256 index) public view returns (bool) {
         ClaimRequest memory req = claimReqs[msg.sender][index];
         return _canBeClaimed(req);
+    }
+
+    /*
+        transferOut is a mock function that replaces the unreachable external contract function call.
+    */
+    function transferOut(
+        address contractAddr,
+        address recipient,
+        uint256 amount,
+        uint64 expireTime
+    ) external payable returns (bool) {
+        return true;
     }
 }

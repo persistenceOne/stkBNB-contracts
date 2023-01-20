@@ -51,7 +51,7 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --path . \
 --loop_iter 3 \
 --settings -optimisticFallback=true --optimistic_loop \
---staging \
+--staging master \
 $RULE  \
 --msg "pstake -$RULE $MSG"
 

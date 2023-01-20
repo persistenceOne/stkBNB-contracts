@@ -100,7 +100,7 @@ ghost mapping(address => mathint) sumClaimsPerUser {
 }
 
 ghost ghostGetStakePool() returns address {
-    axiom ghostGetStakePool() == currentContract;
+    axiom ghostGetStakePool() == stakePoolContract;
 }
 
 /*
@@ -280,7 +280,7 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
 /** verifying that one can not gain or lose **/
 /** checking this on a 1 exchange rate and no fee- can be adjusted to more cases **/
 /** TODO Add check for tokensReceived which is failing due to hook (Sstore claimReqs) old value. **/
-rule totalAssetOfUserPreserved(method f, address user)  filtered { f -> !f.isView && !f.isFallback && f.selector !=  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector}
+rule totalAssetOfUserPreserved(method f, address user)  filtered { f -> !f.isView && !f.isFallback && f.selector !=  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector && f.selector !=  (transferOut(address, address, uint256, uint64)).selector}
  {
     // Consider all fees 0 %
     feeValidation(1, 1, 1);

@@ -243,11 +243,7 @@ contract StakePool is
      * replaced by just the function call, instead of all the lines in these functions.
      */
 
-    function _checkMinAndDust(
-        string memory tag,
-        uint256 minVal,
-        uint256 gotVal
-    ) private pure {
+    function _checkMinAndDust(string memory tag, uint256 minVal, uint256 gotVal) private pure {
         if (gotVal < minVal) {
             revert LessThanMinimum(tag, minVal, gotVal);
         }
@@ -294,17 +290,17 @@ contract StakePool is
         _disableInitializers();
     }
 
-    function initialize(IAddressStore addressStore_, Config.Data calldata config_)
-        public
-        initializer
-    {
+    function initialize(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) public initializer {
         __StakePool_init(addressStore_, config_);
     }
 
-    function __StakePool_init(IAddressStore addressStore_, Config.Data calldata config_)
-        internal
-        onlyInitializing
-    {
+    function __StakePool_init(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) internal onlyInitializing {
         // Need to call initializers for each parent without calling anything twice.
         // So, we need to individually see each parent's initializer and not call the initializer's that have already been called.
         //      1. __AccessControlEnumerable_init => This is empty in the current openzeppelin v0.4.6
@@ -313,10 +309,10 @@ contract StakePool is
         __StakePool_init_unchained(addressStore_, config_);
     }
 
-    function __StakePool_init_unchained(IAddressStore addressStore_, Config.Data calldata config_)
-        internal
-        onlyInitializing
-    {
+    function __StakePool_init_unchained(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) internal onlyInitializing {
         // set contract state variables
         _addressStore = addressStore_;
         config._init(config_);
@@ -442,11 +438,11 @@ contract StakePool is
      * - The contract must not be paused.
      */
     function tokensReceived(
-        address, /*operator*/
+        address /*operator*/,
         address from,
         address to,
         uint256 amount,
-        bytes calldata, /*userData*/
+        bytes calldata /*userData*/,
         bytes calldata /*operatorData*/
     )
         external
@@ -625,12 +621,9 @@ contract StakePool is
      * @param bnbUnbonding_: The amount of BNB for which unbonding was initiated on BBC.
      *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
-    function unbondingInitiated(uint256 bnbUnbonding_)
-        external
-        override
-        whenNotPaused
-        onlyRole(BOT_ROLE)
-    {
+    function unbondingInitiated(
+        uint256 bnbUnbonding_
+    ) external override whenNotPaused onlyRole(BOT_ROLE) {
         _bnbToUnbond -= bnbUnbonding_.toInt256();
         _bnbUnbonding += bnbUnbonding_;
 
@@ -815,10 +808,7 @@ contract StakePool is
         claimReqs[msg.sender].pop();
 
         // return BNB back to user (which can be anyone: EOA or a contract)
-        (
-            bool sent, /*memory data*/
-
-        ) = msg.sender.call{ value: req.weiToReturn }("");
+        (bool sent /*memory data*/, ) = msg.sender.call{ value: req.weiToReturn }("");
         if (!sent) {
             revert BNBTransferToUserFailed();
         }
