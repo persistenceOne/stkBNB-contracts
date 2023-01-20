@@ -309,6 +309,66 @@ rule revertOnPause(){
     assert lastReverted;
     operatorBurn@withrevert(e, from ,amount, bytesVal, bytesVal) at initialStorage;
     assert lastReverted;
-//     // transferFrom@withrevert(e, from, to, amount) at initialStorage;
-//     // assert !lastreverted;
  }
+
+ // Write spec for operatorSend, send and Operator
+
+ rule SendSumOfFromAndToBalancesStaySame(address to, uint256 amount, bytes data) {
+    env e;
+    mathint sum = stakedBNBContract.balanceOf(e,e.msg.sender) + stakedBNBContract.balanceOf(e,to);
+    require sum < max_uint256;
+
+    uint256 totalSupplyBefore = totalSupply(e);
+    send(e, to, amount, data); 
+    uint256 totalSupplyAfter = totalSupply(e);
+    // make use of send method too here
+    assert stakedBNBContract.balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
+    assert totalSupplyBefore == totalSupplyAfter;
+}
+
+rule SendDoesntChangeOtherBalance(address to, uint256 amount, address other, bytes data) {
+    env e;
+    require other != e.msg.sender;
+    require other != to && other != currentContract;
+    uint256 balanceBefore = balanceOf(e, other);
+    send(e, to, amount, data); 
+    uint256 balanceAfter = balanceOf(e, other);
+    assert balanceBefore == balanceAfter;
+}
+
+// Users should transfer balance if and only if amount > 0 and amount <=total balance of user. (low)
+rule SendCorrelation(address to, uint256 amount, bytes data) {
+    env e;
+    uint256 balanceBefore = balanceOf(e, e.msg.sender);
+    // e.msg.sender ---> amount ---> user
+    send(e, to, amount, data); 
+    assert amount > 0 => amount <= balanceBefore;
+}
+
+rule SendAndMintAdditivity{
+    uint amountA;
+    uint amountB;
+    address user;
+    bytes userData;
+    bytes operatorData;
+    bytes data;
+    env e;
+
+    storage init = lastStorage;
+    send(e, user, amountA, data); 
+    send(e, user, amountB, data); 
+
+    uint seperate_balance = balanceOf(e, user);
+
+    send(e, user, amountA+amountB, data) at init;
+    uint together_balance =  balanceOf(e, user);
+
+    mint(e,user, amountA, userData, operatorData) at init;
+    mint(e,user, amountB, userData, operatorData);
+    uint seperate_mint_balance = balanceOf(e, user);
+    mint(e,user, amountA+amountB, userData, operatorData) at init;
+    uint together_mint_balance =  balanceOf(e, user);
+
+    assert seperate_mint_balance == together_mint_balance;
+    assert seperate_balance == together_balance;
+}
