@@ -9,5 +9,6 @@ certoraRun  certora/harness/StakedBNBTokenHarness.sol \
 --path . \
 --loop_iter 3 \
 --staging master \
+--rule_sanity \
 --settings -assumeUnwindCond,-enableStorageAnalysis=true,-ciMode=true,-optimisticFallback=true \
 --msg "stkBNB"

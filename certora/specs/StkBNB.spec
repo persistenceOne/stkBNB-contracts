@@ -7,12 +7,10 @@ using TimelockedAdmin as timelockedAdminContract
 methods {
     // Harness methods:
     getStakePoolAddress() returns (address) envfree
-
     mint(address,uint256, bytes, bytes) => DISPATCHER(true)
     burn(uint256, bytes) => DISPATCHER(true)
     getStakePool() returns (address) => ghostGetStakePool();
     getTimelockedAdmin() returns (address) => ghostGetTimelockedAdmin();
-
     transferOwnership(address) => DISPATCHER(true);
     getOwner() => DISPATCHER(true);
     paused() => DISPATCHER(true);
@@ -20,42 +18,52 @@ methods {
     unpause() => DISPATCHER(true);
     balanceOf(address) returns (uint256)=> DISPATCHER(true);
     allowanace(address, address) returns (uint256)=> DISPATCHER(true);
-
     transfer(address, uint256) returns (bool) => DISPATCHER(true);
     transferFrom(address, address, uint256) returns (bool) => DISPATCHER(true);
-    // send and operatorSend
-
+    send(address, bytes) => DISPATCHER(true);
+    operatorSend(address, address, bytes, bytes) => DISPATCHER(true);
 }
 
-rule onlyMinterCanMint(method f)filtered {f-> f.selector == mint(address,uint256, bytes, bytes).selector} {
+/**************************************************
+ *                GHOSTS AND HOOKS                *
+ **************************************************/
+
+ghost ghostGetStakePool() returns address {
+    axiom ghostGetStakePool() == stakePoolContract;
+}
+
+ghost ghostGetTimelockedAdmin() returns address {
+    axiom ghostGetTimelockedAdmin() == timelockedAdminContract;
+}
+
+rule OnlyMinterCanMint(method f)filtered {f-> f.selector == mint(address,uint256, bytes, bytes).selector} {
     env e;
     calldataarg args;
     f(e, args);
     assert(e.msg.sender == getStakePoolAddress());
-    // total supply should be increases 
 }
 
-rule onlyBurnerCanBurn(method f)filtered {f-> f.selector == burn(uint256, bytes).selector || f.selector == operatorBurn(address,uint256, bytes, bytes).selector} {
+rule OnlyBurnerCanBurn(method f)filtered {f-> f.selector == burn(uint256, bytes).selector || f.selector == operatorBurn(address,uint256, bytes, bytes).selector} {
     env e;
     calldataarg args;
     f(e, args);
     assert(e.msg.sender == getStakePoolAddress());
 }
 
-rule ownerCanChangeOwnership(address user){
+rule OwnerCanChangeOwnership(address user){
     env e;
     require e.msg.sender != user;
     transferOwnership(e,user);
     assert user == getOwner(e);
 }
 
-rule onlyOwnerCanPause(){
+rule OnlyOwnerCanPause(){
     env e;
     pause(e);
     assert e.msg.sender == getOwner(e) <=> paused(e) == true;
 }
 
-rule onlyOwnerCanUnpause(){
+rule OnlyOwnerCanUnpause(){
     env e;
     unpause(e);
     assert e.msg.sender == getOwner(e) <=> paused(e) == false;
@@ -84,16 +92,15 @@ rule TransferDoesntChangeOtherBalance(address to, uint256 amount, address other)
     assert balanceBefore == balanceAfter;
 }
 
-// Users should transfer balance if and only if amount > 0 and amount <=total balance of user. (low)
+
 rule TransferCorrelation(address to, uint256 amount) {
     env e;
     uint256 balanceBefore = balanceOf(e, e.msg.sender);
-    // e.msg.sender ---> amount ---> user
     transfer(e, to, amount); 
     assert amount > 0 => amount <= balanceBefore;
 }
 
-rule transferAndMintAdditivity{
+rule TransferAndMintAdditivity{
     uint amountA;
     uint amountB;
     address user;
@@ -120,77 +127,11 @@ rule transferAndMintAdditivity{
     assert seperate_balance == together_balance;
 }
 
-// rule shouldRevertMintAndBurnOnPause(){
-
-// }
-
-/**
-    Self destruct can only be called by ownership 
-**/
-rule onlyOwnerCanDestruct(){
+rule OnlyOwnerCanDestruct(){
     env e;
     selfDestruct(e);
-    assert e.msg.sender == getTimelockedAdminAddress(e) => paused(e) == true;
+    assert e.msg.sender == getTimelockedAdminAddress(e) && paused(e) == true;
 }
-
-ghost ghostGetStakePool() returns address {
-    axiom ghostGetStakePool() == stakePoolContract;
-}
-
-ghost ghostGetTimelockedAdmin() returns address {
-    axiom ghostGetTimelockedAdmin() == timelockedAdminContract;
-}
-
-// rule ChangingAllowance(method f, address from, address spender) {
-//     uint256 allowanceBefore = allowance(from, spender);
-//     env e;
-//     if (f.selector == approve(address, uint256).selector) {
-//         address spender_;
-//         uint256 amount;
-//         approve(e, spender_, amount);
-//         if (from == e.msg.sender && spender == spender_) {
-//             assert allowance(from, spender) == amount;
-//         } else {
-//             assert allowance(from, spender) == allowanceBefore;
-//         }
-//     } else if (f.selector == transferFrom(address,address,uint256).selector) {
-//         address from_;
-//         address to;
-//         address amount;
-//         transferFrom(e, from_, to, amount);
-//         uint256 allowanceAfter = allowance(from, spender);
-//         if (from == from_ && spender == e.msg.sender) {
-//             assert from == to || allowanceBefore == max_uint256 || allowanceAfter == allowanceBefore - amount;
-//         } else {
-//             assert allowance(from, spender) == allowanceBefore;
-//         }
-//     } else if (f.selector == decreaseAllowance(address, uint256).selector) {
-//         address spender_;
-//         uint256 amount;
-//         require amount <= allowanceBefore;
-//         decreaseAllowance(e, spender_, amount);
-//         if (from == e.msg.sender && spender == spender_) {
-//             assert allowance(from, spender) == allowanceBefore - amount;
-//         } else {
-//             assert allowance(from, spender) == allowanceBefore;
-//         }
-//     } else if (f.selector == increaseAllowance(address, uint256).selector) {
-//         address spender_;
-//         uint256 amount;
-//         require amount + allowanceBefore < max_uint256;
-//         increaseAllowance(e, spender_, amount);
-//         if (from == e.msg.sender && spender == spender_) {
-//             assert allowance(from, spender) == allowanceBefore + amount;
-//         } else {
-//             assert allowance(from, spender) == allowanceBefore;
-//         }
-//     } else
-//     {
-//         calldataarg args;
-//         f(e, args);
-//         assert allowance(from, spender) == allowanceBefore;
-//     }
-// }
 
 rule TransferFromSumOfFromAndToBalancesStaySame(address from, address to, uint256 amount) {
     env e;
@@ -206,13 +147,12 @@ rule TransferFromSumOfFromAndToBalancesStaySame(address from, address to, uint25
     assert spenderBalanceBefore == spenderBalanceAfter;
 }
 
-rule transferFromCorrect(address from, address to, uint256 amount) {
+rule TransferFromCorrect(address from, address to, uint256 amount) {
     env e;
-    // require e.msg.value == 0;
     uint256 fromBalanceBefore = balanceOf(e, from);
     uint256 toBalanceBefore = balanceOf(e, to);
     uint256 allowanceBefore = allowance(e, from, e.msg.sender);
-    require allowanceBefore < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    require allowanceBefore < max_uint256;
     require fromBalanceBefore + toBalanceBefore <= max_uint256;
 
     transferFrom(e, from, to, amount);
@@ -227,21 +167,7 @@ rule transferFromCorrect(address from, address to, uint256 amount) {
         allowance(e, from, e.msg.sender) == allowanceBefore - amount;
 }
 
-// rule transferFromReverts(address from, address to, uint256 amount) {
-//     env e;
-//     uint256 allowanceBefore = allowance(e, from, e.msg.sender);
-//     uint256 fromBalanceBefore = balanceOf(e, from);
-//     require from != 0 && e.msg.sender != 0;
-//     require e.msg.value == 0;
-//     require fromBalanceBefore + balanceOf(e, to) <= max_uint256;
-//     require allowanceBefore < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-
-//     transferFrom@withrevert(e, from, to, amount);
-//     // There are some more possible reverts, if we want to check this major reverts we need to check seperately
-//     assert lastReverted <=> (allowanceBefore < amount || amount > fromBalanceBefore || to == 0);
-// }
-
-rule isMintPrivileged(address privileged, address recipient, uint256 amount) {
+rule IsMintPrivileged(address privileged, address recipient, uint256 amount) {
     env e1;
 	require e1.msg.sender == privileged;
     bytes userData;
@@ -250,6 +176,7 @@ rule isMintPrivileged(address privileged, address recipient, uint256 amount) {
     uint256 totalSupplyBefore = totalSupply(e1);
 	mint(e1, recipient, amount, userData, operatorData); // no revert
 	uint256 totalSupplyAfter1 = totalSupply(e1);
+
     require(totalSupplyAfter1 > totalSupplyBefore);
 
 	env e2;
@@ -259,17 +186,16 @@ rule isMintPrivileged(address privileged, address recipient, uint256 amount) {
 	bool secondSucceeded = !lastReverted;
     uint256 totalSupplyAfter2 = totalSupply(e2);
 
-    // either non privileged mint reverted or it didn't influence total supply
 	assert  !secondSucceeded || (totalSupplyBefore == totalSupplyAfter2);
 }
 
-rule noFeeOnTransfer(address bob, uint256 amount) {
+rule NoFeeOnTransfer(address bob, uint256 amount) {
     env e;
     calldataarg args;
     require bob != e.msg.sender;
+
     uint256 balanceSenderBefore = balanceOf(e, e.msg.sender);
     uint256 balanceBefore = balanceOf(e, bob);
-
     transfer(e, bob, amount);
 
     uint256 balanceAfter = balanceOf(e, bob);
@@ -277,20 +203,20 @@ rule noFeeOnTransfer(address bob, uint256 amount) {
     assert balanceAfter == balanceBefore + amount;
 }
 
-rule noFeeOnTransferFrom(address alice, address bob, uint256 amount) {
+rule NoFeeOnTransferFrom(address alice, address bob, uint256 amount) {
     env e;
     calldataarg args;
     require alice != bob;
     require allowance(e, alice, e.msg.sender) >= amount;
-    uint256 balanceBefore = balanceOf(e, bob);
 
+    uint256 balanceBefore = balanceOf(e, bob);
     transferFrom(e, alice, bob, amount);
 
     uint256 balanceAfter = balanceOf(e, bob);
     assert balanceAfter == balanceBefore + amount;
 }
 
-rule revertOnPause(){
+rule RevertOnPause(){
     env e;
     require paused(e) == true;
     storage initialStorage = lastStorage;
@@ -301,6 +227,7 @@ rule revertOnPause(){
     bytes operatorData;
     address from;
     address to;
+
     mint@withrevert(e, recipient, amount, userData, operatorData);
     assert lastReverted;
     pause@withrevert(e) at initialStorage;
@@ -311,8 +238,6 @@ rule revertOnPause(){
     assert lastReverted;
  }
 
- // Write spec for operatorSend, send and Operator
-
  rule SendSumOfFromAndToBalancesStaySame(address to, uint256 amount, bytes data) {
     env e;
     mathint sum = stakedBNBContract.balanceOf(e,e.msg.sender) + stakedBNBContract.balanceOf(e,to);
@@ -321,7 +246,7 @@ rule revertOnPause(){
     uint256 totalSupplyBefore = totalSupply(e);
     send(e, to, amount, data); 
     uint256 totalSupplyAfter = totalSupply(e);
-    // make use of send method too here
+
     assert stakedBNBContract.balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
     assert totalSupplyBefore == totalSupplyAfter;
 }
@@ -336,11 +261,10 @@ rule SendDoesntChangeOtherBalance(address to, uint256 amount, address other, byt
     assert balanceBefore == balanceAfter;
 }
 
-// Users should transfer balance if and only if amount > 0 and amount <=total balance of user. (low)
 rule SendCorrelation(address to, uint256 amount, bytes data) {
     env e;
     uint256 balanceBefore = balanceOf(e, e.msg.sender);
-    // e.msg.sender ---> amount ---> user
+
     send(e, to, amount, data); 
     assert amount > 0 => amount <= balanceBefore;
 }
@@ -371,4 +295,32 @@ rule SendAndMintAdditivity{
 
     assert seperate_mint_balance == together_mint_balance;
     assert seperate_balance == together_balance;
+}
+
+rule OperatorSendSumOfFromAndToBalancesStaySame(address from, address to, uint256 amount, bytes data, bytes operatorData) {
+    env e;
+    require e.msg.sender != from && e.msg.sender != to;
+    mathint sum = balanceOf(e, from) + balanceOf(e, to);
+    uint256 spenderBalanceBefore = balanceOf(e, e.msg.sender);
+    require sum < max_uint256;
+    
+    operatorSend(e, from, to, amount, data, operatorData); 
+    uint256 spenderBalanceAfter = balanceOf(e, e.msg.sender);
+
+    assert balanceOf(e, from) + balanceOf(e, to) == sum;
+    assert spenderBalanceBefore == spenderBalanceAfter;
+}
+
+rule AuthorizeOperatorCorrectness(address tokenHolder, address to, bytes data, bytes operatorData, uint256 amount) {
+    env e;
+    require e.msg.sender != tokenHolder;
+    require isOperatorFor(e, e.msg.sender, tokenHolder) == false;
+    storage initialStorage = lastStorage;
+    operatorSend@withrevert(e, tokenHolder, to, amount, data, operatorData);
+    assert lastReverted;
+
+    env e2;
+    require e2.msg.sender == tokenHolder; 
+    authorizeOperator(e2, e.msg.sender) at initialStorage;
+    assert isOperatorFor(e, e.msg.sender, tokenHolder) == true;
 }
