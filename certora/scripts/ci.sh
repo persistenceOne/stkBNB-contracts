@@ -12,3 +12,4 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --rule_sanity \
 --settings -assumeUnwindCond,-enableStorageAnalysis=true,-ciMode=true,-optimisticFallback=true \
 --msg "pstake"
+

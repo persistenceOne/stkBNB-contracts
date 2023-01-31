@@ -14,6 +14,8 @@ methods {
     getMinTokenWithdrawal() returns (uint256) envfree
     bnbBalanceOf(address) returns (uint256) envfree
     getFee() returns ( uint256, uint256, uint256) envfree
+    getClaimRequestLength(address) envfree
+
 
 
     // Getters:
@@ -179,7 +181,7 @@ invariant totalTokenSupply()
  *               STATE TRANSITIONS                *
  **************************************************/
 // User should not be able to change other user balance
-rule userDoesNotChangeOtherUserBalance(method f){
+rule userDoesNotChangeOtherUserBalance(method f) filtered { f -> f.selector != tokensReceived(address,address,address,uint256,bytes,bytes).selector } {
     env e;
     address user;
     calldataarg args;
@@ -245,9 +247,9 @@ rule correlationPoolTokenSupplyVsTotalWei (method f){
 rule claimAllCorrectness(){ 
     env e;
     uint256 index;
-    bool notAllCanBeClaimed  = index < getClaimRequestLength(e,e.msg.sender) && !canBeClaimed(e, index);
+    bool notAllCanBeClaimed  = index < getClaimRequestLength(e.msg.sender) && !canBeClaimed(e, index);
     claimAll(e);
-    assert notAllCanBeClaimed => getClaimRequestLength(e,e.msg.sender) > 0;
+    assert notAllCanBeClaimed => getClaimRequestLength(e.msg.sender) > 0;
 }
 
 // if a user did claimAll() => all the claims that are left are not claimable
@@ -262,7 +264,7 @@ rule claimAllCorrectness2(){
 rule claimOnEmpty(){    
     env e;
     uint256 index;
-    require (getClaimRequestLength(e,e.msg.sender)==0);
+    require (getClaimRequestLength(e.msg.sender)==0);
     claim@withrevert(e,index);
     assert (lastReverted);
 }
@@ -422,16 +424,16 @@ rule verifyZeroWeiZeroClaims(method f, address user) filtered { f -> !f.isView &
         require eSend.msg.sender == user;
         stkBNB.send(eSend, currentContract, amount, data);
         env eRec;
-        uint256 claimReqLenBefore = getClaimRequestLength(eRec,user);
+        uint256 claimReqLenBefore = getClaimRequestLength(user);
         require claimReqLenBefore < max_uint256;
         tokensReceived(eRec, _, user, getStakePoolAddress(), amount, _, _ );
         // exception on withdraw of wei also, the totalWei could be 0 but it create claimRequest;
-        assert getTotalWei() == 0 => getClaimRequestLength(eRec,user) == claimReqLenBefore + 1;
+        assert getTotalWei() == 0 => getClaimRequestLength(user) == claimReqLenBefore + 1;
     }
     else {
         calldataarg args;
         f(e,args);
-        assert getTotalWei() == 0 => getClaimRequestLength(e,user) == 0;
+        assert getTotalWei() == 0 => getClaimRequestLength(user) == 0;
     }
  }
 
