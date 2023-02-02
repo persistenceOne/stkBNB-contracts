@@ -20,8 +20,8 @@ methods {
     allowanace(address, address) returns (uint256)=> DISPATCHER(true);
     transfer(address, uint256) returns (bool) => DISPATCHER(true);
     transferFrom(address, address, uint256) returns (bool) => DISPATCHER(true);
-    send(address, bytes) => DISPATCHER(true);
-    operatorSend(address, address, bytes, bytes) => DISPATCHER(true);
+    send(address, uint256, bytes) => DISPATCHER(true);
+    operatorSend(address, address, uint256, bytes, bytes) => DISPATCHER(true);
 }
 
 /**************************************************
@@ -71,14 +71,14 @@ rule OnlyOwnerCanUnpause(){
 
 rule TransferSumOfFromAndToBalancesStaySame(address to, uint256 amount) {
     env e;
-    mathint sum = stakedBNBContract.balanceOf(e,e.msg.sender) + stakedBNBContract.balanceOf(e,to);
+    mathint sum = balanceOf(e,e.msg.sender) + balanceOf(e,to);
     require sum < max_uint256;
 
     uint256 totalSupplyBefore = totalSupply(e);
     transfer(e, to, amount); 
     uint256 totalSupplyAfter = totalSupply(e);
     // make use of send method too here
-    assert stakedBNBContract.balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
+    assert balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
     assert totalSupplyBefore == totalSupplyAfter;
 }
 
@@ -177,16 +177,15 @@ rule IsMintPrivileged(address privileged, address recipient, uint256 amount) {
 	mint(e1, recipient, amount, userData, operatorData); // no revert
 	uint256 totalSupplyAfter1 = totalSupply(e1);
 
-    require(totalSupplyAfter1 > totalSupplyBefore);
+    assert totalSupplyAfter1 == totalSupplyBefore + amount;
 
 	env e2;
 	require e2.msg.sender != privileged;
 
 	mint@withrevert(e2, recipient, amount, userData, operatorData) at initialStorage;
-	bool secondSucceeded = !lastReverted;
     uint256 totalSupplyAfter2 = totalSupply(e2);
 
-	assert  !secondSucceeded || (totalSupplyBefore == totalSupplyAfter2);
+    assert  (totalSupplyBefore == totalSupplyAfter2);
 }
 
 rule NoFeeOnTransfer(address bob, uint256 amount) {
@@ -240,14 +239,14 @@ rule RevertOnPause(){
 
  rule SendSumOfFromAndToBalancesStaySame(address to, uint256 amount, bytes data) {
     env e;
-    mathint sum = stakedBNBContract.balanceOf(e,e.msg.sender) + stakedBNBContract.balanceOf(e,to);
+    mathint sum = balanceOf(e,e.msg.sender) + balanceOf(e,to);
     require sum < max_uint256;
 
     uint256 totalSupplyBefore = totalSupply(e);
     send(e, to, amount, data); 
     uint256 totalSupplyAfter = totalSupply(e);
 
-    assert stakedBNBContract.balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
+    assert balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
     assert totalSupplyBefore == totalSupplyAfter;
 }
 
