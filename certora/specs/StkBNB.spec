@@ -340,18 +340,15 @@ rule OperatorSendSumOfFromAndToBalancesStaySame(address from, address to, uint25
 }
 
 rule AuthorizeOperatorCorrectness(address tokenHolder, address to, bytes data, bytes operatorData, uint256 amount) {
-
-    env e2;
-    require e2.msg.sender == tokenHolder; 
-    authorizeOperator(e2, e.msg.sender) at initialStorage;
-    assert isOperatorFor(e, e.msg.sender, tokenHolder) == true;
-}
-
-rule OperatorSendRevert(address tokenHolder, address to, bytes data, bytes operatorData, uint256 amount) {
     env e;
     require e.msg.sender != tokenHolder;
     require isOperatorFor(e, e.msg.sender, tokenHolder) == false;
     storage initialStorage = lastStorage;
     operatorSend@withrevert(e, tokenHolder, to, amount, data, operatorData);
     assert lastReverted;
+
+    env e2;
+    require e2.msg.sender == tokenHolder; 
+    authorizeOperator(e2, e.msg.sender) at initialStorage;
+    assert isOperatorFor(e, e.msg.sender, tokenHolder) == true;
 }
