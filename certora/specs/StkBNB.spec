@@ -9,6 +9,7 @@ methods {
     getStakePoolAddress() returns (address) envfree
     mint(address,uint256, bytes, bytes) => DISPATCHER(true)
     burn(uint256, bytes) => DISPATCHER(true)
+    operatorBurn(address,uint256, bytes, bytes) => DISPATCHER(true)
     getStakePool() returns (address) => ghostGetStakePool();
     getTimelockedAdmin() returns (address) => ghostGetTimelockedAdmin();
     transferOwnership(address) => DISPATCHER(true);
@@ -36,24 +37,42 @@ ghost ghostGetTimelockedAdmin() returns address {
     axiom ghostGetTimelockedAdmin() == timelockedAdminContract;
 }
 
-rule OnlyMinterCanMint(method f)filtered {f-> f.selector == mint(address,uint256, bytes, bytes).selector} {
+rule OnlyStakePoolCanMint(address user, uint256 amount, bytes userData, bytes operatorData) {
     env e;
     calldataarg args;
-    f(e, args);
+    mint(e,user, amount, userData, operatorData);
     assert(e.msg.sender == getStakePoolAddress());
 }
 
-rule OnlyBurnerCanBurn(method f)filtered {f-> f.selector == burn(uint256, bytes).selector || f.selector == operatorBurn(address,uint256, bytes, bytes).selector} {
+rule OnlyStakePoolCanBurn( uint256 amount, bytes data) {
     env e;
     calldataarg args;
-    f(e, args);
+    uint256 totalSupplyBefore = totalSupply(e);
+    burn(e, amount, data);
+    uint256 totalSupplyAfter = totalSupply(e);
     assert(e.msg.sender == getStakePoolAddress());
+    assert amount > 0 => totalSupplyAfter < totalSupplyBefore;
+    assert amount == 0 => totalSupplyAfter == totalSupplyBefore;
+}
+
+rule OnlyStakePoolCanOperatorBurn( uint256 amount, bytes data) {
+    env e;
+    calldataarg args;
+    uint256 totalSupplyBefore = totalSupply(e);
+    operatorBurn(e, stakePoolContract, amount, data, data);
+    uint256 totalSupplyAfter = totalSupply(e);
+    assert(e.msg.sender == getStakePoolAddress());
+    assert amount > 0 => totalSupplyAfter < totalSupplyBefore;
+    assert amount == 0 => totalSupplyAfter == totalSupplyBefore;
 }
 
 rule OwnerCanChangeOwnership(address user){
     env e;
+
+    address previousOwner = getOwner(e);
     require e.msg.sender != user;
     transferOwnership(e,user);
+    assert previousOwner == e.msg.sender;
     assert user == getOwner(e);
 }
 
@@ -77,7 +96,6 @@ rule TransferSumOfFromAndToBalancesStaySame(address to, uint256 amount) {
     uint256 totalSupplyBefore = totalSupply(e);
     transfer(e, to, amount); 
     uint256 totalSupplyAfter = totalSupply(e);
-    // make use of send method too here
     assert balanceOf(e,e.msg.sender) + balanceOf(e,to) == sum;
     assert totalSupplyBefore == totalSupplyAfter;
 }
@@ -133,7 +151,7 @@ rule OnlyOwnerCanDestruct(){
     assert e.msg.sender == getTimelockedAdminAddress(e) && paused(e) == true;
 }
 
-rule TransferFromSumOfFromAndToBalancesStaySame(address from, address to, uint256 amount) {
+rule TransferFromCorrectness(address from, address to, uint256 amount) {
     env e;
     require e.msg.sender != from && e.msg.sender != to;
     mathint sum = balanceOf(e, from) + balanceOf(e, to);
@@ -152,12 +170,12 @@ rule TransferFromCorrect(address from, address to, uint256 amount) {
     uint256 fromBalanceBefore = balanceOf(e, from);
     uint256 toBalanceBefore = balanceOf(e, to);
     uint256 allowanceBefore = allowance(e, from, e.msg.sender);
-    require allowanceBefore < max_uint256;
+    // require allowanceBefore < max_uint256;
     require fromBalanceBefore + toBalanceBefore <= max_uint256;
 
     transferFrom(e, from, to, amount);
 
-    assert from != to =>
+        assert allowanceBefore < max_uint256 && from != to =>
         balanceOf(e, from) == fromBalanceBefore - amount &&
         balanceOf(e, to) == toBalanceBefore + amount &&
         allowanceBefore >= amount &&
@@ -165,6 +183,16 @@ rule TransferFromCorrect(address from, address to, uint256 amount) {
         from != 0 &&
         to != 0 &&
         allowance(e, from, e.msg.sender) == allowanceBefore - amount;
+
+        assert allowanceBefore == max_uint256 && from != to =>
+        balanceOf(e, from) == fromBalanceBefore - amount &&
+        balanceOf(e, to) == toBalanceBefore + amount &&
+        allowanceBefore >= amount &&
+        fromBalanceBefore >= amount &&
+        from != 0 &&
+        to != 0 &&
+        allowance(e, from, e.msg.sender) == allowanceBefore;
+
 }
 
 rule IsMintPrivileged(address privileged, address recipient, uint256 amount) {
@@ -308,18 +336,22 @@ rule OperatorSendSumOfFromAndToBalancesStaySame(address from, address to, uint25
 
     assert balanceOf(e, from) + balanceOf(e, to) == sum;
     assert spenderBalanceBefore == spenderBalanceAfter;
+    assert isOperatorFor(e, e.msg.sender, from) == true;
 }
 
 rule AuthorizeOperatorCorrectness(address tokenHolder, address to, bytes data, bytes operatorData, uint256 amount) {
+
+    env e2;
+    require e2.msg.sender == tokenHolder; 
+    authorizeOperator(e2, e.msg.sender) at initialStorage;
+    assert isOperatorFor(e, e.msg.sender, tokenHolder) == true;
+}
+
+rule OperatorSendRevert(address tokenHolder, address to, bytes data, bytes operatorData, uint256 amount) {
     env e;
     require e.msg.sender != tokenHolder;
     require isOperatorFor(e, e.msg.sender, tokenHolder) == false;
     storage initialStorage = lastStorage;
     operatorSend@withrevert(e, tokenHolder, to, amount, data, operatorData);
     assert lastReverted;
-
-    env e2;
-    require e2.msg.sender == tokenHolder; 
-    authorizeOperator(e2, e.msg.sender) at initialStorage;
-    assert isOperatorFor(e, e.msg.sender, tokenHolder) == true;
 }
