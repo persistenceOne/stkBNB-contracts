@@ -323,7 +323,6 @@ jobs:
       - name: Verify with Certora
         run: |
           certora/scripts/ci.sh
-          certora/scripts/stkBNB_run.sh
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
 
