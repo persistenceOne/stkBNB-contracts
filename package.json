@@ -68,6 +68,7 @@
     "web3": "^1.7.3"
   },
   "dependencies": {
+    "@axelar-network/axelar-gmp-sdk-solidity": "^3.3.0",
     "typescript": "^4.7.3"
   }
 }
