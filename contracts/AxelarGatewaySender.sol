@@ -9,6 +9,11 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820Registry
 
 /*
  * Docs for Axelar gateway sendToken method: https://docs.axelar.dev/dev/send-tokens/overview
+ * Users that wish to send stkBNB tokens to Persistence chain will only have to send tokens to this contract.
+ * The `tokensReceived` method will handle calling the `approve` method of ERC20, which is necessary for the AxelarGateway.
+ * When invoking `send` method of stkBNB contract, the users will only have to encode the parameters necessary for
+ * the `sendToken` method of AxelarGateway contract, which are `chainName`, `destinationAddress` and the `tokenSymbol`.
+ * The encoding is to be done off-chain in our current use-case.
  */
 contract AxelarGatewaySender is IERC777Recipient {
     IAxelarGateway public immutable gateway;
