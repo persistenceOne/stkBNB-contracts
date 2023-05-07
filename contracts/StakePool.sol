@@ -743,6 +743,47 @@ contract StakePool is
      * INTERNAL FUNCTIONS
      ********************/
 
+    /// @dev Calculate the claim unlock time. Returns a value between 8-15 days.
+    /// @param requestCreationTime Block timestamp of request creation.
+    /// @param crosschainCooldown Cooldown for cross-chain transfer between BSC and BC chains.
+    function _getClaimUnlockTime(uint256 requestCreationTime, uint256 crosschainCooldown) internal pure returns(uint256 claimUnlockTime) {
+        // Cover the base when contracts are deployed on the test net where
+        // Cross-chain transfer time is 1 day
+        if (crosschainCooldown == 1 days) {
+            return requestCreationTime + 1 days;
+        }
+
+        uint256 weekSeconds = 1 weeks;
+        // Each Wednesday claim reserve is filled
+        // It should be finished by 00:45 UTC
+        uint256 claimReserveFilledTime = 45 minutes;
+
+        // UNIX timestamp starts on January 1st, 1970.
+        // That day was Thursday. 
+        // By modulus operation, we get the time elapsed since last Thursday
+        uint256 elapsedTimeSinceThursdayStart = requestCreationTime % weekSeconds; // January 1st, 1970 was a Thursday
+        
+        // Assume that the claim request was not created on a Wednesday
+        uint256 weeksFactor = 1;
+
+        // If claim request was created on a Wednesday,
+        // there needs to be another full week added to the calculations
+        // to prevent overflow.
+        // We subtract 1 day from week seconds time
+        // because UNIX weeks begin on a Thursday.
+        // Claim reserves need to be filled by Wednesday 00:45 UTC.
+        if (weekSeconds - 1 days < elapsedTimeSinceThursdayStart) {
+            weeksFactor = 2;
+        }
+
+        // Calculate how many seconds until the next claimable Wednesday. 
+        uint256 secondsUntilNextWednesday = weeksFactor * weekSeconds - 1 days - elapsedTimeSinceThursdayStart;
+        
+        // Add the time until next Wednesday, crosschain transfer cooldown, time from midnight to 00:45
+        // to the request creation time
+        claimUnlockTime = requestCreationTime + secondsUntilNextWednesday + claimReserveFilledTime + crosschainCooldown;
+    }
+
     function _withdraw(address from, uint256 amount) internal {
         uint256 poolTokensFee = config.fee.withdraw._apply(amount);
         uint256 poolTokensToBurn = amount - poolTokensFee;
@@ -824,6 +865,6 @@ contract StakePool is
      * @return true if the request can be claimed.
      */
     function _canBeClaimed(ClaimRequest memory req) internal view returns (bool) {
-        return block.timestamp > (req.createdAt + config.cooldownPeriod);
+        return block.timestamp > _getClaimUnlockTime(req.createdAt, config.cooldownPeriod);
     }
 }
