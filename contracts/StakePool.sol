@@ -745,11 +745,11 @@ contract StakePool is
 
     /// @dev Calculate the claim unlock time. Returns a value between 8-15 days.
     /// @param requestCreationTime Block timestamp of request creation.
-    /// @param crosschainCooldown Cooldown for cross-chain transfer between BSC and BC chains.
-    function _getClaimUnlockTime(uint256 requestCreationTime, uint256 crosschainCooldown) internal pure returns(uint256 claimUnlockTime) {
+    /// @param unstakingCooldown Cooldown for unstaking.
+    function _getClaimUnlockTime(uint256 requestCreationTime, uint256 unstakingCooldown) internal pure returns(uint256 claimUnlockTime) {
         // Cover the base when contracts are deployed on the test net where
         // Cross-chain transfer time is 1 day
-        if (crosschainCooldown == 1 days) {
+        if (unstakingCooldown == 1 days) {
             return requestCreationTime + 1 days;
         }
 
@@ -781,7 +781,7 @@ contract StakePool is
         
         // Add the time until next Wednesday, crosschain transfer cooldown, time from midnight to 00:45
         // to the request creation time
-        claimUnlockTime = requestCreationTime + secondsUntilNextWednesday + claimReserveFilledTime + crosschainCooldown;
+        claimUnlockTime = requestCreationTime + secondsUntilNextWednesday + claimReserveFilledTime + unstakingCooldown;
     }
 
     function _withdraw(address from, uint256 amount) internal {
