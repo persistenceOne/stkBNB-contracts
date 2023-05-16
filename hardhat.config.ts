@@ -1,16 +1,14 @@
 import { task } from 'hardhat/config';
-import '@nomiclabs/hardhat-waffle';
+import "@nomicfoundation/hardhat-toolbox";
 import '@nomiclabs/hardhat-web3';
-import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
-import 'hardhat-gas-reporter';
-import 'solidity-coverage';
 import 'hardhat-contract-sizer';
 import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
 import { CONFIG } from './scripts/types/config';
 import 'hardhat-forta'; // forta
 import { ethers } from 'ethers';
 import { string } from 'hardhat/internal/core/params/argumentTypes';
+import "hardhat-erc1820"; // Ensure that the network we're using has ERC1820Registry deployed
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -94,7 +92,7 @@ export default {
     contractSizer: {
         alphaSort: false,
         disambiguatePaths: false,
-        runOnCompile: true,
+        runOnCompile: false,
         strict: true,
     },
     solidity: {
