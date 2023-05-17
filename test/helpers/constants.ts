@@ -21,6 +21,6 @@ export const STAKE_POOL_CONFIG: StakePoolConfig = {
 export const TOKEN_HUB_ADDRESS = "0x0000000000000000000000000000000000001004";
 
 export const TOKEN_HUB_ARGS: TokenHubArgs = {
-  minRelayFee: "0.004", // fails for 0.004 value, TODO: Figure it out
+  minRelayFee: "0.004",
   transferOutTimeout: 120
 }
