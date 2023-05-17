@@ -11,7 +11,7 @@ describe("Set-up & Deployment tests", () => {
     it("should check for TokenHub instance", async () => {
       const tokenHub = await deployTokenHubFixture();
       expect(tokenHub.address).to.be.equal(TOKEN_HUB_ADDRESS);
-      expect(await tokenHub.getMiniRelayFee()).to.be.equal(ethers.utils.parseEther(TOKEN_HUB_ARGS.minRelayFee));
+      expect(await tokenHub.getMiniRelayFee()).to.be.equal(ethers.utils.parseEther(TOKEN_HUB_ARGS.miniRelayFee));
     });
   
     it("should check for ERC1820 instance", async () => {

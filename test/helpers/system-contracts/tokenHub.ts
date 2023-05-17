@@ -2,8 +2,12 @@ import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { getStorageSlots, removeContractDeployment } from ".";
 
+/**
+ * Use human-readable format for miniRelayFee value.
+ * For instance 0.1 is 10% of a whole ETH (18 decimals).
+ */
 export type TokenHubArgs = {
-  minRelayFee: string,
+  miniRelayFee: string,
   transferOutTimeout: number
 }
 
@@ -13,7 +17,7 @@ export async function getTokenHubParameteres(tokenHubArgs: TokenHubArgs) {
   // Deploy the mocked TokenHub contract so we can get the bytecode 
   // deployed with adequate constructor args.
   const tokenHubDeployed = await TokenHub.deploy(
-    ethers.utils.parseEther(tokenHubArgs.minRelayFee), 
+    ethers.utils.parseEther(tokenHubArgs.miniRelayFee), 
     BigNumber.from(tokenHubArgs.transferOutTimeout)
   );
 
