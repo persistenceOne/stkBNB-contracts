@@ -4,6 +4,8 @@ import { StakePoolConfig } from "../../../scripts/types/config";
 import { AddressStore, FeeVault, StakePool, StakedBNBToken, TimelockedAdmin, UndelegationHolder } from "../../../typechain-types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
+export type Fixture<T> = () => Promise<T>;
+
 export type AddressStoreDeployment = {
   addressStore: AddressStore,
   deployer: SignerWithAddress
