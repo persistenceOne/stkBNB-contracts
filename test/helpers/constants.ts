@@ -1,5 +1,5 @@
 import { BigNumber } from "ethers";
-import { StakePoolConfig } from "../../scripts/types/config";
+import { StakePoolConfig, StakePoolConfigV2 } from "../../scripts/types/config";
 import { TokenHubArgs } from "./system-contracts/tokenHub";
 
 export const DAY_SECONDS = 86400; // One day
@@ -17,6 +17,11 @@ export const STAKE_POOL_CONFIG: StakePoolConfig = {
     withdraw: BigNumber.from("0")
   }
 };
+
+export const STAKE_POOL_CONFIG_V2: StakePoolConfigV2 = {
+  automatedClaimFee: BigNumber.from("500000000000000"), // 0.0005 ETH
+  instantClaimFeePercentage: BigNumber.from("1"),
+}
 
 export const TOKEN_HUB_ADDRESS = "0x0000000000000000000000000000000000001004";
 

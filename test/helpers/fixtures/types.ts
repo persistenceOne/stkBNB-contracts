@@ -1,6 +1,6 @@
-import { BigNumberish } from "ethers";
+import { BigNumberish, TypedDataDomain } from "ethers";
 import { Contracts } from "../../../helpers/types";
-import { StakePoolConfig } from "../../../scripts/types/config";
+import { StakePoolConfig, StakePoolConfigV2 } from "../../../scripts/types/config";
 import { AddressStore, FeeVault, StakePool, StakedBNBToken, TimelockedAdmin, UndelegationHolder } from "../../../typechain-types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
@@ -42,6 +42,7 @@ export type StakePoolDeployment = {
 export type AllContractsDeployment = {
   contracts: Contracts,
   stakepoolConfig: StakePoolConfig,
+  stakepoolConfigV2: StakePoolConfigV2,
   timelockedAdminArgs: {
     minDelay: BigNumberish,
     proposers: Array<string>,
@@ -51,5 +52,8 @@ export type AllContractsDeployment = {
     deployer: SignerWithAddress,
     bot: SignerWithAddress,
     user: SignerWithAddress
+  },
+  domains: {
+    StakePoolDomain: TypedDataDomain
   }
 }

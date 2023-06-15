@@ -29,7 +29,7 @@ library Config {
         // @dev The minimum amount of tokens required to make a withdrawal from the contract.
         uint256 minTokenWithdrawal;
         // @dev The minimum amount of time (in seconds) a user has to wait after unstake to claim their BNB.
-        // It would be 15 days on mainnet. 3 days on testnet.
+        // It would be 8 days on mainnet. 3 days on testnet.
         uint256 cooldownPeriod;
         // @dev The fee distribution to represent different kinds of fee.
         FeeDistribution.Data fee;
