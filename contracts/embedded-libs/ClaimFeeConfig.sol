@@ -25,7 +25,7 @@ library ClaimFeeConfig {
     }
 
     function _checkValid(ClaimFeeConfigData calldata self) internal pure {
-        if (self.instantClaimFeePercentage > 100) {
+        if (self.instantClaimFeePercentage >= 100) {
             revert MustBeLowerThan(100);
         }
         if (self.automatedClaimFee == 0) {
