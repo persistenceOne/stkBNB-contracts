@@ -16,7 +16,6 @@ import "./interfaces/IStakedBNBToken.sol";
 import "./interfaces/IStakePoolBot.sol";
 import "./interfaces/ITokenHub.sol";
 import "./interfaces/IUndelegationHolder.sol";
-import "hardhat/console.sol";
 
 // Upgrade 1 - Reduced Claim Waiting Period, Instant Claim
 // TODO:
