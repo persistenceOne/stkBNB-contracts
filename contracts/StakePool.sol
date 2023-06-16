@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "./embedded-libs/BasisFee.sol";
 import "./embedded-libs/Config.sol";
-import "./embedded-libs/ConfigV2.sol";
+import "./embedded-libs/ClaimFeeConfig.sol";
 import "./embedded-libs/ExchangeRate.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakedBNBToken.sol";
@@ -32,12 +32,10 @@ contract StakePool is
      ********************/
 
     using Config for Config.Data;
-    using ConfigV2 for ConfigV2.DataV2;
+    using ClaimFeeConfig for ClaimFeeConfig.ClaimFeeConfigData;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
     using SafeCastUpgradeable for uint256;
-    // Upgrade 1
-    // using ECDSAUpgradeable for bytes32;
 
     /*********************
      * STRUCTS
@@ -154,13 +152,13 @@ contract StakePool is
     /**
      * @dev Configuration for the V2 contract. You can modify this variable in the future upgrades for config variables.
      */
-    ConfigV2.DataV2 public configV2;
+    ClaimFeeConfig.ClaimFeeConfigData public claimFeeConfig;
 
     /*********************
      * EVENTS
      ********************/
     event ConfigUpdated(); // emitted when config is updated
-    event ConfigV2Updated(); // emitted when config for V2 features is updated
+    event ClaimFeeConfigUpdated(); // emitted when config for V2 claim fee features is updated
     event Deposit(
         address indexed user,
         uint256 bnbAmount,
@@ -317,7 +315,7 @@ contract StakePool is
         _disableInitializers();
     }
 
-    function reinitialize(ConfigV2.DataV2 calldata configV2_) public reinitializer(2) {
+    function reinitialize(ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_) public reinitializer(2) {
         _paused = true; // to ensure that nothing happens until the whole system is setup
 
         // set contract state variables
@@ -335,7 +333,7 @@ contract StakePool is
 
         claimTypehash = keccak256("Claim(uint256 index)");
 
-        configV2._init(configV2_);
+        claimFeeConfig._init(claimFeeConfig_);
     }
 
     /*********************
@@ -381,11 +379,11 @@ contract StakePool is
         emit ConfigUpdated();
     }
 
-    function updateConfigV2(
-        ConfigV2.DataV2 calldata configV2_
+    function updateClaimFeeConfig(
+        ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        configV2._init(configV2_);
-        emit ConfigV2Updated();
+        claimFeeConfig._init(claimFeeConfig_);
+        emit ClaimFeeConfigUpdated();
     }
 
     /*********************
@@ -536,7 +534,7 @@ contract StakePool is
 
         // Deduct the convenience fee
         // TODO: This is ugly, make it beautiful - look at the libs, what do they use
-        uint256 valueToReturn = (req.weiToReturn * (100 - configV2.instantClaimFeePercentage)) /
+        uint256 valueToReturn = (req.weiToReturn * (100 - claimFeeConfig.instantClaimFeePercentage)) /
             100;
 
         // return BNB back to user (which can be anyone: EOA or a contract)
@@ -877,7 +875,7 @@ contract StakePool is
 
         uint256 requestValue = req.weiToReturn;
         if (isAutomated) {
-            requestValue -= configV2.automatedClaimFee;
+            requestValue -= claimFeeConfig.automatedClaimFee;
         }
 
         // return BNB back to user (which can be anyone: EOA or a contract)

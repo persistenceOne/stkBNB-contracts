@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.7;
 
-library ConfigV2 {
-    using ConfigV2 for DataV2;
+library ClaimFeeConfig {
+    using ClaimFeeConfig for ClaimFeeConfigData;
 
     error MustBeGreaterThan(uint256 number);
     error MustBeLowerThan(uint256 number);
 
-    struct DataV2 {
+    struct ClaimFeeConfigData {
         /**
          * @dev A percentage deducted from the balance of the claim payout
          */
@@ -19,12 +19,12 @@ library ConfigV2 {
         uint256 automatedClaimFee;
     }
 
-    function _init(DataV2 storage self, DataV2 calldata obj) internal {
+    function _init(ClaimFeeConfigData storage self, ClaimFeeConfigData calldata obj) internal {
         obj._checkValid();
         self._set(obj);
     }
 
-    function _checkValid(DataV2 calldata self) internal pure {
+    function _checkValid(ClaimFeeConfigData calldata self) internal pure {
         if (self.instantClaimFeePercentage > 100) {
             revert MustBeLowerThan(100);
         }
@@ -33,7 +33,7 @@ library ConfigV2 {
         }
     }
 
-    function _set(DataV2 storage self, DataV2 calldata obj) internal {
+    function _set(ClaimFeeConfigData storage self, ClaimFeeConfigData calldata obj) internal {
         self.automatedClaimFee = obj.automatedClaimFee;
         self.instantClaimFeePercentage = obj.instantClaimFeePercentage;
     }
