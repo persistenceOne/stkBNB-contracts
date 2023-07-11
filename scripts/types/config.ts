@@ -34,6 +34,11 @@ export interface StakePoolConfig {
     fee: Fee;
 }
 
+export interface StakePoolConfigV2 {
+    automatedClaimFee: BigNumber,
+    instantClaimFeePercentage: BigNumber
+}
+
 export interface StakePoolInit {
     config: StakePoolConfig;
 }

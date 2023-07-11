@@ -6,21 +6,18 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820RegistryUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import "./embedded-libs/BasisFee.sol";
-import "./embedded-libs/Config.sol";
-import "./embedded-libs/ClaimFeeConfig.sol";
-import "./embedded-libs/ExchangeRate.sol";
-import "./interfaces/IAddressStore.sol";
-import "./interfaces/IStakedBNBToken.sol";
-import "./interfaces/IStakePoolBot.sol";
-import "./interfaces/ITokenHub.sol";
-import "./interfaces/IUndelegationHolder.sol";
+import "./../embedded-libs/BasisFee.sol";
+import "./../embedded-libs/Config.sol";
+import "./../embedded-libs/ExchangeRate.sol";
+import "./../interfaces/IAddressStore.sol";
+import "./../interfaces/IStakedBNBToken.sol";
+import "./../interfaces/IStakePoolBot.sol";
+import "./../interfaces/ITokenHub.sol";
+import "./../interfaces/IUndelegationHolder.sol";
 
-// Upgrade 1 - Reduced Claim Waiting Period, Instant Claim
 // TODO:
 // * Tests
-contract StakePool is
+contract StakePoolV1 is
     IStakePoolBot,
     IERC777RecipientUpgradeable,
     Initializable,
@@ -31,7 +28,6 @@ contract StakePool is
      ********************/
 
     using Config for Config.Data;
-    using ClaimFeeConfig for ClaimFeeConfig.ClaimFeeConfigData;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
     using SafeCastUpgradeable for uint256;
@@ -136,28 +132,10 @@ contract StakePool is
      */
     mapping(address => ClaimRequest[]) public claimReqs;
 
-    // Upgrade 1
-
-    /**
-     * @dev EIP712 domain separator
-     */
-    bytes32 public domainSeparator;
-
-    /**
-     * @dev EIP712 claim typehash
-     */
-    bytes32 public claimTypehash; // TODO: Initialize
-
-    /**
-     * @dev Configuration for the V2 contract. You can modify this variable in the future upgrades for config variables.
-     */
-    ClaimFeeConfig.ClaimFeeConfigData public claimFeeConfig;
-
     /*********************
      * EVENTS
      ********************/
     event ConfigUpdated(); // emitted when config is updated
-    event ClaimFeeConfigUpdated(); // emitted when config for V2 claim fee features is updated
     event Deposit(
         address indexed user,
         uint256 bnbAmount,
@@ -200,8 +178,6 @@ contract StakePool is
     error PausableNotPaused();
     error ReentrancyGuardReentrantCall();
     error TransferOutFailed();
-    error AddressZero();
-    error InvalidSignature();
 
     /*********************
      * MODIFIERS
@@ -314,25 +290,48 @@ contract StakePool is
         _disableInitializers();
     }
 
-    function reinitialize(ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_) public reinitializer(2) {
-        _paused = true; // to ensure that nothing happens until the whole system is setup
+    function initialize(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) public initializer {
+        __StakePool_init(addressStore_, config_);
+    }
 
+    function __StakePool_init(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) internal onlyInitializing {
+        // Need to call initializers for each parent without calling anything twice.
+        // So, we need to individually see each parent's initializer and not call the initializer's that have already been called.
+        //      1. __AccessControlEnumerable_init => This is empty in the current openzeppelin v0.4.6
+
+        // Finally, initialize this contract.
+        __StakePool_init_unchained(addressStore_, config_);
+    }
+
+    function __StakePool_init_unchained(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) internal onlyInitializing {
         // set contract state variables
-        domainSeparator = keccak256(
-            abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
-                keccak256(bytes("Stake Pool")),
-                keccak256(bytes("v2")),
-                block.chainid,
-                address(this)
-            )
+        _addressStore = addressStore_;
+        config._init(config_);
+        _paused = true; // to ensure that nothing happens until the whole system is setup
+        _status = _NOT_ENTERED;
+        _bnbToUnbond = 0;
+        _bnbUnbonding = 0;
+        _claimReserve = 0;
+        exchangeRate._init();
+
+        // register interfaces
+        _ERC1820_REGISTRY.setInterfaceImplementer(
+            address(this),
+            keccak256("ERC777TokensRecipient"),
+            address(this)
         );
 
-        claimTypehash = keccak256("Claim(uint256 index)");
-
-        claimFeeConfig._init(claimFeeConfig_);
+        // Make the deployer the default admin, deployer will later transfer this role to a multi-sig.
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /*********************
@@ -376,13 +375,6 @@ contract StakePool is
     function updateConfig(Config.Data calldata config_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         config._init(config_);
         emit ConfigUpdated();
-    }
-
-    function updateClaimFeeConfig(
-        ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        claimFeeConfig._init(claimFeeConfig_);
-        emit ClaimFeeConfigUpdated();
     }
 
     /*********************
@@ -488,7 +480,7 @@ contract StakePool is
         uint256 i = 0;
 
         while (i < claimRequestCount) {
-            if (_claim(i, msg.sender, false)) {
+            if (_claim(i)) {
                 --claimRequestCount;
                 continue;
             }
@@ -506,58 +498,7 @@ contract StakePool is
      * @param index: The index of the ClaimRequest which is to be claimed.
      */
     function claim(uint256 index) external whenNotPaused nonReentrant {
-        if (!_claim(index, msg.sender, false)) {
-            revert CantClaimBeforeDeadline();
-        }
-    }
-
-    // TODO: Unite the claim functions
-    function instantClaim(uint256 index) external whenNotPaused nonReentrant {
-        // Find the request
-        if (index >= claimReqs[msg.sender].length) {
-            revert IndexOutOfBounds(index);
-        }
-
-        ClaimRequest memory req = claimReqs[msg.sender][index];
-
-        // Check if there are enough funds to satify the request
-        uint256 excessBNB = address(this).balance - _claimReserve;
-
-        if (excessBNB < req.weiToReturn) {
-            revert InsufficientFundsToSatisfyClaim();
-        }
-
-        // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
-        claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
-        claimReqs[msg.sender].pop();
-
-        // Deduct the convenience fee
-        // TODO: This is ugly, make it beautiful - look at the libs, what do they use
-        uint256 valueToReturn = (req.weiToReturn * (100 - claimFeeConfig.instantClaimFeePercentage)) /
-            100;
-
-        // return BNB back to user (which can be anyone: EOA or a contract)
-        (bool sent /*memory data*/, ) = msg.sender.call{ value: valueToReturn }("");
-        if (!sent) {
-            revert BNBTransferToUserFailed();
-        }
-        emit Claim(msg.sender, req, block.timestamp);
-    }
-
-    function automatedClaim(
-        bytes memory signature,
-        uint256 index,
-        address claimOwner
-    ) external whenNotPaused nonReentrant {
-        bytes32 structHash = keccak256(abi.encode(claimTypehash, index));
-        bytes32 typedDataHash = ECDSAUpgradeable.toTypedDataHash(domainSeparator, structHash);
-
-        address result = ECDSAUpgradeable.recover(typedDataHash, signature);
-        if (result != claimOwner) {
-            revert InvalidSignature();
-        }
-
-        if (!_claim(index, claimOwner, true)) {
+        if (!_claim(index)) {
             revert CantClaimBeforeDeadline();
         }
     }
@@ -836,24 +777,18 @@ contract StakePool is
      * @dev _claim: Claim BNB after cooldown has finished.
      *
      * @param index: The index of the ClaimRequest which is to be claimed.
-     * @param claimOwner: Owner of the claim
      *
      * @return true if the request can be claimed, false otherwise.
      */
-    function _claim(uint256 index, address claimOwner, bool isAutomated) internal returns (bool) {
-        if (claimOwner == address(0)) {
-            revert AddressZero();
-        }
-
-        if (index >= claimReqs[claimOwner].length) {
+    function _claim(uint256 index) internal returns (bool) {
+        if (index >= claimReqs[msg.sender].length) {
             revert IndexOutOfBounds(index);
         }
 
         // find the requested claim
-        ClaimRequest memory req = claimReqs[claimOwner][index];
+        ClaimRequest memory req = claimReqs[msg.sender][index];
 
         if (!_canBeClaimed(req)) {
-            // TODO: Move it out of this function
             return false;
         }
         // the contract should have at least as much balance as needed to fulfil the request
@@ -869,20 +804,15 @@ contract StakePool is
         _claimReserve -= req.weiToReturn;
 
         // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
-        claimReqs[claimOwner][index] = claimReqs[claimOwner][claimReqs[claimOwner].length - 1];
-        claimReqs[claimOwner].pop();
-
-        uint256 requestValue = req.weiToReturn;
-        if (isAutomated) {
-            requestValue -= claimFeeConfig.automatedClaimFee;
-        }
+        claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
+        claimReqs[msg.sender].pop();
 
         // return BNB back to user (which can be anyone: EOA or a contract)
-        (bool sent /*memory data*/, ) = claimOwner.call{ value: requestValue }("");
+        (bool sent /*memory data*/, ) = msg.sender.call{ value: req.weiToReturn }("");
         if (!sent) {
             revert BNBTransferToUserFailed();
         }
-        emit Claim(claimOwner, req, block.timestamp);
+        emit Claim(msg.sender, req, block.timestamp);
         return true;
     }
 
@@ -894,12 +824,6 @@ contract StakePool is
      * @return true if the request can be claimed.
      */
     function _canBeClaimed(ClaimRequest memory req) internal view returns (bool) {
-        return block.timestamp > req.createdAt + config.cooldownPeriod;
+        return block.timestamp > (req.createdAt + config.cooldownPeriod);
     }
 }
-
-/**
- * Login to machine, team access.
- * AWS machine. Same machine running the testnet and mainnet.
- * Giletto deployment if using staking on the BSC chain.
- */
