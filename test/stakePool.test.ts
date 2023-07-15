@@ -58,7 +58,7 @@ describe("Stakepool tests", function () {
       const stakePoolConnectedUser = stakePool.connect(user);
       expect(await stakePoolConnectedUser.deposit({ value: ethers.constants.WeiPerEther })).to.not.be.reverted;
     });
-  
+
     it("should mint stkBNB correctly", async () => {
       const allContractsDeployment = await loadFixture(setupProtocolFixture);
       const { stakePool, stakedBNBToken } = allContractsDeployment.contracts;
@@ -77,10 +77,10 @@ describe("Stakepool tests", function () {
 
       expect(await stakePoolConnectedUser.deposit({ value: ethers.constants.WeiPerEther }))
         .to.changeTokenBalance(stakedBNBToken, user, ethers.constants.WeiPerEther);
-      
+
       const stakePoolConnectedBot = stakePool.connect(bot);
       await stakePoolConnectedBot.epochUpdate(ethers.constants.WeiPerEther);
-      
+
       await expect(stakePoolConnectedUser.deposit({ value: ethers.constants.WeiPerEther })).not.to.be.reverted;
       const userBalance = await stakedBNBToken.balanceOf(user.address);
       expect(userBalance.lt(ethers.constants.WeiPerEther.mul(2))).to.be.true; // Deposited 2 BNB, should have less than 2 stkBNB because of an epoch update
@@ -98,10 +98,10 @@ describe("Stakepool tests", function () {
     beforeEach(async () => {
       allContractsDeployment = await loadFixture(setupProtocolFixture);
       stakePool = allContractsDeployment.contracts.stakePool as StakePool;
-      
+
       const [_, userSigner] = await ethers.getSigners();
       user = userSigner;
-      
+
       stakePoolConnectedUser = stakePool.connect(userSigner);
       expect(await stakePoolConnectedUser.deposit({ value: ethers.constants.WeiPerEther })).to.not.be.reverted;
 
@@ -119,11 +119,11 @@ describe("Stakepool tests", function () {
 
     it("should revert when message sender is not stkBNB", async () => {
       await expect(stakePool.tokensReceived(
-        ethers.constants.AddressZero, 
-        user.address, 
-        stakePool.address, 
-        ethers.constants.WeiPerEther, 
-        [], 
+        ethers.constants.AddressZero,
+        user.address,
+        stakePool.address,
+        ethers.constants.WeiPerEther,
+        [],
         []
       )).to.be.revertedWithCustomError(stakePool, "UnknownSender");
     });
@@ -132,9 +132,9 @@ describe("Stakepool tests", function () {
       const { addressStore } = allContractsDeployment.contracts;
       await addressStore.setStakePool(user.address); // to be able to mint 
       await expect(stkBnBConnectedUser.mint(
-        stakePool.address, 
-        ethers.constants.WeiPerEther, 
-        [], 
+        stakePool.address,
+        ethers.constants.WeiPerEther,
+        [],
         []
       )).to.be.revertedWithCustomError(stakePool, "TokenMintingToSelfNotAllowed");
     });
@@ -145,8 +145,8 @@ describe("Stakepool tests", function () {
     let user: SignerWithAddress;
 
     beforeEach(async () => {
-      allContractsDeployment = await loadFixture(depositBnbFixture);      
-      user = allContractsDeployment.accounts.user; 
+      allContractsDeployment = await loadFixture(depositBnbFixture);
+      user = allContractsDeployment.accounts.user;
     });
 
     it("should create a claim request", async () => {
@@ -158,27 +158,27 @@ describe("Stakepool tests", function () {
       expect(await stakedBNBTokenConnectedUser.send(stakePool.address, stkBnbBalance, [])).to.not.be.reverted;
       expect(await stakePool.bnbToUnbond()).to.be.equal(stkBnbBalance);
       expect(await stakePool.getClaimRequestCount(user.address)).to.be.equal(ethers.constants.One);
-      
+
       const blockNumber = await ethers.provider.getBlockNumber();
-      
-      const {weiToReturn, createdAt } = await stakePool.claimReqs(user.address, 0);
-      
+
+      const { weiToReturn, createdAt } = await stakePool.claimReqs(user.address, 0);
+
       const targetBlock = await ethers.provider.getBlock(blockNumber);
-      
+
       expect(weiToReturn).to.be.equal(ethers.constants.WeiPerEther);
       expect(createdAt.toNumber()).to.be.equal(targetBlock.timestamp);
     });
 
     it("should claim", async () => {
       const { stakePool } = allContractsDeployment.contracts;
-      const { user, bot} = allContractsDeployment.accounts;
+      const { user, bot } = allContractsDeployment.accounts;
 
       const stakedBNBTokenConnectedUser = allContractsDeployment.contracts.stakedBNBToken.connect(user);
 
       const stkBnbBalance = await stakedBNBTokenConnectedUser.balanceOf(user.address);
 
       expect(await stakedBNBTokenConnectedUser.send(stakePool.address, stkBnbBalance, [])).to.not.be.reverted;
-      
+
       const stakePoolConnectedBot = stakePool.connect(bot);
 
       await stakePoolConnectedBot.unbondingInitiated(ethers.constants.WeiPerEther);
@@ -194,45 +194,56 @@ describe("Stakepool tests", function () {
     });
   });
 
-  describe("V2 claims", () => {
+  describe("V2 claim features", () => {
     let allContractsDeployment: AllContractsDeployment;
+    let stakedBNBTokenConnectedUser: StakedBNBToken
     let user: SignerWithAddress;
-    let stakePoolConnectedUser: StakePool
+    let stakePool: StakePool;
     let latestClaimIndex: BigNumber;
 
-    beforeEach(async () => {
-      allContractsDeployment = await loadFixture(createClaimFixture);      
-      user = allContractsDeployment.accounts.user; 
-      stakePoolConnectedUser = allContractsDeployment.contracts.stakePool.connect(user) as StakePool;
-      
-      const claimRequestCount = await stakePoolConnectedUser.getClaimRequestCount(user.address);
-      latestClaimIndex = claimRequestCount.sub(1); // Because arrays are indexed from 0
-    });
+    describe("Instant Claim", () => {
+      let allContractsDeployment: AllContractsDeployment;
+      let stakedBNBTokenConnectedUser: StakedBNBToken
+      let user: SignerWithAddress;
+      let stakePool: StakePool;
 
-    describe("instant claim", () => {
-      it("should instantClaim successfully", async () => {
-        await expect(stakePoolConnectedUser.instantClaim(latestClaimIndex)).not.to.be.reverted;
+      beforeEach(async () => {
+        allContractsDeployment = await loadFixture(depositBnbFixture);
+        user = allContractsDeployment.accounts.user;
+        stakedBNBTokenConnectedUser = allContractsDeployment.contracts.stakedBNBToken.connect(user) as StakedBNBToken;
+        stakePool = allContractsDeployment.contracts.stakePool as StakePool;
       });
-  
+
+      it("should instantClaim successfully", async () => {
+        await expect(stakedBNBTokenConnectedUser.send(stakePool.address, ethers.constants.WeiPerEther, Buffer.from("instant"))).not.to.be.reverted;
+      });
+
       it("should update the balances correctly when using instantClaim", async () => {
         const feePercentage = 1; // TODO: Get from contract
         const expectedValue = ethers.constants.WeiPerEther.mul(100 - feePercentage).div(100);
-  
-        await expect(stakePoolConnectedUser.instantClaim(latestClaimIndex))
+
+        console.log(await stakedBNBTokenConnectedUser.balanceOf(user.address));
+
+        await expect(stakedBNBTokenConnectedUser.send(stakePool.address, ethers.constants.WeiPerEther, Buffer.from("instant")))
           .to.changeEtherBalances(
-            [user, stakePoolConnectedUser], 
+            [user, stakePool],
             [expectedValue, expectedValue.mul(-1)]
           );
       });
     });
 
-    describe("automatedClaim", () => {
+    describe("Automated Claim", () => {
       let signature: string;
       let stakePool: StakePool;
 
       beforeEach(async () => {
+        allContractsDeployment = await loadFixture(createClaimFixture);
+        user = allContractsDeployment.accounts.user;
+        stakedBNBTokenConnectedUser = allContractsDeployment.contracts.stakedBNBToken.connect(user) as StakedBNBToken;
         stakePool = allContractsDeployment.contracts.stakePool as StakePool;
-        const { user } = allContractsDeployment.accounts;
+        latestClaimIndex = (await stakePool.getClaimRequestCount(user.address)).sub(1); // Because arrays are indexed from 0
+
+        stakePool = allContractsDeployment.contracts.stakePool as StakePool;
 
         const claim: ClaimArgs = {
           index: latestClaimIndex
@@ -240,7 +251,7 @@ describe("Stakepool tests", function () {
 
         signature = await user._signTypedData(allContractsDeployment.domains.StakePoolDomain, ClaimDataType, claim);
 
-        await time.increase(24*3600*16);
+        await time.increase(24 * 3600 * 16);
       });
 
       it("should make an automatedClaim successfully", async () => {
@@ -261,7 +272,7 @@ describe("Stakepool tests", function () {
     let stakePool: StakePool;
 
     describe("after upgrade", () => {
-      beforeEach(async () => { 
+      beforeEach(async () => {
         allContractsDeployment = await loadFixture(deployProtocolContractsV1Fixture);
         stakePoolV1 = allContractsDeployment.contracts.stakePool as StakePoolV1;
         stakePool = await upgradeStakePoolV2(stakePoolV1.address, STAKE_POOL_CONFIG_V2);
@@ -275,15 +286,15 @@ describe("Stakepool tests", function () {
     describe("with upgrade", () => {
       let user: SignerWithAddress;
       let latestClaimIndex: BigNumber;
-      
-      beforeEach(async () => { 
+
+      beforeEach(async () => {
         allContractsDeployment = await loadFixture(createClaimV1Fixture);
-        
+
         stakePoolV1 = allContractsDeployment.contracts.stakePool as StakePoolV1;
         stakePool = await upgradeStakePoolV2(stakePoolV1.address, STAKE_POOL_CONFIG_V2);
 
         await stakePool.unpause();
-        
+
         user = allContractsDeployment.accounts.user;
 
         const claimRequestCount = await stakePool.getClaimRequestCount(user.address);
@@ -292,7 +303,7 @@ describe("Stakepool tests", function () {
 
       it("should finish a claim successfully", async () => {
         const stakePoolConnectedUser = stakePool.connect(user);
-        await time.increase(24*3600*16);
+        await time.increase(24 * 3600 * 16);
         await expect(stakePoolConnectedUser.claim(latestClaimIndex)).not.to.be.reverted;
 
       });
@@ -304,13 +315,8 @@ describe("Stakepool tests", function () {
 
         const signature = await user._signTypedData(allContractsDeployment.domains.StakePoolDomain, ClaimDataType, claim);
 
-        await time.increase(24*3600*16);
+        await time.increase(24 * 3600 * 16);
         await expect(stakePool.automatedClaim(signature, latestClaimIndex, user.address)).not.to.be.reverted;
-      });
-
-      it("should finish an instantClaim successfully", async () => {
-        const stakePoolConnectedUser = stakePool.connect(user);
-        await expect(stakePoolConnectedUser.instantClaim(latestClaimIndex))
       });
     });
   });
