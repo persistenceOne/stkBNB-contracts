@@ -12,29 +12,29 @@ import { stakePoolSetUp } from '../helpers/setUps/stakePool';
 // NOTE: ERC-1820 Registry deployed by default, check the hardhat config file.
 
 async function main() {
-    console.log("Ecosystem local deployment");
-    console.log("mnemonic:", CONFIG.mnemonic);
+    console.log('Ecosystem local deployment');
+    console.log('mnemonic:', CONFIG.mnemonic);
     const [deployer, bot] = await ethers.getSigners();
-    console.log("deployer address", await deployer.getAddress());
-    console.log("deployer balance", await deployer.getBalance());
+    console.log('deployer address', await deployer.getAddress());
+    console.log('deployer balance', await deployer.getBalance());
     const provider = deployer.provider as Provider;
-    console.log("network", await provider.getNetwork());
+    console.log('network', await provider.getNetwork());
 
     const contracts = await deployAllContracts(
-        DAY_SECONDS, 
-        STAKE_POOL_CONFIG, 
-        STAKE_POOL_CONFIG_V2, 
-        [deployer.address], 
-        [deployer.address]
+        DAY_SECONDS,
+        STAKE_POOL_CONFIG,
+        STAKE_POOL_CONFIG_V2,
+        [deployer.address],
+        [deployer.address],
     );
 
-    console.log("stake pool address");
+    console.log('stake pool address');
     console.log(contracts.stakePool.address);
 
-    console.log("filling address store");
+    console.log('filling address store');
     await fillAddressStore(contracts);
 
-    console.log("setting up stake pool");
+    console.log('setting up stake pool');
     await stakePoolSetUp(contracts.stakePool, bot.address);
 }
 

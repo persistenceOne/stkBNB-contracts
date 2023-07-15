@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.7;
 
-import {ITokenHub} from "./../../contracts/interfaces/ITokenHub.sol";
+import { ITokenHub } from "./../../contracts/interfaces/ITokenHub.sol";
 
 contract TokenHubMock is ITokenHub {
     uint256 public constant TEN_DECIMALS = 1e10;
