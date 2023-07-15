@@ -115,8 +115,7 @@ export default {
             blockGasLimit: 40000000,
         },
         testnet: {
-            // url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-            url: 'https://rpc.ankr.com/bsc_testnet_chapel',
+            url: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
             chainId: 97,
             gasPrice: 20000000000,
             blockGasLimit: 40000000,
