@@ -314,7 +314,9 @@ contract StakePool is
         _disableInitializers();
     }
 
-    function reinitialize(ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_) public reinitializer(2) {
+    function reinitialize(
+        ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_
+    ) public reinitializer(3) {
         _paused = true; // to ensure that nothing happens until the whole system is setup
 
         // set contract state variables
@@ -450,7 +452,7 @@ contract StakePool is
         address from,
         address to,
         uint256 amount,
-        bytes calldata /*userData*/,
+        bytes calldata userData,
         bytes calldata /*operatorData*/
     )
         external
@@ -474,6 +476,11 @@ contract StakePool is
         }
 
         _withdraw(from, amount);
+
+        // Potentially add routing here from different protocols
+        if (keccak256(abi.encodePacked(userData)) == keccak256(abi.encodePacked("instant"))) {
+            _instantClaim(from, claimReqs[from].length - 1);
+        }
     }
 
     /**
@@ -509,39 +516,6 @@ contract StakePool is
         if (!_claim(index, msg.sender, false)) {
             revert CantClaimBeforeDeadline();
         }
-    }
-
-    // TODO: Unite the claim functions
-    function instantClaim(uint256 index) external whenNotPaused nonReentrant {
-        // Find the request
-        if (index >= claimReqs[msg.sender].length) {
-            revert IndexOutOfBounds(index);
-        }
-
-        ClaimRequest memory req = claimReqs[msg.sender][index];
-
-        // Check if there are enough funds to satify the request
-        uint256 excessBNB = address(this).balance - _claimReserve;
-
-        if (excessBNB < req.weiToReturn) {
-            revert InsufficientFundsToSatisfyClaim();
-        }
-
-        // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
-        claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
-        claimReqs[msg.sender].pop();
-
-        // Deduct the convenience fee
-        // TODO: This is ugly, make it beautiful - look at the libs, what do they use
-        uint256 valueToReturn = (req.weiToReturn * (100 - claimFeeConfig.instantClaimFeePercentage)) /
-            100;
-
-        // return BNB back to user (which can be anyone: EOA or a contract)
-        (bool sent /*memory data*/, ) = msg.sender.call{ value: valueToReturn }("");
-        if (!sent) {
-            revert BNBTransferToUserFailed();
-        }
-        emit Claim(msg.sender, req, block.timestamp);
     }
 
     function automatedClaim(
@@ -884,6 +858,50 @@ contract StakePool is
         }
         emit Claim(claimOwner, req, block.timestamp);
         return true;
+    }
+
+    /**
+     * @dev _instantClaim: Called by a user to initiate the withdrawal of their staked BNB.
+     *  The BNB will be available for withdrawal after the unstaking period.
+     *  The user will receive the BNB in their account instantly.
+     *  Make sure to call only from nonReentrant functions.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     * @param user: The address of the user who is initiating the claim.
+     * @param index: The index of the ClaimRequest which is to be claimed. Left for future flexibility purposes only.
+     */
+    function _instantClaim(address user, uint256 index) internal whenNotPaused {
+        // Find the request
+        if (index >= claimReqs[user].length) {
+            revert IndexOutOfBounds(index);
+        }
+
+        ClaimRequest memory req = claimReqs[user][index];
+
+        // Check if there are enough funds to satify the request
+        uint256 excessBNB = address(this).balance - _claimReserve;
+
+        if (excessBNB < req.weiToReturn) {
+            revert InsufficientFundsToSatisfyClaim();
+        }
+
+        // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
+        claimReqs[user][index] = claimReqs[user][claimReqs[user].length - 1];
+        claimReqs[user].pop();
+
+        // Deduct the convenience fee
+        // TODO: This is ugly, make it beautiful - look at the libs, what do they use
+        uint256 valueToReturn = (req.weiToReturn *
+            (100 - claimFeeConfig.instantClaimFeePercentage)) / 100;
+
+        // return BNB back to user (which can be anyone: EOA or a contract)
+        (bool sent /*memory data*/, ) = user.call{ value: valueToReturn }("");
+        if (!sent) {
+            revert BNBTransferToUserFailed();
+        }
+        emit Claim(user, req, block.timestamp);
     }
 
     /**
