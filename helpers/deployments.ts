@@ -3,7 +3,6 @@ import { BigNumberish } from "ethers";
 import { ethers, upgrades } from "hardhat";
 import { StakePoolConfig, StakePoolConfigV2 } from '../scripts/types/config';
 import { Contracts } from './types';
-import { STAKE_POOL_CONFIG_V2 } from '../test/helpers/constants';
 
 export async function deployAddressStore(): Promise<AddressStore> {
   const AddressStore = await ethers.getContractFactory("AddressStore");
