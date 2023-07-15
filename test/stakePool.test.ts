@@ -58,7 +58,6 @@ describe("Stakepool tests", function () {
       const stakePoolConnectedUser = stakePool.connect(user);
       expect(await stakePoolConnectedUser.deposit({ value: ethers.constants.WeiPerEther })).to.not.be.reverted;
     });
-
     it("should mint stkBNB correctly", async () => {
       const allContractsDeployment = await loadFixture(setupProtocolFixture);
       const { stakePool, stakedBNBToken } = allContractsDeployment.contracts;
@@ -178,7 +177,6 @@ describe("Stakepool tests", function () {
       const stkBnbBalance = await stakedBNBTokenConnectedUser.balanceOf(user.address);
 
       expect(await stakedBNBTokenConnectedUser.send(stakePool.address, stkBnbBalance, [])).to.not.be.reverted;
-
       const stakePoolConnectedBot = stakePool.connect(bot);
 
       await stakePoolConnectedBot.unbondingInitiated(ethers.constants.WeiPerEther);
@@ -221,8 +219,6 @@ describe("Stakepool tests", function () {
       it("should update the balances correctly when using instantClaim", async () => {
         const feePercentage = 1; // TODO: Get from contract
         const expectedValue = ethers.constants.WeiPerEther.mul(100 - feePercentage).div(100);
-
-        console.log(await stakedBNBTokenConnectedUser.balanceOf(user.address));
 
         await expect(stakedBNBTokenConnectedUser.send(stakePool.address, ethers.constants.WeiPerEther, Buffer.from("instant")))
           .to.changeEtherBalances(
@@ -294,7 +290,6 @@ describe("Stakepool tests", function () {
         stakePool = await upgradeStakePoolV2(stakePoolV1.address, STAKE_POOL_CONFIG_V2);
 
         await stakePool.unpause();
-
         user = allContractsDeployment.accounts.user;
 
         const claimRequestCount = await stakePool.getClaimRequestCount(user.address);
