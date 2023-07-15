@@ -1,6 +1,6 @@
 import { CONFIG } from './types/config';
 import { upgradeStakePoolV2 } from '../helpers/deployments';
-import { StakePoolConfigV2 } from './../scripts/types/config';
+import { StakePoolConfigV2 } from './types/config';
 import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 import { Provider } from '@ethersproject/providers';
