@@ -146,7 +146,7 @@ contract StakePool is
     /**
      * @dev EIP712 claim typehash
      */
-    bytes32 public claimTypehash; // TODO: Initialize
+    bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(uint256 index)");
 
     /**
      * @dev Configuration for the V2 contract. You can modify this variable in the future upgrades for config variables.
@@ -329,10 +329,6 @@ contract StakePool is
                 address(this)
             )
         );
-
-        claimTypehash = keccak256("Claim(uint256 index)");
-
-        claimFeeConfig._init(claimFeeConfig_);
     }
 
     /*********************
@@ -380,7 +376,7 @@ contract StakePool is
 
     function updateClaimFeeConfig(
         ClaimFeeConfig.ClaimFeeConfigData calldata claimFeeConfig_
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external whenPaused onlyRole(DEFAULT_ADMIN_ROLE) {
         claimFeeConfig._init(claimFeeConfig_);
         emit ClaimFeeConfigUpdated();
     }
