@@ -144,9 +144,14 @@ contract StakePool is
     bytes32 public domainSeparator;
 
     /**
-     * @dev EIP712 claim typehash
+     * @dev EIP712 typehash vars
      */
     bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(uint256 index)");
+    bytes32 internal constant EIP712_REVISION_HASH = keccak256("1");
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(address campaign,string version,uint256 chainId,address verifyingContract)"
+        );
 
     /**
      * @dev Configuration for the V2 contract. You can modify this variable in the future upgrades for config variables.
@@ -329,6 +334,50 @@ contract StakePool is
                 address(this)
             )
         );
+    }
+
+    function initialize(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) public initializer {
+        __StakePool_init(addressStore_, config_);
+    }
+
+    function __StakePool_init(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) internal onlyInitializing {
+        // Need to call initializers for each parent without calling anything twice.
+        // So, we need to individually see each parent's initializer and not call the initializer's that have already been called.
+        //      1. __AccessControlEnumerable_init => This is empty in the current openzeppelin v0.4.6
+
+        // Finally, initialize this contract.
+        __StakePool_init_unchained(addressStore_, config_);
+    }
+
+    function __StakePool_init_unchained(
+        IAddressStore addressStore_,
+        Config.Data calldata config_
+    ) internal onlyInitializing {
+        // set contract state variables
+        _addressStore = addressStore_;
+        config._init(config_);
+        _paused = true; // to ensure that nothing happens until the whole system is setup
+        _status = _NOT_ENTERED;
+        _bnbToUnbond = 0;
+        _bnbUnbonding = 0;
+        _claimReserve = 0;
+        exchangeRate._init();
+
+        // register interfaces
+        _ERC1820_REGISTRY.setInterfaceImplementer(
+            address(this),
+            keccak256("ERC777TokensRecipient"),
+            address(this)
+        );
+
+        // Make the deployer the default admin, deployer will later transfer this role to a multi-sig.
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /*********************
@@ -891,6 +940,40 @@ contract StakePool is
      */
     function _canBeClaimed(ClaimRequest memory req) internal view returns (bool) {
         return block.timestamp > req.createdAt + config.cooldownPeriod;
+    }
+
+    function _validateRecoveredAddress(
+        bytes32 digest,
+        address expectedAddress,
+        DataTypes.EIP712Signature calldata sig
+    ) internal view {
+        require(sig.deadline < block.timestamp, "ERR_SIGNATURE_EXPIRED");
+        address recoveredAddress = ecrecover(digest, sig.v, sig.r, sig.s);
+        require(recoveredAddress != address(0) && recoveredAddress == expectedAddress, "ERR_INVALID_SIGNATURE");
+    }
+
+    function _calculateDomainSeparator() internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    EIP712_DOMAIN_TYPEHASH,
+                    keccak256(abi.encode(address(this))),
+                    EIP712_REVISION_HASH,
+                    block.chainid,
+                    address(this)
+                )
+            );
+    }
+
+    function _calculateDigest(bytes32 hashedMessage) internal view returns (bytes32) {
+        bytes32 digest;
+        unchecked {
+            digest = keccak256(
+                abi.encodePacked('\x19\x01', _calculateDomainSeparator(), hashedMessage)
+            );
+        }
+        
+        return digest;
     }
 }
 
