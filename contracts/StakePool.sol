@@ -12,50 +12,47 @@ import "./embedded-libs/ExchangeRate.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakedBNBToken.sol";
 import "./interfaces/IStakePoolBot.sol";
-import "./interfaces/ITokenHub.sol";
 import "./interfaces/IUndelegationHolder.sol";
 
 // TODO:
 // * Tests
-contract StakePool is
-    IStakePoolBot,
-    IERC777RecipientUpgradeable,
-    Initializable,
-    AccessControlEnumerableUpgradeable
-{
-    /*********************
+contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable, AccessControlEnumerableUpgradeable {
+    /**
+     *
      * LIB USAGES
-     ********************/
-
+     *
+     */
     using Config for Config.Data;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
     using SafeCastUpgradeable for uint256;
 
-    /*********************
+    /**
+     *
      * STRUCTS
-     ********************/
-
+     *
+     */
     struct ClaimRequest {
         uint256 weiToReturn; // amount of wei that should be returned to user on claim
         uint256 createdAt; // block timestamp when this request was created
     }
 
-    /*********************
+    /**
+     *
      * RBAC ROLES
-     ********************/
-
+     *
+     */
     bytes32 public constant BOT_ROLE = keccak256("BOT_ROLE"); // Bots can be added/removed through AccessControl
 
-    /*********************
+    /**
+     *
      * CONSTANTS
-     ********************/
-
+     *
+     */
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
         IERC1820RegistryUpgradeable(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
     address private constant _ZERO_ADDR = 0x0000000000000000000000000000000000000000;
-    ITokenHub private constant _TOKEN_HUB = ITokenHub(0x0000000000000000000000000000000000001004);
 
     // Booleans are more expensive than uint256 or any type that takes up a full
     // word because each write operation emits an extra SLOAD to first read the
@@ -71,10 +68,11 @@ contract StakePool is
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
 
-    /*********************
+    /**
+     *
      * STATE VARIABLES
-     ********************/
-
+     *
+     */
     IAddressStore internal _addressStore; // Used to fetch addresses of the other contracts in the system.
     Config.Data public config; // the contract configuration
 
@@ -132,24 +130,16 @@ contract StakePool is
      */
     mapping(address => ClaimRequest[]) public claimReqs;
 
-    /*********************
+    /**
+     *
      * EVENTS
-     ********************/
+     *
+     */
     event ConfigUpdated(); // emitted when config is updated
-    event Deposit(
-        address indexed user,
-        uint256 bnbAmount,
-        uint256 poolTokenAmount,
-        uint256 timestamp
-    );
-    event Withdraw(
-        address indexed user,
-        uint256 poolTokenAmount,
-        uint256 bnbAmount,
-        uint256 timestamp
-    );
+    event Deposit(address indexed user, uint256 bnbAmount, uint256 poolTokenAmount, uint256 timestamp);
+    event Withdraw(address indexed user, uint256 poolTokenAmount, uint256 bnbAmount, uint256 timestamp);
     event Claim(address indexed user, ClaimRequest req, uint256 timestamp);
-    event InitiateDelegation_TransferOut(uint256 transferOutAmount); // emitted during initiateDelegation
+    event InitiateDelegation_Transfered(uint256 transferAmount); // emitted during initiateDelegation
     event InitiateDelegation_ShortCircuit(uint256 shortCircuitAmount); // emitted during initiateDelegation
     event InitiateDelegation_Success(); // emitted during initiateDelegation
     event EpochUpdate(uint256 bnbRewards, uint256 feeTokens); // emitted on epochUpdate
@@ -158,10 +148,11 @@ contract StakePool is
     event Paused(address account); // emitted when the pause is triggered by `account`.
     event Unpaused(address account); // emitted when the pause is lifted by `account`.
 
-    /*********************
+    /**
+     *
      * ERRORS
-     ********************/
-
+     *
+     */
     error UnknownSender();
     error LessThanMinimum(string tag, uint256 expected, uint256 got);
     error DustNotAllowed(uint256 dust);
@@ -177,21 +168,19 @@ contract StakePool is
     error PausablePaused();
     error PausableNotPaused();
     error ReentrancyGuardReentrantCall();
-    error TransferOutFailed();
+    error TransferFailed();
 
-    /*********************
+    /**
+     *
      * MODIFIERS
-     ********************/
+     *
+     */
 
     /**
      * @dev Checks that gotVal is at least minVal. Otherwise, reverts with the given tag.
      * Also ensures that the gotVal doesn't have token dust based on minVal.
      */
-    modifier checkMinAndDust(
-        string memory tag,
-        uint256 minVal,
-        uint256 gotVal
-    ) {
+    modifier checkMinAndDust(string memory tag, uint256 minVal, uint256 gotVal) {
         _checkMinAndDust(tag, minVal, gotVal);
         _;
     }
@@ -233,16 +222,17 @@ contract StakePool is
         _nonReentrantPost();
     }
 
-    /*********************
+    /**
+     *
      * MODIFIERS FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev A modifier is replaced by all the code in its definition. This leads to increase in compiled contract size.
      * Creating functions for the code inside a modifier, helps reduce the contract size as now the modifier will be
      * replaced by just the function call, instead of all the lines in these functions.
      */
-
     function _checkMinAndDust(string memory tag, uint256 minVal, uint256 gotVal) private pure {
         if (gotVal < minVal) {
             revert LessThanMinimum(tag, minVal, gotVal);
@@ -281,26 +271,22 @@ contract StakePool is
         _status = _NOT_ENTERED;
     }
 
-    /*********************
+    /**
+     *
      * INIT FUNCTIONS
-     ********************/
+     *
+     */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(
-        IAddressStore addressStore_,
-        Config.Data calldata config_
-    ) public initializer {
+    function initialize(IAddressStore addressStore_, Config.Data calldata config_) public initializer {
         __StakePool_init(addressStore_, config_);
     }
 
-    function __StakePool_init(
-        IAddressStore addressStore_,
-        Config.Data calldata config_
-    ) internal onlyInitializing {
+    function __StakePool_init(IAddressStore addressStore_, Config.Data calldata config_) internal onlyInitializing {
         // Need to call initializers for each parent without calling anything twice.
         // So, we need to individually see each parent's initializer and not call the initializer's that have already been called.
         //      1. __AccessControlEnumerable_init => This is empty in the current openzeppelin v0.4.6
@@ -309,10 +295,10 @@ contract StakePool is
         __StakePool_init_unchained(addressStore_, config_);
     }
 
-    function __StakePool_init_unchained(
-        IAddressStore addressStore_,
-        Config.Data calldata config_
-    ) internal onlyInitializing {
+    function __StakePool_init_unchained(IAddressStore addressStore_, Config.Data calldata config_)
+        internal
+        onlyInitializing
+    {
         // set contract state variables
         _addressStore = addressStore_;
         config._init(config_);
@@ -324,19 +310,17 @@ contract StakePool is
         exchangeRate._init();
 
         // register interfaces
-        _ERC1820_REGISTRY.setInterfaceImplementer(
-            address(this),
-            keccak256("ERC777TokensRecipient"),
-            address(this)
-        );
+        _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777TokensRecipient"), address(this));
 
         // Make the deployer the default admin, deployer will later transfer this role to a multi-sig.
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    /*********************
+    /**
+     *
      * ADMIN FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev pause: Used by admin to pause the contract.
@@ -377,9 +361,11 @@ contract StakePool is
         emit ConfigUpdated();
     }
 
-    /*********************
+    /**
+     *
      * USER FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev deposit: Called by a user to deposit BNB to the contract in exchange for stkBNB.
@@ -401,10 +387,7 @@ contract StakePool is
         uint256 poolTokensUser = poolTokensToReturn - poolTokensDepositFee;
 
         // update the exchange rate using the wei amount for which tokens will be minted
-        exchangeRate._update(
-            ExchangeRate.Data(userWei, poolTokensToReturn),
-            ExchangeRate.UpdateOp.Add
-        );
+        exchangeRate._update(ExchangeRate.Data(userWei, poolTokensToReturn), ExchangeRate.UpdateOp.Add);
 
         // mint the tokens for appropriate accounts
         IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
@@ -438,19 +421,13 @@ contract StakePool is
      * - The contract must not be paused.
      */
     function tokensReceived(
-        address /*operator*/,
+        address, /*operator*/
         address from,
         address to,
         uint256 amount,
-        bytes calldata /*userData*/,
+        bytes calldata, /*userData*/
         bytes calldata /*operatorData*/
-    )
-        external
-        override
-        whenNotPaused
-        nonReentrant
-        checkMinAndDust("Withdrawal", config.minTokenWithdrawal, amount)
-    {
+    ) external override whenNotPaused nonReentrant checkMinAndDust("Withdrawal", config.minTokenWithdrawal, amount) {
         // checks
         if (msg.sender != _addressStore.getStkBNB()) {
             revert UnknownSender();
@@ -503,13 +480,15 @@ contract StakePool is
         }
     }
 
-    /*********************
+    /**
+     *
      * BOT FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
-     * staking address on BBC.
+     * staking address on BSC.
      * Call frequency:
      *      Mainnet: Daily
      *      Testnet: Daily
@@ -517,37 +496,20 @@ contract StakePool is
     function initiateDelegation() external override whenNotPaused onlyRole(BOT_ROLE) {
         // contract will always have at least the _claimReserve, so this should never overflow.
         uint256 excessBNB = address(this).balance - _claimReserve;
-        // token hub expects only 8 decimals in the cross-chain transfer value to avoid any precision loss
-        // so, remove the insignificant 10 decimals
-        uint256 transferOutValue = excessBNB - (excessBNB % 1e10);
-        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
-
-        // Initiate a cross-chain transfer only if we have enough amount.
-        if (transferOutValue >= miniRelayFee + config.minCrossChainTransfer) {
-            // this would always be at least config.minCrossChainTransfer
-            uint256 transferOutAmount = transferOutValue - miniRelayFee;
-            // We are charging the relay fee from the user funds. Similarly, any other fees on the BBC would be
-            // paid from user funds. This will eventually lead to the total BNB with the protocol to be less than what
-            // is accounted in the exchangeRate. This might lead to claims not working in case of a black swan event.
-            // So, we must pay back the fee losses to the protocol to ensure the protocol correctness.
-            // For this, we will monitor the fee losses, and pay them back to the protocol periodically.
+        // Initiate a transfer only if deposited BNB > minDelegationAmount
+        if (excessBNB >= config.minDelegationAmount) {
             // Note that the probability of a black swan event is very low. On top of that, as time passes, we will be
             // accumulating some stkBNB as rewards in FeeVault. This implies that our share of BNB in the pool will
             // keep increasing over time. As long as this share is more than the total fee spent till that time, we need
             // not worry about paying back the fee losses. Also, for us to be economically successful, we must set
             // protocol fee rates in a way so that the rewards we earn via FeeVault are significantly more than the fee
             // we are paying for the protocol operations.
-            bool success = _TOKEN_HUB.transferOut{ value: transferOutValue }(
-                _ZERO_ADDR,
-                config.bcStakingWallet,
-                transferOutAmount,
-                uint64(block.timestamp + config.transferOutTimeout)
-            );
+            (bool success, /* bytes memory data */ ) = payable(config.bscStakingWallet).call{value: excessBNB}("");
             if (!success) {
-                revert TransferOutFailed();
+                revert TransferFailed();
             }
 
-            emit InitiateDelegation_TransferOut(transferOutAmount);
+            emit InitiateDelegation_Transfered(excessBNB);
         } else if (excessBNB > 0 && _bnbToUnbond > 0) {
             // if the excess amount is so small that it can't be moved to BBC and there is _bnbToUnbond, short-circuit
             // the bot process and directly update the _claimReserve. This way, we will still be able to satisfy claims
@@ -594,19 +556,13 @@ contract StakePool is
     function epochUpdate(uint256 bnbRewards) external override whenNotPaused onlyRole(BOT_ROLE) {
         // calculate fee
         uint256 feeWei = config.fee.reward._apply(bnbRewards);
-        uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) /
-            (exchangeRate.totalWei + bnbRewards - feeWei);
+        uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) / (exchangeRate.totalWei + bnbRewards - feeWei);
 
         // update exchange rate
         exchangeRate._update(ExchangeRate.Data(bnbRewards, feeTokens), ExchangeRate.UpdateOp.Add);
 
         // mint the fee tokens to FeeVault
-        IStakedBNBToken(_addressStore.getStkBNB()).mint(
-            _addressStore.getFeeVault(),
-            feeTokens,
-            "",
-            ""
-        );
+        IStakedBNBToken(_addressStore.getStkBNB()).mint(_addressStore.getFeeVault(), feeTokens, "", "");
 
         // emit the ack event
         emit EpochUpdate(bnbRewards, feeTokens);
@@ -621,9 +577,7 @@ contract StakePool is
      * @param bnbUnbonding_: The amount of BNB for which unbonding was initiated on BBC.
      *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
-    function unbondingInitiated(
-        uint256 bnbUnbonding_
-    ) external override whenNotPaused onlyRole(BOT_ROLE) {
+    function unbondingInitiated(uint256 bnbUnbonding_) external override whenNotPaused onlyRole(BOT_ROLE) {
         _bnbToUnbond -= bnbUnbonding_.toInt256();
         _bnbUnbonding += bnbUnbonding_;
 
@@ -642,8 +596,8 @@ contract StakePool is
     function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
         // the unbondedAmount can never be more than _bnbUnbonding. UndelegationHolder takes care of that.
         // So, no need to worry about arithmetic overflows.
-        uint256 unbondedAmount = IUndelegationHolder(payable(_addressStore.getUndelegationHolder()))
-            .withdrawUnbondedBNB();
+        uint256 unbondedAmount =
+            IUndelegationHolder(payable(_addressStore.getUndelegationHolder())).withdrawUnbondedBNB();
         _bnbUnbonding -= unbondedAmount;
         _claimReserve += unbondedAmount;
 
@@ -661,9 +615,11 @@ contract StakePool is
         // Any necessary events for recording the balance change are emitted in unbondingFinished().
     }
 
-    /*********************
+    /**
+     *
      * VIEWS
-     ********************/
+     *
+     */
 
     /**
      * @return the address store
@@ -715,11 +671,11 @@ contract StakePool is
      * @param from: List start index (inclusive).
      * @param to: List end index (exclusive).
      */
-    function getPaginatedClaimRequests(
-        address user,
-        uint256 from,
-        uint256 to
-    ) external view returns (ClaimRequest[] memory) {
+    function getPaginatedClaimRequests(address user, uint256 from, uint256 to)
+        external
+        view
+        returns (ClaimRequest[] memory)
+    {
         if (from >= claimReqs[user].length) {
             revert IndexOutOfBounds(from);
         }
@@ -739,10 +695,11 @@ contract StakePool is
         return paginatedClaimRequests;
     }
 
-    /*********************
+    /**
+     *
      * INTERNAL FUNCTIONS
-     ********************/
-
+     *
+     */
     function _withdraw(address from, uint256 amount) internal {
         uint256 poolTokensFee = config.fee.withdraw._apply(amount);
         uint256 poolTokensToBurn = amount - poolTokensFee;
@@ -757,10 +714,7 @@ contract StakePool is
         _bnbToUnbond += weiToReturn.toInt256();
 
         // update the exchange rate to reflect the balance changes
-        exchangeRate._update(
-            ExchangeRate.Data(weiToReturn, poolTokensToBurn),
-            ExchangeRate.UpdateOp.Subtract
-        );
+        exchangeRate._update(ExchangeRate.Data(weiToReturn, poolTokensToBurn), ExchangeRate.UpdateOp.Subtract);
 
         IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
         // burn the non-fee tokens
@@ -808,7 +762,7 @@ contract StakePool is
         claimReqs[msg.sender].pop();
 
         // return BNB back to user (which can be anyone: EOA or a contract)
-        (bool sent /*memory data*/, ) = msg.sender.call{ value: req.weiToReturn }("");
+        (bool sent, /*memory data*/ ) = msg.sender.call{value: req.weiToReturn}("");
         if (!sent) {
             revert BNBTransferToUserFailed();
         }

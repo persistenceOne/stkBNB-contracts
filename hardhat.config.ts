@@ -1,13 +1,10 @@
 import { task } from 'hardhat/config';
-import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-web3';
-import '@nomiclabs/hardhat-etherscan';
+import '@nomiclabs/hardhat-ethers';
 import '@openzeppelin/hardhat-upgrades';
-import 'hardhat-gas-reporter';
-import 'solidity-coverage';
 import 'hardhat-contract-sizer';
-import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config';
-import { CONFIG } from './scripts/types/config';
+import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config.ts';
+import { CONFIG } from './scripts/types/config.ts';
 import 'hardhat-forta'; // forta
 import { ethers } from 'ethers';
 import { string } from 'hardhat/internal/core/params/argumentTypes';

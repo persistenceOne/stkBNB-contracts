@@ -13,17 +13,14 @@ library Config {
     error CooldownPeriodCantBeMoreThan30Days();
 
     struct Data {
-        // @dev The address of the staking wallet on the BBC chain. It will be used for transferOut transactions.
-        // It needs to be correctly converted from a bech32 BBC address to a solidity address.
-        address bcStakingWallet;
-        // @dev The minimum amount of BNB required to initiate a cross-chain transfer from BSC to BC.
-        // This should be at least minStakingAddrBalance + minDelegationAmount.
+        // @dev The address of the staking wallet on the BSC chain. It will be used for Delegate/Undelegate/Redelegate transactions.
+        address bscStakingWallet;
+        // @dev The minimum amount of BNB required to make delegation on BSC Native Staking Module.
+        // This should be at least minDelegationBNBChange in the StakeHub Contract.
         // Ideally, this should be set to a value such that the protocol revenue from this value is more than the fee
-        // lost on this value for cross-chain transfer/delegation/undelegation/etc.
+        // lost on this value for Native Staking Module delegation/undelegation/redelegation/etc.
         // But, finding the ideal value is non-deterministic.
-        uint256 minCrossChainTransfer;
-        // The timeout for the cross-chain transfer out operation in seconds.
-        uint256 transferOutTimeout;
+        uint256 minDelegationAmount;
         // @dev The minimum amount of BNB required to make a deposit to the contract.
         uint256 minBNBDeposit;
         // @dev The minimum amount of tokens required to make a withdrawal from the contract.
@@ -42,10 +39,7 @@ library Config {
 
     function _checkValid(Data calldata self) internal pure {
         self.fee._checkValid();
-        if (self.minCrossChainTransfer == 0) {
-            revert MustBeGreaterThanZero();
-        }
-        if (self.transferOutTimeout == 0) {
+        if (self.minDelegationAmount == 0) {
             revert MustBeGreaterThanZero();
         }
         if (self.minBNBDeposit > 1e18) {
@@ -60,9 +54,8 @@ library Config {
     }
 
     function _set(Data storage self, Data calldata obj) internal {
-        self.bcStakingWallet = obj.bcStakingWallet;
-        self.minCrossChainTransfer = obj.minCrossChainTransfer;
-        self.transferOutTimeout = obj.transferOutTimeout;
+        self.bscStakingWallet = obj.bscStakingWallet;
+        self.minDelegationAmount = obj.minDelegationAmount;
         self.minBNBDeposit = obj.minBNBDeposit;
         self.minTokenWithdrawal = obj.minTokenWithdrawal;
         self.cooldownPeriod = obj.cooldownPeriod;

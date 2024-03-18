@@ -20,5 +20,6 @@ module.exports = {
             },
         ],
         'no-process-exit': ['off'],
+        'node/no-unpublished-import': 'off',
     },
 };
