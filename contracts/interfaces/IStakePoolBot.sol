@@ -9,6 +9,16 @@ pragma solidity ^0.8.7;
  */
 interface IStakePoolBot {
     /**
+     *
+     * STRUCTS
+     *
+     */
+    struct DelegatorStakes {
+        uint256[] shares;
+        uint256[] bnbAmounts;
+    }
+
+    /**
      * @dev The amount that needs to be unbonded in the next unstaking epoch.
      * It increases on every user unstake operation, and decreases when the bot initiates unbonding.
      * This is queried by the bot in order to initiate unbonding.
@@ -50,13 +60,31 @@ interface IStakePoolBot {
     function claimReserve() external view returns (uint256);
 
     /**
+     * @dev The quantity of BNB within the stakepool contract, designated for delegation to the
+     * BSC Native Staking Module by the bot, at the commencement of the subsequent Epoch.
+     *
+     * Increase frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
+     * Decrease frequency: anytime
+     */
+    function getDeposits() external view returns (uint256);
+
+    /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
      * staking address on BC.
      * Call frequency:
      *      Mainnet: Daily
      *      Testnet: Daily
      */
-    function initiateDelegation() external;
+    function initiateDelegation(address[] calldata operators, uint256[] calldata bnbAmounts) external;
+
+    /**
+     * @dev This is called by the bot in order to redelegate BNB from one Validator
+     * to another Validator provided that the new validator exists
+     *
+     */
+    function initiateRedelegation(address srcValidator, address dstValidator, uint256 shares) external;
 
     /**
      * @dev Called by the bot to update the exchange rate in contract based on the rewards
@@ -70,15 +98,18 @@ interface IStakePoolBot {
     function epochUpdate(uint256 bnbRewards) external;
 
     /**
-     * @dev This is called by the bot after it has executed the unbond transaction on BBC.
+     * @dev This is called by the bot to undelegate 'bnbToUnbond' funds from the BSC Native Staking Module.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param bnbUnbonding: The amount of BNB for which unbonding was initiated on BC.
+     * @param operators   : The list of validators to undelegate from.
+     * @param amounts     : This struct contains bnbAmount and its corresponding shares from a validator.
+     *                      It will be calculated by the bot and feed to this function
      *                      It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
-    function unbondingInitiated(uint256 bnbUnbonding) external;
+    function unbondingInitiated(address[] calldata operators, DelegatorStakes calldata amounts) external;
 
     /**
      * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BBC
@@ -89,5 +120,5 @@ interface IStakePoolBot {
      *      Mainnet: Weekly
      *      Testnet: Daily
      */
-    function unbondingFinished() external;
+    function unbondingFinished(address[] calldata operators, uint256[] calldata requestNumbers) external;
 }

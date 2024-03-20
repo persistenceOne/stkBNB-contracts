@@ -11,7 +11,7 @@ contract AddressStore is IAddressStore, Ownable {
     string public constant STK_BNB = "stkBNB";
     string public constant FEE_VAULT = "FeeVault";
     string public constant STAKE_POOL = "StakePool";
-    string public constant UNDELEGATION_HOLDER = "UndelegationHolder";
+    string public constant DELEGATION_MANAGER = "DelegationManager";
 
     // the address store
     mapping(string => address) private _store;
@@ -43,8 +43,8 @@ contract AddressStore is IAddressStore, Ownable {
         setAddr(STAKE_POOL, addr);
     }
 
-    function setUndelegationHolder(address addr) external override {
-        setAddr(UNDELEGATION_HOLDER, addr);
+    function setDelegationManager(address addr) external override {
+        setAddr(DELEGATION_MANAGER, addr);
     }
 
     function getAddr(string memory key) public view override returns (address) {
@@ -67,7 +67,7 @@ contract AddressStore is IAddressStore, Ownable {
         return getAddr(STAKE_POOL);
     }
 
-    function getUndelegationHolder() external view override returns (address) {
-        return getAddr(UNDELEGATION_HOLDER);
+    function getDelegationManager() external view override returns (address) {
+        return getAddr(DELEGATION_MANAGER);
     }
 }

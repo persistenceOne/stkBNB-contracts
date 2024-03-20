@@ -13,7 +13,7 @@ interface IAddressStore {
 
     function setStakePool(address addr) external;
 
-    function setUndelegationHolder(address addr) external;
+    function setDelegationManager(address addr) external;
 
     function getAddr(string calldata key) external view returns (address);
 
@@ -25,5 +25,5 @@ interface IAddressStore {
 
     function getStakePool() external view returns (address);
 
-    function getUndelegationHolder() external view returns (address);
+    function getDelegationManager() external view returns (address);
 }

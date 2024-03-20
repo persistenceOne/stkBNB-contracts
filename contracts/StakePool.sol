@@ -12,7 +12,7 @@ import "./embedded-libs/ExchangeRate.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakedBNBToken.sol";
 import "./interfaces/IStakePoolBot.sol";
-import "./interfaces/IUndelegationHolder.sol";
+import "./interfaces/IDelegationManager.sol";
 
 // TODO:
 // * Tests
@@ -142,6 +142,9 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
     event InitiateDelegation_Transfered(uint256 transferAmount); // emitted during initiateDelegation
     event InitiateDelegation_ShortCircuit(uint256 shortCircuitAmount); // emitted during initiateDelegation
     event InitiateDelegation_Success(); // emitted during initiateDelegation
+    event Redelegation_Success(
+        address indexed srcValidator, address indexed dstValidator, uint256 shares, uint256 timeStamp
+    ); // emitted after a successfull redelegation
     event EpochUpdate(uint256 bnbRewards, uint256 feeTokens); // emitted on epochUpdate
     event UnbondingInitiated(uint256 bnbUnbonding); // emitted on unbondingInitiated
     event UnbondingFinished(uint256 unbondedAmount); // emitted on unbondingFinished
@@ -168,7 +171,10 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
     error PausablePaused();
     error PausableNotPaused();
     error ReentrancyGuardReentrantCall();
-    error TransferFailed();
+    error DepositsDelegationFailed();
+    error ArgumentsLengthMismatch();
+
+    error UndelegationFailed(address validator, uint256 shares);
 
     /**
      *
@@ -493,20 +499,32 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
      *      Mainnet: Daily
      *      Testnet: Daily
      */
-    function initiateDelegation() external override whenNotPaused onlyRole(BOT_ROLE) {
+    function initiateDelegation(address[] calldata operators, uint256[] calldata bnbAmounts)
+        external
+        override
+        whenNotPaused
+        onlyRole(BOT_ROLE)
+    {
+        if (operators.length != bnbAmounts.length) {
+            revert ArgumentsLengthMismatch();
+        }
         // contract will always have at least the _claimReserve, so this should never overflow.
-        uint256 excessBNB = address(this).balance - _claimReserve;
-        // Initiate a transfer only if deposited BNB > minDelegationAmount
-        if (excessBNB >= config.minDelegationAmount) {
+        uint256 excessBNB = getDeposits();
+
+        // Initiate a transfer only if deposited BNB > minDelegationAmount == 3 BNB
+        if (excessBNB > config.minDelegationAmount) {
             // Note that the probability of a black swan event is very low. On top of that, as time passes, we will be
             // accumulating some stkBNB as rewards in FeeVault. This implies that our share of BNB in the pool will
             // keep increasing over time. As long as this share is more than the total fee spent till that time, we need
             // not worry about paying back the fee losses. Also, for us to be economically successful, we must set
             // protocol fee rates in a way so that the rewards we earn via FeeVault are significantly more than the fee
             // we are paying for the protocol operations.
-            (bool success, /* bytes memory data */ ) = payable(config.bscStakingWallet).call{value: excessBNB}("");
-            if (!success) {
-                revert TransferFailed();
+            bool delegated = IDelegationManager(payable(_addressStore.getDelegationManager())).delegateDepositedBNB{
+                value: excessBNB
+            }(operators, bnbAmounts);
+
+            if (!delegated) {
+                revert DepositsDelegationFailed();
             }
 
             emit InitiateDelegation_Transfered(excessBNB);
@@ -545,6 +563,24 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
     }
 
     /**
+     * @dev This is called by the bot in order to redelegate BNB from one Validator
+     * to another Validator provided that the new validator exists
+     *
+     */
+    function initiateRedelegation(address srcValidator, address dstValidator, uint256 shares)
+        external
+        override
+        whenNotPaused
+        onlyRole(BOT_ROLE)
+    {
+        IDelegationManager(payable(_addressStore.getDelegationManager())).redelegateBnbShares(
+            srcValidator, dstValidator, shares, false
+        );
+
+        emit Redelegation_Success(srcValidator, dstValidator, shares, block.timestamp);
+    }
+
+    /**
      * @dev Called by the bot to update the exchange rate in contract based on the rewards
      * obtained in the BBC staking address and accordingly mint fee tokens.
      * Call frequency:
@@ -569,35 +605,63 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
     }
 
     /**
-     * @dev This is called by the bot after it has executed the unbond transaction on BBC.
+     * @dev This is called by the bot to undelegate 'bnbToUnbond' funds from the BSC Native Staking Module.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param bnbUnbonding_: The amount of BNB for which unbonding was initiated on BBC.
-     *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
+     * @param operators   : The list of validators to undelegate from.
+     * @param amounts     : This struct contains bnbAmount and its corresponding shares from a validator.
+     *                      It will be calculated by the bot and feed to this function
+     *                      It can be more than bnbToUnbond, but within a factor of min undelegation amount.
      */
-    function unbondingInitiated(uint256 bnbUnbonding_) external override whenNotPaused onlyRole(BOT_ROLE) {
-        _bnbToUnbond -= bnbUnbonding_.toInt256();
-        _bnbUnbonding += bnbUnbonding_;
+    function unbondingInitiated(address[] calldata operators, DelegatorStakes calldata amounts)
+        external
+        override
+        whenNotPaused
+        onlyRole(BOT_ROLE)
+    {
+        uint256[] memory shares = amounts.shares;
+        uint256[] memory bnbAmounts = amounts.bnbAmounts;
 
-        emit UnbondingInitiated(bnbUnbonding_);
+        if (operators.length != shares.length && operators.length != bnbAmounts.length) {
+            revert ArgumentsLengthMismatch();
+        }
+
+        uint256 totalBNBUnbonding = IDelegationManager(payable(_addressStore.getDelegationManager()))
+            .undelegateBNBtoUnbond(operators, shares, bnbAmounts);
+
+        _bnbToUnbond -= totalBNBUnbonding.toInt256();
+        _bnbUnbonding += totalBNBUnbonding;
+
+        emit UnbondingInitiated(totalBNBUnbonding);
     }
 
     /**
-     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BBC
-     * and has been transferred to the UndelegationHolder contract on BSC.
-     * It calls UndelegationHolder.withdrawUnbondedBNB() to fetch the unbonded BNB to itself and
+     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in Validator Credit Contract
+     *
+     * It calls StakeHub.claimBatch() to fetch the unbonded BNB to itself from the above contract and
      * update `bnbUnbonding` and `claimReserve`.
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
      */
-    function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
-        // the unbondedAmount can never be more than _bnbUnbonding. UndelegationHolder takes care of that.
+    function unbondingFinished(address[] calldata operators, uint256[] calldata requestNumbers)
+        external
+        override
+        whenNotPaused
+        onlyRole(BOT_ROLE)
+    {
+        if (operators.length != requestNumbers.length) {
+            revert ArgumentsLengthMismatch();
+        }
+        // the unbondedAmount can never be more than _bnbUnbonding. DelegationManager takes care of that.
         // So, no need to worry about arithmetic overflows.
-        uint256 unbondedAmount =
-            IUndelegationHolder(payable(_addressStore.getUndelegationHolder())).withdrawUnbondedBNB();
+        uint256 unbondedAmount = IDelegationManager(payable(_addressStore.getDelegationManager())).claimUnbondedBNB(
+            operators, requestNumbers
+        );
+
         _bnbUnbonding -= unbondedAmount;
         _claimReserve += unbondedAmount;
 
@@ -605,15 +669,25 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
     }
 
     /**
-     * @dev It is called by the UndelegationHolder as part of withdrawUnbondedBNB() during the unbondingFinished() call.
+     * @dev It is called by the DelegationManager as part of claimUnbondedBNB() during the unbondingFinished() call.
      */
     receive() external payable whenNotPaused {
-        if (msg.sender != _addressStore.getUndelegationHolder()) {
+        if (msg.sender != _addressStore.getDelegationManager()) {
             revert UnknownSender();
         }
         // do nothing
         // Any necessary events for recording the balance change are emitted in unbondingFinished().
     }
+
+    // /**
+    //  * @dev Called by the TokenHub contract when undelegated funds are transferred cross-chain by
+    //  * bot from BBC staking address to this contract on BSC. At the same time, can also be used by
+    //  * anyone to send any amount to this contract, which can be both a use as well as a misuse.
+    //  * So, should be handled properly.
+    //  */
+    // receive() external payable override {
+    //     emit Received(msg.sender, msg.value);
+    // }
 
     /**
      *
@@ -654,6 +728,14 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
      */
     function claimReserve() external view override returns (uint256) {
         return _claimReserve;
+    }
+
+    /**
+     * @return excessBNB
+     */
+    function getDeposits() public view override returns (uint256) {
+        uint256 excessBNB = address(this).balance - _claimReserve;
+        return excessBNB;
     }
 
     /**
