@@ -173,7 +173,6 @@ contract StakePool is IStakePoolBot, IERC777RecipientUpgradeable, Initializable,
     error ReentrancyGuardReentrantCall();
     error DepositsDelegationFailed();
     error ArgumentsLengthMismatch();
-
     error UndelegationFailed(address validator, uint256 shares);
 
     /**

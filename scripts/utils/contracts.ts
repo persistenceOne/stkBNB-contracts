@@ -20,7 +20,7 @@ export interface ContractFactories {
     AddressStore: ContractFactory;
     TimelockedAdmin: ContractFactory;
     StakedBNBToken: ContractFactory;
-    UndelegationHolder: ContractFactory;
+    DelegationManager: ContractFactory;
     FeeVault: ContractFactory;
     StakePool: ContractFactory;
 }
@@ -30,7 +30,7 @@ export class Contracts {
     public addressStore: Contract;
     public timelockedAdmin: Contract;
     public stakedBNBToken: Contract;
-    public undelegationHolder: Contract;
+    public delegationManager: Contract;
     public feeVault: Contract;
     public stakePool: Contract;
     public sys: SysContracts;
@@ -40,7 +40,7 @@ export class Contracts {
         this.addressStore = contracts[0];
         this.timelockedAdmin = contracts[1];
         this.stakedBNBToken = contracts[2];
-        this.undelegationHolder = contracts[3];
+        this.delegationManager = contracts[3];
         this.feeVault = contracts[4];
         this.stakePool = contracts[5];
         this.sys = sys;
@@ -57,7 +57,7 @@ export class Contracts {
             AddressStore: await ethers.getContractFactory('AddressStore'),
             TimelockedAdmin: await ethers.getContractFactory('TimelockedAdmin'),
             StakedBNBToken: await ethers.getContractFactory('StakedBNBToken'),
-            UndelegationHolder: await ethers.getContractFactory('UndelegationHolder'),
+            DelegationManager: await ethers.getContractFactory('DelegationManager'),
             FeeVault: await ethers.getContractFactory('FeeVault'),
             StakePool: await ethers.getContractFactory('StakePool'),
         } as ContractFactories;
@@ -70,7 +70,7 @@ export class Contracts {
             factories.AddressStore.attach(config.addressStore.address),
             factories.TimelockedAdmin.attach(config.timelockedAdmin.address),
             factories.StakedBNBToken.attach(config.stkBNB.address),
-            factories.UndelegationHolder.attach(config.undelegationHolder.address),
+            factories.DelegationManager.attach(config.delegationManager.address),
             factories.FeeVault.attach(config.feeVault.address),
             factories.StakePool.attach(config.stakePool.address),
         ]);
@@ -131,19 +131,19 @@ export class Contracts {
             console.log(`StakedBNBToken attached: ${contracts.stakedBNBToken.address}`);
         }
 
-        // deploy undelegationHolder
-        if (config.undelegationHolder.deploy) {
-            contracts.undelegationHolder = await factories.UndelegationHolder.deploy(
+        // deploy DelegationManager
+        if (config.delegationManager.deploy) {
+            contracts.delegationManager = await factories.DelegationManager.deploy(
                 contracts.addressStore.address,
             );
-            await contracts.undelegationHolder.deployed();
+            await contracts.delegationManager.deployed();
 
-            console.log(`UndelegationHolder deployed: ${contracts.undelegationHolder.address}`);
+            console.log(`DelegationManager deployed: ${contracts.delegationManager.address}`);
         } else {
-            contracts.undelegationHolder = factories.UndelegationHolder.attach(
-                config.undelegationHolder.address,
+            contracts.delegationManager = factories.DelegationManager.attach(
+                config.delegationManager.address,
             );
-            console.log(`UndelegationHolder attached: ${contracts.undelegationHolder.address}`);
+            console.log(`DelegationManager attached: ${contracts.delegationManager.address}`);
         }
 
         // deploy fee vault
@@ -193,12 +193,12 @@ export class Contracts {
                 console.log('AddressStore updated with stkBNB');
             }
 
-            // setup UndelegationHolder
-            if (config.undelegationHolder.deploy) {
-                await executeTx(contracts.addressStore, 'setUndelegationHolder', [
-                    contracts.undelegationHolder.address,
+            // setup DelegationManager
+            if (config.delegationManager.deploy) {
+                await executeTx(contracts.addressStore, 'setDelegationManager', [
+                    contracts.delegationManager.address,
                 ]);
-                console.log('AddressStore updated with UndelegationHolder');
+                console.log('AddressStore updated with DelegationManager');
             }
 
             // setup FeeVault
@@ -388,7 +388,7 @@ export class Contracts {
         console.log('Address: ', addressStore.address);
         console.log(`getTimelockedAdmin: ${await addressStore.getTimelockedAdmin()}`);
         console.log(`getStkBNB: ${await addressStore.getStkBNB()}`);
-        console.log(`getUndelegationHolder: ${await addressStore.getUndelegationHolder()}`);
+        console.log(`getDelegationManager: ${await addressStore.getDelegationManager()}`);
         console.log(`getFeeVault: ${await addressStore.getFeeVault()}`);
         console.log(`getStakePool: ${await addressStore.getStakePool()}`);
 
@@ -412,8 +412,8 @@ export class Contracts {
 
         console.log('\n\n');
 
-        const uh: Contract = this.undelegationHolder;
-        console.log('=== UndelegationHolder ===');
+        const uh: Contract = this.delegationManager;
+        console.log('=== DelegationManager ===');
         console.log('Address: ', uh.address);
         console.log(`Balance: ${formatEther(await ethers.provider.getBalance(uh.address))} BNB`);
 
@@ -519,18 +519,6 @@ export class Contracts {
             ethers.constants.HashZero, // predecessor
             ethers.constants.HashZero, // salt
         ]);
-    }
-
-    public async mirrorStkBNB() {
-        await this.sys.mirror(this.stakedBNBToken.address);
-    }
-
-    public async syncStkBNB() {
-        await this.sys.sync(this.stakedBNBToken.address);
-    }
-
-    public async transferOutStkBNB(bcRecipient: string, amount: BigNumber) {
-        await this.sys.transferOut(this.stakedBNBToken, bcRecipient, amount);
     }
 
     public logAddress() {

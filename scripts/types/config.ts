@@ -1,7 +1,7 @@
 import { BigNumber } from 'ethers';
 import fs from 'fs';
 import Ajv from 'ajv-draft-04';
-import { getNetwork, isLocalNetwork } from '../utils/network';
+import { getNetwork, isLocalNetwork } from '../utils/network.ts';
 
 export interface ContractConfig<T> {
     address: string;
@@ -25,9 +25,8 @@ export interface Fee {
 }
 
 export interface StakePoolConfig {
-    bcStakingWallet: string;
-    minCrossChainTransfer: BigNumber;
-    transferOutTimeout: BigNumber;
+    bscStakingWallet: string;
+    minDelegationAmount: BigNumber;
     minBNBDeposit: BigNumber;
     minTokenWithdrawal: BigNumber;
     cooldownPeriod: BigNumber;
@@ -53,7 +52,7 @@ export interface IConfig {
     addressStore: ContractConfig<null>;
     timelockedAdmin: ContractConfig<TimelockedAdminConfig>;
     stkBNB: ContractConfig<null>;
-    undelegationHolder: ContractConfig<null>;
+    delegationManager: ContractConfig<null>;
     feeVault: UpgradableContractConfig<null>;
     stakePool: UpgradableContractConfig<StakePoolInit>;
 }
@@ -68,7 +67,7 @@ export class Config implements IConfig {
     addressStore: ContractConfig<null>;
     timelockedAdmin: ContractConfig<TimelockedAdminConfig>;
     stkBNB: ContractConfig<null>;
-    undelegationHolder: ContractConfig<null>;
+    delegationManager: ContractConfig<null>;
     feeVault: UpgradableContractConfig<null>;
     stakePool: UpgradableContractConfig<StakePoolInit>;
 
@@ -82,7 +81,7 @@ export class Config implements IConfig {
         this.addressStore = config.addressStore;
         this.timelockedAdmin = config.timelockedAdmin;
         this.stkBNB = config.stkBNB;
-        this.undelegationHolder = config.undelegationHolder;
+        this.delegationManager = config.delegationManager;
         this.feeVault = config.feeVault;
         this.stakePool = config.stakePool;
     }

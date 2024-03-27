@@ -1,7 +1,8 @@
+// eslint-disable-next-line node/no-extraneous-import
 import { TransactionResponse, TransactionReceipt } from '@ethersproject/abstract-provider';
-import { CONFIG } from '../types/config';
+import { CONFIG } from '../types/config.ts';
 import { Contract } from 'ethers';
-import { ADDRESS } from './constants';
+import { ADDRESS } from './constants.ts';
 import { inspect } from 'util';
 
 export async function wait(tx: TransactionResponse): Promise<TransactionReceipt> {
@@ -46,16 +47,14 @@ export function getContractName(address: string): string {
             return 'TimelockedAdmin';
         case CONFIG.stkBNB.address:
             return 'stkBNB';
-        case CONFIG.undelegationHolder.address:
-            return 'UndelegationHolder';
+        case CONFIG.delegationManager.address:
+            return 'DelegationManager';
         case CONFIG.feeVault.address:
             return 'FeeVault';
         case CONFIG.stakePool.address:
             return 'StakePool';
-        case ADDRESS.tokenHub:
-            return 'TokenHub';
-        case ADDRESS.tokenManager:
-            return 'TokenManager';
+        case ADDRESS.stakeHub:
+            return 'StakeHub';
         default:
             return `Unknown_Contract(${address})`;
     }

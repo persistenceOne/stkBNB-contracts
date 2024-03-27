@@ -1,6 +1,8 @@
 import { task } from 'hardhat/config';
 import '@nomiclabs/hardhat-web3';
 import '@nomiclabs/hardhat-ethers';
+import '@nomicfoundation/hardhat-verify';
+import '@nomicfoundation/hardhat-chai-matchers';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-contract-sizer';
 import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config.ts';
@@ -48,6 +50,7 @@ task('verify-all', 'Verifies all contracts on Etherscan', async (taskArgs, hre) 
         address: CONFIG.addressStore.address,
         constructorArguments: [],
     });
+
     // TimelockedAdmin
     await hre.run('verify:verify', {
         address: CONFIG.timelockedAdmin.address,
@@ -58,14 +61,16 @@ task('verify-all', 'Verifies all contracts on Etherscan', async (taskArgs, hre) 
         ],
         contract: 'contracts/TimelockedAdmin.sol:TimelockedAdmin',
     });
+
     // stkBNB
     await hre.run('verify:verify', {
         address: CONFIG.stkBNB.address,
         constructorArguments: [CONFIG.addressStore.address],
     });
-    // UndelegationHolder
+
+    // delegationManager
     await hre.run('verify:verify', {
-        address: CONFIG.undelegationHolder.address,
+        address: CONFIG.delegationManager.address,
         constructorArguments: [CONFIG.addressStore.address],
     });
 
@@ -73,8 +78,8 @@ task('verify-all', 'Verifies all contracts on Etherscan', async (taskArgs, hre) 
     // can't use `verify:verify` as suggested in Etherscan plugin doc for programmatic verification,
     // as the openzeppelin upgrades plugin overrides only the `verify` task for proxies.
     // yarn hardhat verify --network <NETWORK> PROXY_CONTRACT_ADDR
-    await hre.run('verify', { address: CONFIG.feeVault.address }); // FeeVault
-    await hre.run('verify', { address: CONFIG.stakePool.address }); // StakePool
+    await hre.run('verify:verify', { address: CONFIG.feeVault.address }); // FeeVault
+    await hre.run('verify:verify', { address: CONFIG.stakePool.address }); // StakePool
 });
 
 // You need to export an object to set up your config
@@ -112,17 +117,20 @@ export default {
         localhost: {
             url: 'http://127.0.0.1:8545',
             blockGasLimit: 40000000,
+            // accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
         testnet: {
             // url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-            url: 'https://rpc.ankr.com/bsc_testnet_chapel',
+            // https://rpc.ankr.com/bsc_testnet_chapel
+            url: 'https://cold-soft-sea.bsc-testnet.quiknode.pro/310d00fd36884aada2e0d2c9131b740c366dcce2/',
             chainId: 97,
             gasPrice: 20000000000,
             blockGasLimit: 40000000,
             accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
         mainnet: {
-            url: 'https://bsc-dataseed.binance.org/',
+            // https://bsc-dataseed.binance.org/
+            url: 'https://greatest-polished-field.bsc.quiknode.pro/2d02def20c37eafa051b760a91e9292eed512cd9/',
             chainId: 56,
             gasPrice: 20000000000,
             blockGasLimit: 40000000,
@@ -130,6 +138,10 @@ export default {
         },
     },
     etherscan: {
-        apiKey: CONFIG.etherscanApiKey,
+        enabled: true,
+        apiKey: { bscTestnet: CONFIG.etherscanApiKey },
+    },
+    sourcify: {
+        enabled: false,
     },
 };
