@@ -13,33 +13,40 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
         IERC1820RegistryUpgradeable(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
-    /*********************
+    /**
+     *
      * STATE VARIABLES
-     ********************/
+     *
+     */
 
     /**
      * @dev addressStore: The Address Store. Used to fetch addresses of the other contracts in the system.
      */
     IAddressStore private _addressStore;
 
-    /*********************
+    /**
+     *
      * EVENTS
-     ********************/
-
+     *
+     */
     event Deposit(address from, uint256 amount); // emitted when stkBNB is sent to this contract
     event Withdraw(address from, address to, uint256 amount); // emitted when stkBNB is claimed from this contract
 
-    /*********************
+    /**
+     *
      * ERRORS
-     ********************/
+     *
+     */
     error UnstakingFeeTokensIsntSupported();
     error ReceivedUnknownToken();
     error UnexpectedSender(address from);
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
 
-    /*********************
+    /**
+     *
      * INIT FUNCTIONS
-     ********************/
+     *
+     */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {

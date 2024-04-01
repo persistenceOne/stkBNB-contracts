@@ -2,22 +2,14 @@
 
 pragma solidity ^0.8.7;
 
+import "../embedded-libs/ValidatorSet.sol";
+
 /**
  * @title StakePool Bot
  * @dev The functionalities required from the StakePool contract by the bot. This contract should
  * be implemented by the StakePool contract.
  */
 interface IStakePoolBot {
-    /**
-     *
-     * STRUCTS
-     *
-     */
-    struct DelegatorStakes {
-        uint256[] shares;
-        uint256[] bnbAmounts;
-    }
-
     /**
      * @dev The amount that needs to be unbonded in the next unstaking epoch.
      * It increases on every user unstake operation, and decreases when the bot initiates unbonding.
@@ -66,59 +58,112 @@ interface IStakePoolBot {
      * Increase frequency:
      *      Mainnet: Daily
      *      Testnet: Daily
+     *
      * Decrease frequency: anytime
      */
     function getDeposits() external view returns (uint256);
 
     /**
-     * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
-     * staking address on BC.
+     * @dev Returns a list of all Validators
+     */
+    function getValidators() external view returns (ValidatorSet.Info[] memory);
+
+    /**
+     * @dev Returns the total number of validators
+     */
+    function getTotalValidators() external view returns (uint256);
+
+    /**
+     * @dev epochUpdate: Accessible to any user and can be invoked once daily to adjust the exchange rate.
+     * The adjustment is based on the total rewards accumulated by all validators, ensuring that
+     * the rate reflects the latest reward dynamics and accordingly mint fee tokens.
+     *
+     * Requirements:
+     *
+     * - Can only be called once per day
+     *
      * Call frequency:
      *      Mainnet: Daily
      *      Testnet: Daily
      */
-    function initiateDelegation(address[] calldata operators, uint256[] calldata bnbAmounts) external;
+    function epochUpdate() external;
+
+    /**
+     * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
+     * stakehub contract on BSC Native Staking Module.
+     *
+     * Call frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
+     *
+     * @param operators_  : A list of Validator Operators to delegate to.
+     * @param bnbAmounts_ : A list of bnb delegation amounts given by the bot
+     *
+     */
+    function initiateDelegation(
+        address[] calldata operators_,
+        uint256[] calldata bnbAmounts_
+    ) external;
 
     /**
      * @dev This is called by the bot in order to redelegate BNB from one Validator
      * to another Validator provided that the new validator exists
      *
-     */
-    function initiateRedelegation(address srcValidator, address dstValidator, uint256 shares) external;
-
-    /**
-     * @dev Called by the bot to update the exchange rate in contract based on the rewards
-     * obtained in the BC staking address and accordingly mint fee tokens.
-     * Call frequency:
-     *      Mainnet: Daily
-     *      Testnet: Daily
+     * Requirements:
      *
-     * @param bnbRewards: The amount of BNB which were received as staking rewards.
+     * - The caller must be bot.
+     *
+     * @param srcOperator_ : Source Validator Operator to undelegate from
+     * @param dstOperator_ : Destination Validator Operator to delegate to
+     * @param allotment_   : Percentage of funds to redelegate
+     *
      */
-    function epochUpdate(uint256 bnbRewards) external;
+    function initiateRedelegation(
+        address srcOperator_,
+        address dstOperator_,
+        uint256 allotment_
+    ) external;
 
     /**
      * @dev This is called by the bot to undelegate 'bnbToUnbond' funds from the BSC Native Staking Module.
      *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param operators   : The list of validators to undelegate from.
-     * @param amounts     : This struct contains bnbAmount and its corresponding shares from a validator.
-     *                      It will be calculated by the bot and feed to this function
-     *                      It can be more than bnbToUnbond, but within a factor of min undelegation amount.
+     * @param operators_       : The list of validators to undelegate from.
+     * @param bnbUnbondValues_ : The list contains bnb unbonding amounts from the respective validators.
+     *                           It will be calculated by the bot.
+     *                           It can be more than bnbToUnbond in total, but within a factor of minUndelegation amount (1 BNB).
      */
-    function unbondingInitiated(address[] calldata operators, DelegatorStakes calldata amounts) external;
+    function unbondingInitiated(
+        address[] calldata operators_,
+        uint256[] calldata bnbUnbondValues_
+    ) external;
 
     /**
-     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BBC
-     * and has been transferred to the UndelegationHolder contract on BSC.
-     * It calls UndelegationHolder.withdrawUnbondedBNB() to fetch the unbonded BNB to itself and
+     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in Validator Credit Contract
+     * It calls StakeHub.claimBatch() to fetch the unbonded BNB to itself from the above contract and
      * update `bnbUnbonding` and `claimReserve`.
+     *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
+     *
+     * @param operators_      : List of Validators to claim the unbonded bnb.
+     * @param requestNumbers_ : Must be "0" to claim all the requests
+     *
      */
-    function unbondingFinished(address[] calldata operators, uint256[] calldata requestNumbers) external;
+    function unbondingFinished(
+        address[] calldata operators_,
+        uint256[] calldata requestNumbers_
+    ) external;
 }

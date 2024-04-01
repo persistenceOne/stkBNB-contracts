@@ -13,7 +13,9 @@ library Config {
     error CooldownPeriodCantBeMoreThan30Days();
 
     struct Data {
-        // @dev The address of the staking wallet on the BSC chain. It will be used for Delegate/Undelegate/Redelegate transactions.
+        // @dev The address of the staking wallet on the BSC chain.
+        // It will be used for Delegate/Undelegate/Redelegate transactions
+        // While the contracts are paused
         address bscStakingWallet;
         // @dev The minimum amount of BNB required to make delegation on BSC Native Staking Module.
         // This should be at least minDelegationBNBChange in the StakeHub Contract.
@@ -21,6 +23,8 @@ library Config {
         // lost on this value for Native Staking Module delegation/undelegation/redelegation/etc.
         // But, finding the ideal value is non-deterministic.
         uint256 minDelegationAmount;
+        // This variable is used to prevent storage collisions while proxy upgrades
+        uint256 __deprecatedOne;
         // @dev The minimum amount of BNB required to make a deposit to the contract.
         uint256 minBNBDeposit;
         // @dev The minimum amount of tokens required to make a withdrawal from the contract.

@@ -73,8 +73,8 @@ contract DelegationManager is IDelegationManager {
     }
 
     /**
-     * @dev Called by the TokenHub contract when undelegated funds are transferred cross-chain by
-     * bot from BBC staking address to this contract on BSC. At the same time, can also be used by
+     * @dev Called by the Validator credit contract when undelegated funds are claimed by
+     * bot by calling unbondingFinished() on StakePool. At the same time, can also be used by
      * anyone to send any amount to this contract, which can be both a use as well as a misuse.
      * So, should be handled properly.
      */
@@ -91,13 +91,10 @@ contract DelegationManager is IDelegationManager {
      *
      * @return The current deposits, all of which it will be sending to the StakeHub.
      */
-    function delegateDepositedBNB(address[] calldata operators, uint256[] calldata bnbAmounts)
-        external
-        payable
-        override
-        onlyStakePool
-        returns (bool)
-    {
+    function delegateDepositedBNB(
+        address[] calldata operators,
+        uint256[] calldata bnbAmounts
+    ) external payable override onlyStakePool returns (bool) {
         address stakePool = getStakePool();
 
         // Checks if the BNB Deposits is received in this contract
@@ -110,9 +107,9 @@ contract DelegationManager is IDelegationManager {
                 if (bnbAmount < 1 ether) {
                     revert InsufficientDelegationAmount(bnbAmount);
                 } else {
-                    (bool delegated, /* bytes memory data */ ) = _STAKE_HUB.call{value: bnbAmount}(
-                        abi.encodeWithSelector(IStakeHub.delegate.selector, operator, false)
-                    );
+                    (bool delegated /* bytes memory data */, ) = _STAKE_HUB.call{
+                        value: bnbAmount
+                    }(abi.encodeWithSelector(IStakeHub.delegate.selector, operator, false));
                     if (!delegated) {
                         revert TransferToStakeHubFailed();
                     }
@@ -128,29 +125,34 @@ contract DelegationManager is IDelegationManager {
     /**
      * @dev Called by the StakePool contract to redelegate BNB from one validator to
      * another validator. StakeHub.redelegate() has some fee associated with it.
-     * 0.02 % of redelegation amount to discourage frequent relegation between
+     * 0.002 % of redelegation amount to discourage frequent relegation between
      * delegators to chase the highest rewards.
      *
      * Redelegation happens instantly, there is no waiting period
      *
      * Requirements:
      * - The caller must be the StakePool contract.
-     *
      */
-    function redelegateBnbShares(address srcValidator, address dstValidator, uint256 shares, bool delegateVotePower)
-        external
-        payable
-        override
-        onlyStakePool
-    {
+    function redelegateBnbShares(
+        address srcValidator,
+        address dstValidator,
+        uint256 shares,
+        bool delegateVotePower
+    ) external payable override onlyStakePool {
         uint256 delegatorShares = _getDelegatorShares(srcValidator);
         if (shares == 0 || shares > delegatorShares) {
             revert InvalidSharesAmount();
         }
 
         // Calls StakeHub.redelegate() on BSC Native Staking Module
-        (bool redelegated, /* bytes memory data */ ) = _STAKE_HUB.call(
-            abi.encodeWithSelector(IStakeHub.redelegate.selector, srcValidator, dstValidator, shares, delegateVotePower)
+        (bool redelegated /* bytes memory data */, ) = _STAKE_HUB.call(
+            abi.encodeWithSelector(
+                IStakeHub.redelegate.selector,
+                srcValidator,
+                dstValidator,
+                shares,
+                delegateVotePower
+            )
         );
 
         if (!redelegated) {
@@ -160,7 +162,8 @@ contract DelegationManager is IDelegationManager {
 
     /**
      * @dev Called by the StakePool contract to undelegate "bnbToUnbond" BNB from the BSC Native Staking Module
-     * Burns Staking Credit and Governance Tokens on the StakeHub Contract Side
+     * Burns Staking Credit and Governance Tokens on the StakeHub Contract Side and requests initial delegations
+     * and rewards earned
      *
      * Requirements:
      * - The caller must be the StakePool contract.
@@ -170,21 +173,22 @@ contract DelegationManager is IDelegationManager {
     function undelegateBNBtoUnbond(
         address[] calldata operators,
         uint256[] calldata shares,
-        uint256[] calldata bnbAmounts
+        uint256[] calldata bnbUnbonds
     ) external override onlyStakePool returns (uint256) {
         uint256 totalBNBUnbonding = 0;
         for (uint256 i = 0; i < operators.length; i++) {
             address operator = operators[i];
             uint256 share = shares[i];
-            uint256 bnbAmount = bnbAmounts[i];
+            uint256 bnbUnbond = bnbUnbonds[i];
 
-            (bool undelegated, /* bytes memory data */ ) =
-                _STAKE_HUB.call(abi.encodeWithSelector(IStakeHub.undelegate.selector, operator, share));
+            (bool undelegated /* bytes memory data */, ) = _STAKE_HUB.call(
+                abi.encodeWithSelector(IStakeHub.undelegate.selector, operator, share)
+            );
 
             if (!undelegated) {
                 revert UndelegationFailed(operator, share);
             } else {
-                totalBNBUnbonding += bnbAmount;
+                totalBNBUnbonding += bnbUnbond;
             }
         }
 
@@ -193,24 +197,23 @@ contract DelegationManager is IDelegationManager {
 
     /**
      * @dev Called by the StakePool contract to withdraw the undelegated funds. It sends at max
-     * the bnbUnbonding to StakePool.
+     * the bnbUnbonding to StakePool. Funds will be available to claim only after 7 days waiting period
      *
      * Requirements:
      * - The caller must be the StakePool contract.
      *
      * @return The amount it sent to the StakePool.
      */
-    function claimUnbondedBNB(address[] calldata operators, uint256[] calldata requestNumbers)
-        external
-        override
-        onlyStakePool
-        returns (uint256)
-    {
+    function claimUnbondedBNB(
+        address[] calldata operators,
+        uint256[] calldata requestNumbers
+    ) external override onlyStakePool returns (uint256) {
         address stakePool = getStakePool();
 
         // Calls StakeHub.claimBatch() on BSC Native Staking Module
-        (bool claimed, /* bytes memory data */ ) =
-            _STAKE_HUB.call(abi.encodeWithSelector(IStakeHub.claimBatch.selector, operators, requestNumbers));
+        (bool claimed /* bytes memory data */, ) = _STAKE_HUB.call(
+            abi.encodeWithSelector(IStakeHub.claimBatch.selector, operators, requestNumbers)
+        );
 
         if (!claimed) {
             revert ClaimBatchFailed();
@@ -229,7 +232,7 @@ contract DelegationManager is IDelegationManager {
             amountToSend = bnbUnbonding;
         }
         // can't use address.transfer() here as it limits the gas to 2300, resulting in failure due to gas exhaustion.
-        (bool sent, /*memory data*/ ) = stakePool.call{value: amountToSend}("");
+        (bool sent /*memory data*/, ) = stakePool.call{ value: amountToSend }("");
         if (!sent) {
             revert TransferToStakePoolFailed();
         }
@@ -252,9 +255,11 @@ contract DelegationManager is IDelegationManager {
     }
 
     /**
-     * @return delegatorShares The delegators Shares
+     * @return delegatorShares The delegators Shares with a Validator
      */
-    function _getDelegatorShares(address _operator) internal view returns (uint256 delegatorShares) {
+    function _getDelegatorShares(
+        address _operator
+    ) internal view returns (uint256 delegatorShares) {
         address validatorCredit = IStakeHub(_STAKE_HUB).getValidatorCreditContract(_operator);
         delegatorShares = IStakeCredit(validatorCredit).balanceOf(address(this));
     }

@@ -1,228 +1,190 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "",
-  "type": "object",
-  "properties": {
-    "mnemonic": {
-      "type": "string"
-    },
-    "etherscanApiKey": {
-      "type": "string"
-    },
-    "botAddr": {
-      "type": "string"
-    },
-    "numConfirmBlocks": {
-      "type": "number"
-    },
-    "postDeploySetup": {
-      "type": "boolean"
-    },
-    "gnosisSafeAddr": {
-      "type": "object",
-      "properties": {
-        "primary": {
-          "type": "string"
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "",
+    "type": "object",
+    "properties": {
+        "mnemonic": {
+            "type": "string"
         },
-        "secondary": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "primary",
-        "secondary"
-      ]
-    },
-    "addressStore": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
+        "etherscanApiKey": {
+            "type": "string"
         },
-        "deploy": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "address",
-        "deploy"
-      ]
-    },
-    "timelockedAdmin": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
+        "botAddr": {
+            "type": "string"
         },
-        "deploy": {
-          "type": "boolean"
+        "numConfirmBlocks": {
+            "type": "number"
         },
-        "init": {
-          "type": "object",
-          "properties": {
-            "minDelay": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "minDelay"
-          ]
-        }
-      },
-      "required": [
-        "address",
-        "deploy",
-        "init"
-      ]
-    },
-    "stkBNB": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
+        "postDeploySetup": {
+            "type": "boolean"
         },
-        "deploy": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "address",
-        "deploy"
-      ]
-    },
-    "undelegationHolder": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "deploy": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "address",
-        "deploy"
-      ]
-    },
-    "feeVault": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "deploy": {
-          "type": "boolean"
-        },
-        "upgrade": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "address",
-        "deploy",
-        "upgrade"
-      ]
-    },
-    "stakePool": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "deploy": {
-          "type": "boolean"
-        },
-        "upgrade": {
-          "type": "boolean"
-        },
-        "init": {
-          "type": "object",
-          "properties": {
-            "config": {
-              "type": "object",
-              "properties": {
-                "bcStakingWallet": {
-                  "type": "string",
-                  "minLength": 1
+        "gnosisSafeAddr": {
+            "type": "object",
+            "properties": {
+                "primary": {
+                    "type": "string"
                 },
-                "minCrossChainTransfer": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "transferOutTimeout": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "minBNBDeposit": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "minTokenWithdrawal": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "cooldownPeriod": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "fee": {
-                  "type": "object",
-                  "properties": {
-                    "reward": {
-                      "type": "number"
-                    },
-                    "deposit": {
-                      "type": "number"
-                    },
-                    "withdraw": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "reward",
-                    "deposit",
-                    "withdraw"
-                  ]
+                "secondary": {
+                    "type": "string"
                 }
-              },
-              "required": [
-                "bcStakingWallet",
-                "minCrossChainTransfer",
-                "transferOutTimeout",
-                "minBNBDeposit",
-                "minTokenWithdrawal",
-                "cooldownPeriod",
-                "fee"
-              ]
-            }
-          },
-          "required": [
-            "config"
-          ]
+            },
+            "required": ["primary", "secondary"]
+        },
+        "addressStore": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "deploy": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["address", "deploy"]
+        },
+        "timelockedAdmin": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "deploy": {
+                    "type": "boolean"
+                },
+                "init": {
+                    "type": "object",
+                    "properties": {
+                        "minDelay": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    },
+                    "required": ["minDelay"]
+                }
+            },
+            "required": ["address", "deploy", "init"]
+        },
+        "stkBNB": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "deploy": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["address", "deploy"]
+        },
+        "delegationManager": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "deploy": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["address", "deploy"]
+        },
+        "feeVault": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "deploy": {
+                    "type": "boolean"
+                },
+                "upgrade": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["address", "deploy", "upgrade"]
+        },
+        "stakePool": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "deploy": {
+                    "type": "boolean"
+                },
+                "upgrade": {
+                    "type": "boolean"
+                },
+                "init": {
+                    "type": "object",
+                    "properties": {
+                        "config": {
+                            "type": "object",
+                            "properties": {
+                                "bscStakingWallet": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "minDelegationAmount": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "minBNBDeposit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "minTokenWithdrawal": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "cooldownPeriod": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "fee": {
+                                    "type": "object",
+                                    "properties": {
+                                        "reward": {
+                                            "type": "number"
+                                        },
+                                        "deposit": {
+                                            "type": "number"
+                                        },
+                                        "withdraw": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": ["reward", "deposit", "withdraw"]
+                                }
+                            },
+                            "required": [
+                                "bscStakingWallet",
+                                "minDelegationAmount",
+                                "minBNBDeposit",
+                                "minTokenWithdrawal",
+                                "cooldownPeriod",
+                                "fee"
+                            ]
+                        }
+                    },
+                    "required": ["config"]
+                }
+            },
+            "required": ["address", "deploy", "upgrade", "init"]
         }
-      },
-      "required": [
-        "address",
-        "deploy",
-        "upgrade",
-        "init"
-      ]
-    }
-  },
-  "required": [
-    "mnemonic",
-    "etherscanApiKey",
-    "botAddr",
-    "numConfirmBlocks",
-    "postDeploySetup",
-    "gnosisSafeAddr",
-    "addressStore",
-    "timelockedAdmin",
-    "stkBNB",
-    "undelegationHolder",
-    "feeVault",
-    "stakePool"
-  ]
+    },
+    "required": [
+        "mnemonic",
+        "etherscanApiKey",
+        "botAddr",
+        "numConfirmBlocks",
+        "postDeploySetup",
+        "gnosisSafeAddr",
+        "addressStore",
+        "timelockedAdmin",
+        "stkBNB",
+        "delegationManager",
+        "feeVault",
+        "stakePool"
+    ]
 }

@@ -22,19 +22,38 @@ interface IStakeHub {
      */
     function delegate(address operatorAddress, bool delegateVotePower) external payable;
     function undelegate(address operatorAddress, uint256 shares) external;
-    function redelegate(address srcValidator, address dstValidator, uint256 shares, bool delegateVotePower) external;
+    function redelegate(
+        address srcValidator,
+        address dstValidator,
+        uint256 shares,
+        bool delegateVotePower
+    ) external;
     function claim(address operatorAddress, uint256 requestNumber) external;
-    function claimBatch(address[] calldata operatorAddresses, uint256[] calldata requestNumbers) external;
+    function claimBatch(
+        address[] calldata operatorAddresses,
+        uint256[] calldata requestNumbers
+    ) external;
 
     /**
      *
      * VIEWS
      *
      */
-    function getValidatorCreditContract(address operatorAddress) external view returns (address creditContract);
-    function getValidatorDescription(address operatorAddress) external view returns (Description memory);
-    function getValidatorCommission(address operatorAddress) external view returns (Commission memory);
+    function getValidatorCreditContract(
+        address operatorAddress
+    ) external view returns (address creditContract);
+    function getValidatorDescription(
+        address operatorAddress
+    ) external view returns (Description memory);
+    function getValidatorCommission(
+        address operatorAddress
+    ) external view returns (Commission memory);
 
+    /**
+     *
+     * RETURNS CONSTANTS
+     *
+     */
     function unbondPeriod() external view returns (uint256);
     function transferGasLimit() external view returns (uint256);
 }
