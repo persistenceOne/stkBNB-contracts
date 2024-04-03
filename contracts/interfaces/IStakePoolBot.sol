@@ -64,14 +64,30 @@ interface IStakePoolBot {
     function getDeposits() external view returns (uint256);
 
     /**
+     * @dev Returns a specific Validator
+     */
+    function getValidator(address operator) external view returns (ValidatorSet.Info memory);
+
+    /**
      * @dev Returns a list of all Validators
      */
     function getValidators() external view returns (ValidatorSet.Info[] memory);
 
     /**
+     * @dev Returns a list of Current Delegation weights of Validators
+     */
+    function getValidatorWeights() external view returns (uint256[] memory);
+
+    /**
      * @dev Returns the total number of validators
      */
     function getTotalValidators() external view returns (uint256);
+
+    /**
+     *
+     * BOT FUNCTIONS
+     *
+     */
 
     /**
      * @dev epochUpdate: Accessible to any user and can be invoked once daily to adjust the exchange rate.
@@ -87,6 +103,36 @@ interface IStakePoolBot {
      *      Testnet: Daily
      */
     function epochUpdate() external;
+
+    /**
+     * @dev createValidator: Called by the Bot to add a new validator to the validator set.
+     * It is allowed to create validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function createValidator(address operator_) external;
+
+    /**
+     * @dev enableValidator: Called by the Bot to reactivate the disabled Validator.
+     * It is allowed to activate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function enableValidator(address operator_) external;
+
+    /**
+     * @dev disableValidator: Called by the Bot to deactivate the Validator.
+     * It is allowed to deactivate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function disableValidator(address operator_, ValidatorSet.Status status_) external;
 
     /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
@@ -158,12 +204,6 @@ interface IStakePoolBot {
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param operators_      : List of Validators to claim the unbonded bnb.
-     * @param requestNumbers_ : Must be "0" to claim all the requests
-     *
      */
-    function unbondingFinished(
-        address[] calldata operators_,
-        uint256[] calldata requestNumbers_
-    ) external;
+    function unbondingFinished() external;
 }

@@ -5,11 +5,13 @@ pragma solidity ^0.8.7;
 library ValidatorSet {
     error ZeroAddress(string tag, address account);
     error ValidatorDoesNotExists(address operator);
+    error ValidatorAlreadyActive();
     error NonZeroValue(string tag, uint256 value);
     error InvalidParam(string tag, uint256 param);
     error SelfRedelegationNotAllowed();
 
     using ValidatorSet for ValidatorSet.Info;
+    using ValidatorSet for ValidatorSet.DelegationInfo;
 
     struct Store {
         // @dev Maps address => Validator Info
@@ -27,8 +29,8 @@ library ValidatorSet {
         uint256 lastStakedAt;
         // @dev Validator's Stake Info
         DelegationInfo delegation;
-        // @dev The position of the validator based on its creation.
-        uint256 index;
+        // @dev
+        Status status;
     }
 
     struct DelegationInfo {
@@ -36,51 +38,68 @@ library ValidatorSet {
         uint256 stakes;
         // @dev Amount of stCred token holdings
         uint256 shares;
-        // @dev Percentage of total delegations managed by validator
-        uint256 weightage;
+    }
+
+    enum Status {
+        Inactive,
+        Active,
+        Jailed
     }
 
     uint256 private constant WEIGTHAGE_RATE_BASE = 10_000; // 100 %
 
-    function _create(Info storage self, address operator, address stCred, uint256 index) internal {
-        _checkCreate(operator, stCred);
+    function _create(Info storage self, Info memory newVal) internal {
+        newVal._checkCreate();
 
-        self.operator = operator;
-        self.stCred = stCred;
-        self.index = index;
+        self.operator = newVal.operator;
+        self.stCred = newVal.stCred;
+        self.lastStakedAt = newVal.lastStakedAt;
+        self.delegation = newVal.delegation;
+        self.status = newVal.status;
     }
 
-    function _checkCreate(address operator, address stCred) internal pure {
-        if (operator == address(0)) {
-            revert ZeroAddress("Operator Address cannot be Zero Address", operator);
+    function _checkCreate(Info memory newVal) internal pure {
+        if (newVal.operator == address(0)) {
+            revert ZeroAddress("Operator Address cannot be Zero Address", newVal.operator);
         }
-        if (stCred == address(0)) {
-            revert ZeroAddress("Validator Credit Contract cannot be Zero Address", stCred);
+        if (newVal.stCred == address(0)) {
+            revert ZeroAddress("Validator Credit Contract cannot be Zero Address", newVal.stCred);
+        }
+    }
+
+    function _activate(Info storage self) internal {
+        if (self.status == Status.Inactive || self.status == Status.Jailed) {
+            self.status = Status.Active;
+        } else {
+            revert ValidatorAlreadyActive();
+        }
+    }
+
+    function _deactivate(Info storage self, Status newStatus) internal {
+        if (self.status == Status.Active && newStatus != Status.Active) {
+            self.status = newStatus;
         }
     }
 
     function _delegate(
         Info storage self,
         DelegationInfo memory newDelegation,
-        uint256 stakedAt,
-        uint256 totalVals
+        uint256 stakedAt
     ) internal {
-        self._checkDelegate(newDelegation, stakedAt, totalVals);
+        self._checkDelegate(newDelegation, stakedAt);
 
         self.lastStakedAt = stakedAt;
 
         self.delegation.stakes += newDelegation.stakes;
         self.delegation.shares += newDelegation.shares;
-        self.delegation.weightage += newDelegation.weightage;
     }
 
     function _checkDelegate(
         Info storage self,
         DelegationInfo memory newDelegation,
-        uint256 stakedAt,
-        uint256 totalVals
+        uint256 stakedAt
     ) internal view {
-        if (self._isNotValidator(totalVals)) {
+        if (self._isActiveValidator()) {
             revert ValidatorDoesNotExists(self.operator);
         }
         if (self.lastStakedAt > stakedAt) {
@@ -98,32 +117,20 @@ library ValidatorSet {
                 newDelegation.shares
             );
         }
-        if (self.delegation.weightage + newDelegation.weightage < self.delegation.weightage) {
-            revert InvalidParam(
-                "self.delegation.weightage + newDelegation.weightage < self.delegation.weightage",
-                newDelegation.weightage
-            );
-        }
     }
 
-    function _undelegate(
-        Info storage self,
-        DelegationInfo memory newUndelegation,
-        uint256 totalVals
-    ) internal {
-        self._checkUndelegate(newUndelegation, totalVals);
+    function _undelegate(Info storage self, DelegationInfo memory newUndelegation) internal {
+        self._checkUndelegate(newUndelegation);
 
         self.delegation.stakes -= newUndelegation.stakes;
         self.delegation.shares -= newUndelegation.shares;
-        self.delegation.weightage -= newUndelegation.weightage;
     }
 
     function _checkUndelegate(
         Info storage self,
-        DelegationInfo memory newUndelegation,
-        uint256 totalVals
+        DelegationInfo memory newUndelegation
     ) internal view {
-        if (self._isNotValidator(totalVals)) {
+        if (self._isActiveValidator()) {
             revert ValidatorDoesNotExists(self.operator);
         }
         if (self.delegation.stakes - newUndelegation.stakes > self.delegation.stakes) {
@@ -138,33 +145,22 @@ library ValidatorSet {
                 newUndelegation.shares
             );
         }
-        if (self.delegation.weightage - newUndelegation.weightage > self.delegation.weightage) {
-            revert InvalidParam(
-                "self.delegation.weightage - newUndelegation.weightage > self.delegation.weightage",
-                newUndelegation.weightage
-            );
-        }
     }
 
     function _redelegate(
         Info storage self,
         Info storage val,
         DelegationInfo memory dstDelegation,
-        DelegationInfo memory srcDelegation,
-        uint256 totalVals
+        DelegationInfo memory srcDelegation
     ) internal {
-        self._checkRedelegate(val, totalVals);
+        self._checkRedelegate(val);
 
-        self._delegate(dstDelegation, block.timestamp, totalVals);
-        val._undelegate(srcDelegation, totalVals);
+        self._delegate(dstDelegation, block.timestamp);
+        val._undelegate(srcDelegation);
     }
 
-    function _checkRedelegate(
-        Info storage self,
-        Info storage val,
-        uint256 totalVals
-    ) internal view {
-        if (val._isNotValidator(totalVals)) {
+    function _checkRedelegate(Info storage self, Info storage val) internal view {
+        if (val._isActiveValidator()) {
             revert ValidatorDoesNotExists(val.operator);
         }
         if (self.operator == val.operator) {
@@ -172,7 +168,14 @@ library ValidatorSet {
         }
     }
 
-    function _isNotValidator(Info storage self, uint256 totalVals) internal view returns (bool) {
-        return self.index == 0 || self.index > totalVals;
+    function _getWeight(
+        Info memory self,
+        uint256 totalDelegations
+    ) internal pure returns (uint256) {
+        return (self.delegation.stakes * WEIGTHAGE_RATE_BASE) / totalDelegations;
+    }
+
+    function _isActiveValidator(Info memory self) internal pure returns (bool) {
+        return self.status == Status.Active;
     }
 }

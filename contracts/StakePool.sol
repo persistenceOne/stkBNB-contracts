@@ -32,6 +32,7 @@ contract StakePool is
      */
     using Config for Config.Data;
     using ValidatorSet for ValidatorSet.Info;
+    using ValidatorSet for ValidatorSet.DelegationInfo;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
     using SafeCastUpgradeable for uint256;
@@ -198,6 +199,7 @@ contract StakePool is
      *
      */
     error ZeroAddress();
+    error NoRewardsAccured(string tag);
     error InvalidAllotment(uint256 allotment);
     error UnknownSender();
     error LessThanMinimum(string tag, uint256 expected, uint256 got);
@@ -278,14 +280,6 @@ contract StakePool is
     }
 
     /**
-     * @dev Prevents the epochUpadte from being called more that once in every 24 hrs.
-     */
-    modifier oncePerDay() {
-        _oncePerDay();
-        _;
-    }
-
-    /**
      *
      * MODIFIERS FUNCTIONS
      *
@@ -332,13 +326,6 @@ contract StakePool is
         // By storing the original value once again, a refund is triggered (see
         // https://eips.ethereum.org/EIPS/eip-2200)
         _status = _NOT_ENTERED;
-    }
-
-    function _oncePerDay() private {
-        if (block.timestamp < _lastRateSynced + 24 hours) {
-            revert rateSyncNotAllowed();
-        }
-        _lastRateSynced = block.timestamp;
     }
 
     /**
@@ -582,8 +569,11 @@ contract StakePool is
      *      Mainnet: Daily
      *      Testnet: Daily
      */
-    function epochUpdate() external override whenNotPaused nonReentrant oncePerDay {
+    function epochUpdate() external override whenNotPaused nonReentrant {
         uint256 bnbRewards = _getDailyRewards();
+        if (bnbRewards == 0) {
+            revert NoRewardsAccured("Cannot perform rateSync with 0 BNB as Rewards");
+        }
         // calculate fee
         uint256 feeWei = config.fee.reward._apply(bnbRewards);
         uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) /
@@ -618,7 +608,7 @@ contract StakePool is
      *
      * - The caller must have the BOT_ROLE.
      */
-    function createValidator(address operator_) external onlyRole(BOT_ROLE) {
+    function createValidator(address operator_) external override onlyRole(BOT_ROLE) {
         if (!_createValidator(operator_)) revert ValidatorCreationFailed();
         emit ValidatorCreated(operator_, getTotalValidators());
     }
@@ -628,21 +618,70 @@ contract StakePool is
      */
     function _createValidator(address operator_) private returns (bool) {
         address stCred_ = IStakeHub(_STAKE_HUB).getValidatorCreditContract(operator_);
-        if (operator_ != _ZERO_ADDR && stCred_ != _ZERO_ADDR) revert ZeroAddress();
+        if (operator_ == _ZERO_ADDR || stCred_ == _ZERO_ADDR) revert ZeroAddress();
 
-        if (!_validatorStore.validators[operator_]._isNotValidator(getTotalValidators())) {
+        IStakeCredit validatorCredit = IStakeCredit(stCred_);
+
+        if (getValidator(operator_)._isActiveValidator()) {
             revert ValidatorAlreadyExists();
         } else {
             // Creates new Validator
-            _validatorStore.validators[operator_]._create(
-                operator_,
-                stCred_,
-                getTotalValidators() + 1
-            );
+            uint256 prevStake = validatorCredit.getPooledBNB(_addressStore.getDelegationManager());
+            uint256 prevShare = validatorCredit.getSharesByPooledBNB(prevStake);
+
+            ValidatorSet.Info memory newValidator = prevStake > 0
+                ? ValidatorSet.Info({
+                    operator: operator_,
+                    stCred: stCred_,
+                    lastStakedAt: block.timestamp,
+                    delegation: ValidatorSet.DelegationInfo({
+                        stakes: prevStake,
+                        shares: prevShare
+                    }),
+                    status: ValidatorSet.Status.Active
+                })
+                : ValidatorSet.Info({
+                    operator: operator_,
+                    stCred: stCred_,
+                    lastStakedAt: 0,
+                    delegation: ValidatorSet.DelegationInfo({ stakes: 0, shares: 0 }),
+                    status: ValidatorSet.Status.Active
+                });
+
+            _validatorStore.validators[operator_]._create(newValidator);
             _validatorStore.operatorsList.push(operator_);
         }
 
         return true;
+    }
+
+    /**
+     * @dev enableValidator: Called by the Bot to reactivate the disabled Validator.
+     * It is allowed to activate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function enableValidator(address operator_) external override onlyRole(BOT_ROLE) {
+        ValidatorSet.Info storage validator = _validatorStore.validators[operator_];
+        validator._activate();
+    }
+
+    /**
+     * @dev disableValidator: Called by the Bot to deactivate the Validator.
+     * It is allowed to deactivate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function disableValidator(
+        address operator_,
+        ValidatorSet.Status status_
+    ) external override onlyRole(BOT_ROLE) {
+        ValidatorSet.Info storage validator = _validatorStore.validators[operator_];
+        validator._deactivate(status_);
     }
 
     /**
@@ -669,16 +708,6 @@ contract StakePool is
 
         // Initiate a delegate only if deposited BNB > 1 BNB
         if (excessBNB > config.minDelegationAmount) {
-            for (uint256 i = 0; i < operators_.length; ++i) {
-                ValidatorSet.Info storage validator = _validatorStore.validators[operators_[i]];
-                ValidatorSet.DelegationInfo memory delegation = ValidatorSet.DelegationInfo({
-                    stakes: bnbAmounts_[i],
-                    shares: _getValidatorShares(operators_[i], bnbAmounts_[i]),
-                    weightage: (bnbAmounts_[i] * WEIGTHAGE_RATE_BASE) / exchangeRate.totalWei
-                });
-
-                validator._delegate(delegation, block.timestamp, getTotalValidators());
-            }
             // Note that the probability of a black swan event is very low. On top of that, as time passes, we will be
             // accumulating some stkBNB as rewards in FeeVault. This implies that our share of BNB in the pool will
             // keep increasing over time. As long as this share is more than the total fee spent till that time, we need
@@ -690,6 +719,20 @@ contract StakePool is
 
             if (!delegated) {
                 revert DepositsDelegationFailed(excessBNB);
+            }
+
+            for (uint256 i = 0; i < operators_.length; ++i) {
+                ValidatorSet.Info storage validator = _validatorStore.validators[operators_[i]];
+
+                uint256 newStake = IStakeCredit(validator.stCred).getPooledBNB(
+                    _addressStore.getDelegationManager()
+                );
+                ValidatorSet.DelegationInfo memory delegation = ValidatorSet.DelegationInfo({
+                    stakes: newStake,
+                    shares: _getValidatorShares(operators_[i], newStake)
+                });
+
+                validator._delegate(delegation, block.timestamp);
             }
 
             emit InitiateDelegation_Transfered(excessBNB);
@@ -745,7 +788,7 @@ contract StakePool is
         address dstOperator_,
         uint256 allotment_
     ) external override whenNotPaused onlyRole(BOT_ROLE) {
-        if (_validatorStore.validators[dstOperator_]._isNotValidator(getTotalValidators())) {
+        if (!getValidator(dstOperator_)._isActiveValidator()) {
             _createValidator(dstOperator_);
         }
 
@@ -761,16 +804,10 @@ contract StakePool is
             // 100 % of the stakes are redelegated
             dstDelegation = ValidatorSet.DelegationInfo({
                 stakes: srcValidator.delegation.stakes,
-                shares: _getValidatorShares(dstOperator_, srcValidator.delegation.stakes),
-                weightage: srcValidator.delegation.weightage
+                shares: _getValidatorShares(dstOperator_, srcValidator.delegation.stakes)
             });
 
-            dstValidator._redelegate(
-                srcValidator,
-                dstDelegation,
-                srcValidator.delegation,
-                getTotalValidators()
-            );
+            dstValidator._redelegate(srcValidator, dstDelegation, srcValidator.delegation);
 
             shares = dstDelegation.shares;
             IDelegationManager(payable(_addressStore.getDelegationManager())).redelegateBnbShares(
@@ -787,22 +824,15 @@ contract StakePool is
             );
             dstDelegation = ValidatorSet.DelegationInfo({
                 stakes: _rateFactor(srcValidator.delegation.stakes, allotment_),
-                shares: partialShares,
-                weightage: _rateFactor(srcValidator.delegation.weightage, allotment_)
+                shares: partialShares
             });
 
             srcDelegation = ValidatorSet.DelegationInfo({
                 stakes: _rateFactor(srcValidator.delegation.stakes, allotment_),
-                shares: _rateFactor(srcValidator.delegation.shares, allotment_),
-                weightage: _rateFactor(srcValidator.delegation.weightage, allotment_)
+                shares: _rateFactor(srcValidator.delegation.shares, allotment_)
             });
 
-            dstValidator._redelegate(
-                srcValidator,
-                dstDelegation,
-                srcDelegation,
-                getTotalValidators()
-            );
+            dstValidator._redelegate(srcValidator, dstDelegation, srcDelegation);
 
             shares = partialShares;
             IDelegationManager(payable(_addressStore.getDelegationManager())).redelegateBnbShares(
@@ -845,15 +875,6 @@ contract StakePool is
         uint256[] memory sharesToUnbond = new uint256[](bnbUnbondValues_.length);
         for (uint256 i = 0; i < operators_.length; ++i) {
             sharesToUnbond[i] = _getValidatorShares(operators_[i], bnbUnbondValues_[i]);
-
-            ValidatorSet.Info storage validator = _validatorStore.validators[operators_[i]];
-            ValidatorSet.DelegationInfo memory unDelegation = ValidatorSet.DelegationInfo({
-                stakes: bnbUnbondValues_[i],
-                shares: sharesToUnbond[i],
-                weightage: (bnbUnbondValues_[i] * WEIGTHAGE_RATE_BASE) / exchangeRate.totalWei
-            });
-
-            validator._undelegate(unDelegation, getTotalValidators());
         }
 
         uint256 totalBNBUnbonding = IDelegationManager(
@@ -879,26 +900,45 @@ contract StakePool is
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param operators_      : List of Validators to claim the unbonded bnb.
-     * @param requestNumbers_ : Must be "0" to claim all the requests
-     *
      */
-    function unbondingFinished(
-        address[] calldata operators_,
-        uint256[] calldata requestNumbers_
-    ) external override whenNotPaused onlyRole(BOT_ROLE) {
-        if (operators_.length != requestNumbers_.length) {
-            revert ArgumentsLengthMismatch();
+    function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
+        address[] memory operators;
+        ValidatorSet.Info[] memory allValidators = getValidators();
+
+        for (uint256 i = 0; i < getTotalValidators(); ++i) {
+            IStakeCredit validatorCredit = IStakeCredit(allValidators[i].stCred);
+            uint256 claimRequests = validatorCredit.claimableUnbondRequest(
+                _addressStore.getDelegationManager()
+            );
+
+            if (claimRequests > 0) {
+                operators[i] = allValidators[i].operator;
+
+                ValidatorSet.Info storage validator = _validatorStore.validators[operators[i]];
+
+                uint256 unstake = validatorCredit.lockedBNBs(
+                    _addressStore.getDelegationManager(),
+                    0 // to claim all the unbond requests
+                );
+                uint sharesBurnt = validatorCredit.getSharesByPooledBNB(unstake);
+                ValidatorSet.DelegationInfo memory unDelegation = ValidatorSet.DelegationInfo({
+                    stakes: unstake,
+                    shares: sharesBurnt
+                });
+
+                validator._undelegate(unDelegation);
+            }
         }
-        // the unbondedAmount can never be more than _bnbUnbonding. DelegationManager takes care of that.
+
+        // the claimedAmount can never be more than _bnbUnbonding. DelegationManager takes care of that.
         // So, no need to worry about arithmetic overflows.
-        uint256 unbondedAmount = IDelegationManager(payable(_addressStore.getDelegationManager()))
-            .claimUnbondedBNB(operators_, requestNumbers_);
+        uint256 claimedAmount = IDelegationManager(payable(_addressStore.getDelegationManager()))
+            .claimUnbondedBNB(operators);
 
-        _bnbUnbonding -= unbondedAmount;
-        _claimReserve += unbondedAmount;
+        _bnbUnbonding -= claimedAmount;
+        _claimReserve += claimedAmount;
 
-        emit UnbondingFinished(unbondedAmount);
+        emit UnbondingFinished(claimedAmount);
     }
 
     /**
@@ -971,10 +1011,37 @@ contract StakePool is
 
         for (uint256 i = 0; i < totalValidatorCount; ++i) {
             address operator = _validatorStore.operatorsList[i];
-            allValidators[i] = _validatorStore.validators[operator];
+            allValidators[i] = getValidator(operator);
         }
 
         return allValidators;
+    }
+
+    /**
+     * @dev Returns a specific Validator
+     */
+    function getValidator(
+        address operator
+    ) public view override returns (ValidatorSet.Info memory) {
+        ValidatorSet.Info memory validator = _validatorStore.validators[operator];
+        return validator;
+    }
+
+    /**
+     * @dev Returns a list of Current Delegation weights of Validators
+     */
+    function getValidatorWeights() public view override returns (uint256[] memory) {
+        ValidatorSet.Info[] memory allValidators = getValidators();
+
+        uint256 totalValidators = getTotalValidators();
+        // Sum of total delegations made to validators so far.
+        uint256 totalDelegations = exchangeRate.totalWei - getDeposits();
+        uint256[] memory validatorWeights;
+        for (uint256 i = 0; i < totalValidators; ++i) {
+            validatorWeights[i] = allValidators[i]._getWeight(totalDelegations);
+        }
+
+        return validatorWeights;
     }
 
     /**
@@ -1109,13 +1176,14 @@ contract StakePool is
      */
     function _getDailyRewards() internal returns (uint256) {
         uint256 totalRewardsEarned;
-        for (uint256 i = 0; i <= getTotalValidators(); ++i) {
+        for (uint256 i = 0; i < getTotalValidators(); ++i) {
             ValidatorSet.Info storage validator = _validatorStore.validators[
                 _validatorStore.operatorsList[i]
             ];
+
             // Rewards accured by a validator on a specific day
-            uint256 validatorReward = IStakeCredit(validator.stCred).getPooledBNB(
-                _addressStore.getDelegationManager()
+            uint256 validatorReward = IStakeCredit(validator.stCred).getPooledBNBByShares(
+                validator.delegation.shares
             ) - validator.delegation.stakes;
 
             totalRewardsEarned += validatorReward;
@@ -1146,11 +1214,10 @@ contract StakePool is
         address _operator,
         uint256 _bnbAmount
     ) internal view returns (uint256) {
-        if (_validatorStore.validators[_operator]._isNotValidator(getTotalValidators()))
-            revert ValidatorDoesNotExists();
-        // Validator Credit Contract Address
-        address stCred = _validatorStore.validators[_operator].stCred;
-        uint256 shares = IStakeCredit(stCred).getSharesByPooledBNB(_bnbAmount);
+        ValidatorSet.Info memory validator = getValidator(_operator);
+
+        if (!validator._isActiveValidator()) revert ValidatorDoesNotExists();
+        uint256 shares = IStakeCredit(validator.stCred).getSharesByPooledBNB(_bnbAmount);
 
         return shares;
     }

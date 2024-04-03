@@ -2,13 +2,14 @@
 
 pragma solidity ^0.8.7;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./interfaces/IDelegationManager.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakePoolBot.sol";
 import "./interfaces/IStakeHub.sol";
 import "./interfaces/IStakeCredit.sol";
 
-contract DelegationManager is IDelegationManager {
+contract DelegationManager is IDelegationManager, Initializable {
     /**
      *
      * CONSTANTS
@@ -65,10 +66,27 @@ contract DelegationManager is IDelegationManager {
 
     /**
      *
-     * CONTRACT LOGIC
+     * INIT FUNCTIONS
      *
      */
-    constructor(IAddressStore addressStore_) {
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(IAddressStore addressStore_) public initializer {
+        __DelegationManager_init(addressStore_);
+    }
+
+    function __DelegationManager_init(IAddressStore addressStore_) internal onlyInitializing {
+        __DelegationManager_init_unchained(addressStore_);
+    }
+
+    function __DelegationManager_init_unchained(
+        IAddressStore addressStore_
+    ) internal onlyInitializing {
+        // Finally, initialize this contract.
         _addressStore = addressStore_;
     }
 
@@ -81,6 +99,12 @@ contract DelegationManager is IDelegationManager {
     receive() external payable override {
         emit Received(msg.sender, msg.value);
     }
+
+    /**
+     *
+     * DELEGATE FUNCTIONS
+     *
+     */
 
     /**
      * @dev Called by the StakePool contract to delegate BNB deposits to BSC Native Staking Module.
@@ -205,11 +229,13 @@ contract DelegationManager is IDelegationManager {
      * @return The amount it sent to the StakePool.
      */
     function claimUnbondedBNB(
-        address[] calldata operators,
-        uint256[] calldata requestNumbers
+        address[] calldata operators
     ) external override onlyStakePool returns (uint256) {
         address stakePool = getStakePool();
 
+        // 0 means to claim all the undelegation requests.
+        // requestNumbers will be array of 0's
+        uint256[] memory requestNumbers = new uint256[](operators.length);
         // Calls StakeHub.claimBatch() on BSC Native Staking Module
         (bool claimed /* bytes memory data */, ) = _STAKE_HUB.call(
             abi.encodeWithSelector(IStakeHub.claimBatch.selector, operators, requestNumbers)
@@ -239,6 +265,12 @@ contract DelegationManager is IDelegationManager {
 
         return amountToSend;
     }
+
+    /**
+     *
+     * VIEW FUNCTIONS
+     *
+     */
 
     /**
      * @return the StakePool Address

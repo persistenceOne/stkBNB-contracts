@@ -84,8 +84,5 @@ interface IDelegationManager {
      *
      * @return The current balance, all of which it will be sending to the StakePool.
      */
-    function claimUnbondedBNB(
-        address[] calldata operators,
-        uint256[] calldata requestNumbers
-    ) external returns (uint256);
+    function claimUnbondedBNB(address[] calldata operators) external returns (uint256);
 }
