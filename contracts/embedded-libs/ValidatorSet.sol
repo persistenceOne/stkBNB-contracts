@@ -36,8 +36,8 @@ library ValidatorSet {
     struct DelegationInfo {
         // @dev Current delegations of the validator (total BNB delegated)
         uint256 stakes;
-        // @dev Amount of stCred token holdings
-        uint256 shares;
+        // @dev Current undelegations of the validator (total BNB undelegated)
+        uint256 unstakes;
     }
 
     enum Status {
@@ -81,86 +81,61 @@ library ValidatorSet {
         }
     }
 
-    function _delegate(
-        Info storage self,
-        DelegationInfo memory newDelegation,
-        uint256 stakedAt
-    ) internal {
-        self._checkDelegate(newDelegation, stakedAt);
+    function _delegate(Info storage self, uint256 newStakes, uint256 stakedAt) internal {
+        self._checkDelegate(newStakes, stakedAt);
 
         self.lastStakedAt = stakedAt;
-
-        self.delegation.stakes += newDelegation.stakes;
-        self.delegation.shares += newDelegation.shares;
+        self.delegation.stakes = newStakes;
     }
 
-    function _checkDelegate(
-        Info storage self,
-        DelegationInfo memory newDelegation,
-        uint256 stakedAt
-    ) internal view {
-        if (self._isActiveValidator()) {
+    function _checkDelegate(Info storage self, uint256 newStakes, uint256 stakedAt) internal view {
+        if (!self._isActiveValidator()) {
             revert ValidatorDoesNotExists(self.operator);
         }
         if (self.lastStakedAt > stakedAt) {
             revert InvalidParam("self.lastStakedAt > stakedAt", stakedAt);
         }
-        if (self.delegation.stakes + newDelegation.stakes < self.delegation.stakes) {
+        if (self.delegation.stakes + newStakes < self.delegation.stakes) {
             revert InvalidParam(
                 "self.delegation.stakes + newDelegation.stakes < self.delegation.stakes",
-                newDelegation.stakes
-            );
-        }
-        if (self.delegation.shares + newDelegation.shares < self.delegation.shares) {
-            revert InvalidParam(
-                "self.delegation.shares + newDelegation.shares < self.delegation.shares",
-                newDelegation.shares
+                newStakes
             );
         }
     }
 
-    function _undelegate(Info storage self, DelegationInfo memory newUndelegation) internal {
-        self._checkUndelegate(newUndelegation);
+    function _undelegate(Info storage self, uint256 newUnstakes) internal {
+        self._checkUndelegate(newUnstakes);
 
-        self.delegation.stakes -= newUndelegation.stakes;
-        self.delegation.shares -= newUndelegation.shares;
+        self.delegation.stakes -= newUnstakes;
+        self.delegation.unstakes += newUnstakes;
     }
 
-    function _checkUndelegate(
-        Info storage self,
-        DelegationInfo memory newUndelegation
-    ) internal view {
-        if (self._isActiveValidator()) {
+    function _checkUndelegate(Info storage self, uint256 newUnstakes) internal view {
+        if (!self._isActiveValidator()) {
             revert ValidatorDoesNotExists(self.operator);
         }
-        if (self.delegation.stakes - newUndelegation.stakes > self.delegation.stakes) {
-            revert InvalidParam(
-                "self.delegation.stakes - newUndelegation.stakes > self.delegation.stakes",
-                newUndelegation.stakes
-            );
+        if (newUnstakes <= 0) {
+            revert InvalidParam("newUnstakes <= 0", newUnstakes);
         }
-        if (self.delegation.shares - newUndelegation.shares > self.delegation.shares) {
-            revert InvalidParam(
-                "self.delegation.shares - newUndelegation.shares > self.delegation.shares",
-                newUndelegation.shares
-            );
+        if (newUnstakes > self.delegation.stakes) {
+            revert InvalidParam("newUnstakes > self.delegation.stakes", newUnstakes);
         }
     }
 
     function _redelegate(
         Info storage self,
         Info storage val,
-        DelegationInfo memory dstDelegation,
-        DelegationInfo memory srcDelegation
+        uint256 dstStakes,
+        uint256 srcUnstakes
     ) internal {
         self._checkRedelegate(val);
 
-        self._delegate(dstDelegation, block.timestamp);
-        val._undelegate(srcDelegation);
+        self._delegate(dstStakes, block.timestamp);
+        val._undelegate(srcUnstakes);
     }
 
     function _checkRedelegate(Info storage self, Info storage val) internal view {
-        if (val._isActiveValidator()) {
+        if (!val._isActiveValidator()) {
             revert ValidatorDoesNotExists(val.operator);
         }
         if (self.operator == val.operator) {

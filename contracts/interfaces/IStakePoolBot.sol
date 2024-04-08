@@ -74,11 +74,6 @@ interface IStakePoolBot {
     function getValidators() external view returns (ValidatorSet.Info[] memory);
 
     /**
-     * @dev Returns a list of Current Delegation weights of Validators
-     */
-    function getValidatorWeights() external view returns (uint256[] memory);
-
-    /**
      * @dev Returns the total number of validators
      */
     function getTotalValidators() external view returns (uint256);

@@ -24,6 +24,7 @@ interface IStakeCredit {
     function rewardRecord(uint256 dayIndex) external view returns (uint256);
     function totalPooledBNBRecord(uint256 dayIndex) external view returns (uint256);
     function claimableUnbondRequest(address delegator) external view returns (uint256);
+    function pendingUnbondRequest(address delegator) external view returns (uint256);
     function lockedBNBs(address delegator, uint256 number) external view returns (uint256);
 
     /**

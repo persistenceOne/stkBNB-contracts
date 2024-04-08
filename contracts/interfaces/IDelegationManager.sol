@@ -81,8 +81,8 @@ interface IDelegationManager {
      *
      * Requirements:
      * - The caller must be the StakePool contract.
-     *
-     * @return The current balance, all of which it will be sending to the StakePool.
      */
-    function claimUnbondedBNB(address[] calldata operators) external returns (uint256);
+    function claimUnbondedBNB(address operator) external;
+
+    function withdrawClaimedBNB() external returns (uint256);
 }

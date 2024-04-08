@@ -8,6 +8,7 @@ import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakePoolBot.sol";
 import "./interfaces/IStakeHub.sol";
 import "./interfaces/IStakeCredit.sol";
+import "hardhat/console.sol";
 
 contract DelegationManager is IDelegationManager, Initializable {
     /**
@@ -40,7 +41,7 @@ contract DelegationManager is IDelegationManager, Initializable {
     error RedelegationFailed(address srcValidator, address dstValidator, uint256 shares);
     error InsufficientDelegationAmount(uint256 delegationAmount);
     error UndelegationFailed(address validator, uint256 shares);
-    error ClaimBatchFailed();
+    error ClaimFailed();
 
     /**
      *
@@ -163,8 +164,8 @@ contract DelegationManager is IDelegationManager, Initializable {
         uint256 shares,
         bool delegateVotePower
     ) external payable override onlyStakePool {
-        uint256 delegatorShares = _getDelegatorShares(srcValidator);
-        if (shares == 0 || shares > delegatorShares) {
+        uint256 srcShares = _getShares(srcValidator);
+        if (shares == 0 || shares > srcShares) {
             revert InvalidSharesAmount();
         }
 
@@ -225,26 +226,21 @@ contract DelegationManager is IDelegationManager, Initializable {
      *
      * Requirements:
      * - The caller must be the StakePool contract.
-     *
-     * @return The amount it sent to the StakePool.
      */
-    function claimUnbondedBNB(
-        address[] calldata operators
-    ) external override onlyStakePool returns (uint256) {
-        address stakePool = getStakePool();
-
-        // 0 means to claim all the undelegation requests.
-        // requestNumbers will be array of 0's
-        uint256[] memory requestNumbers = new uint256[](operators.length);
+    function claimUnbondedBNB(address operator) external override onlyStakePool {
         // Calls StakeHub.claimBatch() on BSC Native Staking Module
         (bool claimed /* bytes memory data */, ) = _STAKE_HUB.call(
-            abi.encodeWithSelector(IStakeHub.claimBatch.selector, operators, requestNumbers)
+            //  the request number of the undelegation. 0 means claim all
+            abi.encodeWithSelector(IStakeHub.claim.selector, operator, 0)
         );
 
         if (!claimed) {
-            revert ClaimBatchFailed();
+            revert ClaimFailed();
         }
+    }
 
+    function withdrawClaimedBNB() external override onlyStakePool returns (uint256) {
+        address stakePool = getStakePool();
         // the current balance can be more than what the StakePool contract needs based on bnbUnbonding. It might happen
         // if someone makes an unexpected donation to this contract. The person making the donation could be us, trying
         // to payout the fee losses to the protocol (a legit use-case). It could also be a malicious actor trying to
@@ -287,12 +283,10 @@ contract DelegationManager is IDelegationManager, Initializable {
     }
 
     /**
-     * @return delegatorShares The delegators Shares with a Validator
+     * @return shares The Shares of a Validator
      */
-    function _getDelegatorShares(
-        address _operator
-    ) internal view returns (uint256 delegatorShares) {
+    function _getShares(address _operator) internal view returns (uint256 shares) {
         address validatorCredit = IStakeHub(_STAKE_HUB).getValidatorCreditContract(_operator);
-        delegatorShares = IStakeCredit(validatorCredit).balanceOf(address(this));
+        shares = IStakeCredit(validatorCredit).balanceOf(address(this));
     }
 }

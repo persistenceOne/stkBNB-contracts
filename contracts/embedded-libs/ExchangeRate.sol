@@ -19,8 +19,10 @@ library ExchangeRate {
 
     function _update(Data storage self, Data memory change, UpdateOp op) internal {
         if (op == UpdateOp.Add) {
-            self.totalWei += change.totalWei;
-            self.poolTokenSupply += change.poolTokenSupply;
+            unchecked {
+                self.totalWei += change.totalWei;
+                self.poolTokenSupply += change.poolTokenSupply;
+            }
         } else {
             self.totalWei -= change.totalWei;
             self.poolTokenSupply -= change.poolTokenSupply;
