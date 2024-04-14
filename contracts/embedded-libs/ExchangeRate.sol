@@ -19,10 +19,8 @@ library ExchangeRate {
 
     function _update(Data storage self, Data memory change, UpdateOp op) internal {
         if (op == UpdateOp.Add) {
-            unchecked {
-                self.totalWei += change.totalWei;
-                self.poolTokenSupply += change.poolTokenSupply;
-            }
+            self.totalWei += change.totalWei;
+            self.poolTokenSupply += change.poolTokenSupply;
         } else {
             self.totalWei -= change.totalWei;
             self.poolTokenSupply -= change.poolTokenSupply;
@@ -49,7 +47,7 @@ library ExchangeRate {
         if (numerator < denominator || denominator == 0) {
             return 0;
         }
-        // TODO: later also take remainder into consideration
+
         return numerator / denominator;
     }
 }

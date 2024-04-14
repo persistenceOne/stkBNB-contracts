@@ -10,21 +10,22 @@ library Config {
 
     error MustBeGreaterThanZero();
     error CantBeMoreThan1e18();
-    error CooldownPeriodCantBeMoreThan30Days();
+    error CooldownPeriodOutOfRange();
 
     struct Data {
-        // @dev The address of the staking wallet on the BSC chain.
-        // It will be used for Delegate/Undelegate/Redelegate transactions
-        // While the contracts are paused
-        address bscStakingWallet;
+        // This variable is used to prevent storage collisions while proxy upgrades
+        /// @custom:oz-renamed-from bscStakingWallet
+        address bscStakingWallet_deprecated;
         // @dev The minimum amount of BNB required to make delegation on BSC Native Staking Module.
         // This should be at least minDelegationBNBChange in the StakeHub Contract.
         // Ideally, this should be set to a value such that the protocol revenue from this value is more than the fee
         // lost on this value for Native Staking Module delegation/undelegation/redelegation/etc.
         // But, finding the ideal value is non-deterministic.
+        /// @custom:oz-renamed-from minCrossChainTransfer
         uint256 minDelegationAmount;
         // This variable is used to prevent storage collisions while proxy upgrades
-        uint256 __deprecatedOne;
+        /// @custom:oz-renamed-from transferOutTimeout
+        uint256 transferOutTimeout_deprecated;
         // @dev The minimum amount of BNB required to make a deposit to the contract.
         uint256 minBNBDeposit;
         // @dev The minimum amount of tokens required to make a withdrawal from the contract.
@@ -35,6 +36,9 @@ library Config {
         // @dev The fee distribution to represent different kinds of fee.
         FeeDistribution.Data fee;
     }
+
+    uint256 public constant MAX_ALLOWED_COOLDOWN_PERIOD = 30 days;
+    uint256 public constant MIN_ALLOWED_COOLDOWN_PERIOD = 7 days;
 
     function _init(Data storage self, Data calldata obj) internal {
         obj._checkValid();
@@ -52,13 +56,15 @@ library Config {
         if (self.minTokenWithdrawal > 1e18) {
             revert CantBeMoreThan1e18();
         }
-        if (self.cooldownPeriod > 2592000) {
-            revert CooldownPeriodCantBeMoreThan30Days();
+        if (
+            self.cooldownPeriod > MAX_ALLOWED_COOLDOWN_PERIOD ||
+            self.cooldownPeriod < MIN_ALLOWED_COOLDOWN_PERIOD
+        ) {
+            revert CooldownPeriodOutOfRange();
         }
     }
 
     function _set(Data storage self, Data calldata obj) internal {
-        self.bscStakingWallet = obj.bscStakingWallet;
         self.minDelegationAmount = obj.minDelegationAmount;
         self.minBNBDeposit = obj.minBNBDeposit;
         self.minTokenWithdrawal = obj.minTokenWithdrawal;

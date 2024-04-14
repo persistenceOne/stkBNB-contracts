@@ -154,15 +154,15 @@ interface IStakePoolBot {
      *
      * - The caller must be bot.
      *
-     * @param srcOperator_ : Source Validator Operator to undelegate from
-     * @param dstOperator_ : Destination Validator Operator to delegate to
-     * @param allotment_   : Percentage of funds to redelegate
+     * @param srcOperator_  : Source Validator Operator to undelegate from
+     * @param dstOperator_  : Destination Validator Operator to delegate to
+     * @param srcRestakes_  : Total stakes to redelegate
      *
      */
     function initiateRedelegation(
         address srcOperator_,
         address dstOperator_,
-        uint256 allotment_
+        uint256 srcRestakes_
     ) external;
 
     /**

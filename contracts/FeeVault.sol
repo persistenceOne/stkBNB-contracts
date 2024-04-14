@@ -29,8 +29,8 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
      * EVENTS
      *
      */
-    event Deposit(address from, uint256 amount); // emitted when stkBNB is sent to this contract
-    event Withdraw(address from, address to, uint256 amount); // emitted when stkBNB is claimed from this contract
+    event Deposit(address indexed from, uint256 indexed amount); // emitted when stkBNB is sent to this contract
+    event Withdraw(address indexed from, address indexed to, uint256 indexed amount); // emitted when stkBNB is claimed from this contract
 
     /**
      *
@@ -59,8 +59,8 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
 
     function __FeeVault_init(IAddressStore addressStore_) internal onlyInitializing {
         // Need to call initializers for each parent without calling anything twice.
-        __Context_init_unchained();
-        __Ownable_init_unchained();
+        __Context_init();
+        __Ownable_init();
         // Finally, initialize this contract.
         __FeeVault_init_unchained(addressStore_);
     }

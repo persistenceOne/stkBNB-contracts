@@ -3,14 +3,14 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "./interfaces/IDelegationManager.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakePoolBot.sol";
 import "./interfaces/IStakeHub.sol";
 import "./interfaces/IStakeCredit.sol";
-import "hardhat/console.sol";
 
-contract DelegationManager is IDelegationManager, Initializable {
+contract DelegationManager is IDelegationManager, Initializable, ContextUpgradeable {
     /**
      *
      * CONSTANTS
@@ -39,6 +39,7 @@ contract DelegationManager is IDelegationManager, Initializable {
     error TransferToStakeHubFailed();
     error InvalidSharesAmount();
     error RedelegationFailed(address srcValidator, address dstValidator, uint256 shares);
+    error StakeAmountMismatch(uint256 value, uint256 stakes);
     error InsufficientDelegationAmount(uint256 delegationAmount);
     error UndelegationFailed(address validator, uint256 shares);
     error ClaimFailed();
@@ -59,8 +60,7 @@ contract DelegationManager is IDelegationManager, Initializable {
      *
      */
     function _isStakePool() private view {
-        address stakePool = getStakePool();
-        if (msg.sender != stakePool) {
+        if (_msgSender() != _addressStore.getStakePool()) {
             revert UnauthorizedSender();
         }
     }
@@ -81,6 +81,9 @@ contract DelegationManager is IDelegationManager, Initializable {
     }
 
     function __DelegationManager_init(IAddressStore addressStore_) internal onlyInitializing {
+        // Need to call initializers for each parent without calling anything twice.
+        __Context_init();
+        // Finally, initialize this contract.
         __DelegationManager_init_unchained(addressStore_);
     }
 
@@ -98,7 +101,7 @@ contract DelegationManager is IDelegationManager, Initializable {
      * So, should be handled properly.
      */
     receive() external payable override {
-        emit Received(msg.sender, msg.value);
+        emit Received(_msgSender(), msg.value);
     }
 
     /**
@@ -120,31 +123,27 @@ contract DelegationManager is IDelegationManager, Initializable {
         address[] calldata operators,
         uint256[] calldata bnbAmounts
     ) external payable override onlyStakePool returns (bool) {
-        address stakePool = getStakePool();
+        uint256 excessBNB = msg.value;
+        uint256 totalStake = _calculateTotal(bnbAmounts);
 
-        // Checks if the BNB Deposits is received in this contract
-        if (msg.value >= IStakePoolBot(stakePool).getDeposits()) {
-            for (uint256 i = 0; i < operators.length; i++) {
-                address operator = operators[i];
-                uint256 bnbAmount = bnbAmounts[i];
-
-                // Delegation Amount must be atleast 1 BNB
-                if (bnbAmount < 1 ether) {
-                    revert InsufficientDelegationAmount(bnbAmount);
-                } else {
-                    (bool delegated /* bytes memory data */, ) = _STAKE_HUB.call{
-                        value: bnbAmount
-                    }(abi.encodeWithSelector(IStakeHub.delegate.selector, operator, false));
-                    if (!delegated) {
-                        revert TransferToStakeHubFailed();
-                    }
-                }
-            }
-
-            return true;
+        // sum(bnbAmounts) from the bot should equal excessBNB
+        if (totalStake != excessBNB) {
+            revert StakeAmountMismatch(excessBNB, totalStake);
         }
 
-        return false;
+        for (uint256 i = 0; i < operators.length; i++) {
+            address operator = operators[i];
+            uint256 bnbAmount = bnbAmounts[i];
+
+            (bool delegated /* bytes memory data */, ) = _STAKE_HUB.call{ value: bnbAmount }(
+                abi.encodeWithSelector(IStakeHub.delegate.selector, operator, false)
+            );
+            if (!delegated) {
+                revert TransferToStakeHubFailed();
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -240,7 +239,6 @@ contract DelegationManager is IDelegationManager, Initializable {
     }
 
     function withdrawClaimedBNB() external override onlyStakePool returns (uint256) {
-        address stakePool = getStakePool();
         // the current balance can be more than what the StakePool contract needs based on bnbUnbonding. It might happen
         // if someone makes an unexpected donation to this contract. The person making the donation could be us, trying
         // to payout the fee losses to the protocol (a legit use-case). It could also be a malicious actor trying to
@@ -249,12 +247,12 @@ contract DelegationManager is IDelegationManager, Initializable {
         // advance, without hampering protocol's security, and at the same time, be free of worries about claims failing
         // even in the rarest of the rare scenarios.
         uint256 amountToSend = address(this).balance;
-        uint256 bnbUnbonding = IStakePoolBot(stakePool).bnbUnbonding();
+        uint256 bnbUnbonding = IStakePoolBot(_msgSender()).bnbUnbonding();
         if (amountToSend > bnbUnbonding) {
             amountToSend = bnbUnbonding;
         }
         // can't use address.transfer() here as it limits the gas to 2300, resulting in failure due to gas exhaustion.
-        (bool sent /*memory data*/, ) = stakePool.call{ value: amountToSend }("");
+        (bool sent /*memory data*/, ) = _msgSender().call{ value: amountToSend }("");
         if (!sent) {
             revert TransferToStakePoolFailed();
         }
@@ -264,23 +262,9 @@ contract DelegationManager is IDelegationManager, Initializable {
 
     /**
      *
-     * VIEW FUNCTIONS
+     * INTERNAL FUNCTIONS
      *
      */
-
-    /**
-     * @return the StakePool Address
-     */
-    function getStakePool() public view returns (address) {
-        return _addressStore.getStakePool();
-    }
-
-    /**
-     * @return the address store
-     */
-    function addressStore() external view returns (IAddressStore) {
-        return _addressStore;
-    }
 
     /**
      * @return shares The Shares of a Validator
@@ -288,5 +272,17 @@ contract DelegationManager is IDelegationManager, Initializable {
     function _getShares(address _operator) internal view returns (uint256 shares) {
         address validatorCredit = IStakeHub(_STAKE_HUB).getValidatorCreditContract(_operator);
         shares = IStakeCredit(validatorCredit).balanceOf(address(this));
+    }
+
+    /**
+     * @return sum The Sum of the uint256 Array
+     */
+    function _calculateTotal(uint256[] calldata values) internal pure returns (uint256) {
+        uint256 totalSum;
+        for (uint256 i = 0; i < values.length; ++i) {
+            totalSum += values[i];
+        }
+
+        return totalSum;
     }
 }

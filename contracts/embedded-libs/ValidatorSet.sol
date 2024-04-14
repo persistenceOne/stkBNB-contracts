@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 
 library ValidatorSet {
     error ZeroAddress(string tag, address account);
-    error ValidatorDoesNotExists(address operator);
+    error ValidatorInactive(address operator);
     error ValidatorAlreadyActive();
     error NonZeroValue(string tag, uint256 value);
     error InvalidParam(string tag, uint256 param);
@@ -25,19 +25,19 @@ library ValidatorSet {
         address operator;
         // @dev Address of validator credit contract which manages the stCred token (non-transferable)
         address stCred;
-        // @dev Last staked unix time
-        uint256 lastStakedAt;
+        // @dev Status of the Validator
+        Status status;
+        // @dev 5 slots reserved for future use
+        uint256[5] __reservedSlots;
         // @dev Validator's Stake Info
         DelegationInfo delegation;
-        // @dev
-        Status status;
     }
 
     struct DelegationInfo {
         // @dev Current delegations of the validator (total BNB delegated)
         uint256 stakes;
-        // @dev Current undelegations of the validator (total BNB undelegated)
-        uint256 unstakes;
+        // @dev 5 slots reserved for future use
+        uint256[5] __reservedSlots;
     }
 
     enum Status {
@@ -46,14 +46,11 @@ library ValidatorSet {
         Jailed
     }
 
-    uint256 private constant WEIGTHAGE_RATE_BASE = 10_000; // 100 %
-
     function _create(Info storage self, Info memory newVal) internal {
         newVal._checkCreate();
 
         self.operator = newVal.operator;
         self.stCred = newVal.stCred;
-        self.lastStakedAt = newVal.lastStakedAt;
         self.delegation = newVal.delegation;
         self.status = newVal.status;
     }
@@ -81,25 +78,18 @@ library ValidatorSet {
         }
     }
 
-    function _delegate(Info storage self, uint256 newStakes, uint256 stakedAt) internal {
-        self._checkDelegate(newStakes, stakedAt);
+    function _delegate(Info storage self, uint256 newStakes) internal {
+        self._checkDelegate(newStakes);
 
-        self.lastStakedAt = stakedAt;
         self.delegation.stakes = newStakes;
     }
 
-    function _checkDelegate(Info storage self, uint256 newStakes, uint256 stakedAt) internal view {
+    function _checkDelegate(Info storage self, uint256 newStakes) internal view {
         if (!self._isActiveValidator()) {
-            revert ValidatorDoesNotExists(self.operator);
+            revert ValidatorInactive(self.operator);
         }
-        if (self.lastStakedAt > stakedAt) {
-            revert InvalidParam("self.lastStakedAt > stakedAt", stakedAt);
-        }
-        if (self.delegation.stakes + newStakes < self.delegation.stakes) {
-            revert InvalidParam(
-                "self.delegation.stakes + newDelegation.stakes < self.delegation.stakes",
-                newStakes
-            );
+        if (newStakes < self.delegation.stakes) {
+            revert InvalidParam("newStakes < self.delegation.stakes", newStakes);
         }
     }
 
@@ -107,15 +97,14 @@ library ValidatorSet {
         self._checkUndelegate(newUnstakes);
 
         self.delegation.stakes -= newUnstakes;
-        self.delegation.unstakes += newUnstakes;
     }
 
     function _checkUndelegate(Info storage self, uint256 newUnstakes) internal view {
         if (!self._isActiveValidator()) {
-            revert ValidatorDoesNotExists(self.operator);
+            revert ValidatorInactive(self.operator);
         }
-        if (newUnstakes <= 0) {
-            revert InvalidParam("newUnstakes <= 0", newUnstakes);
+        if (newUnstakes == 0) {
+            revert InvalidParam("newUnstakes == 0", newUnstakes);
         }
         if (newUnstakes > self.delegation.stakes) {
             revert InvalidParam("newUnstakes > self.delegation.stakes", newUnstakes);
@@ -126,31 +115,28 @@ library ValidatorSet {
         Info storage self,
         Info storage val,
         uint256 dstStakes,
-        uint256 srcUnstakes
+        uint256 srcRestakes
     ) internal {
         self._checkRedelegate(val);
 
-        self._delegate(dstStakes, block.timestamp);
-        val._undelegate(srcUnstakes);
+        self._delegate(dstStakes);
+        val._undelegate(srcRestakes);
     }
 
     function _checkRedelegate(Info storage self, Info storage val) internal view {
         if (!val._isActiveValidator()) {
-            revert ValidatorDoesNotExists(val.operator);
+            revert ValidatorInactive(val.operator);
         }
         if (self.operator == val.operator) {
             revert SelfRedelegationNotAllowed();
         }
     }
 
-    function _getWeight(
-        Info memory self,
-        uint256 totalDelegations
-    ) internal pure returns (uint256) {
-        return (self.delegation.stakes * WEIGTHAGE_RATE_BASE) / totalDelegations;
-    }
-
     function _isActiveValidator(Info memory self) internal pure returns (bool) {
         return self.status == Status.Active;
+    }
+
+    function _exists(Info memory self) internal pure returns (bool) {
+        return self.operator != address(0);
     }
 }

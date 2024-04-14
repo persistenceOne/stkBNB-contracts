@@ -10,7 +10,7 @@ interface IStakeCredit {
     function delegate(address delegator) external payable returns (uint256);
     function undelegate(address delegator, uint256 shares) external returns (uint256);
     function unbond(address delegator, uint256 shares) external returns (uint256);
-    function claim(address delegator, uint256 requestNumber) external returns (uint256);
+    function claim(address payable delegator, uint256 requestNumber) external returns (uint256);
 
     /**
      *
