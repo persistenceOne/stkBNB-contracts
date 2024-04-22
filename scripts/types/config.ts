@@ -45,6 +45,7 @@ export interface GnosisSafeAddr {
 export interface IConfig {
     mnemonic: string;
     etherscanApiKey: string;
+    rpcURL: string;
     botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
@@ -52,7 +53,7 @@ export interface IConfig {
     addressStore: ContractConfig<null>;
     timelockedAdmin: ContractConfig<TimelockedAdminConfig>;
     stkBNB: ContractConfig<null>;
-    delegationManager: ContractConfig<null>;
+    delegationManager: UpgradableContractConfig<null>;
     feeVault: UpgradableContractConfig<null>;
     stakePool: UpgradableContractConfig<StakePoolInit>;
 }
@@ -60,6 +61,7 @@ export interface IConfig {
 export class Config implements IConfig {
     mnemonic: string;
     etherscanApiKey: string;
+    rpcURL: string;
     botAddr: string;
     numConfirmBlocks: number;
     postDeploySetup: boolean;
@@ -67,13 +69,14 @@ export class Config implements IConfig {
     addressStore: ContractConfig<null>;
     timelockedAdmin: ContractConfig<TimelockedAdminConfig>;
     stkBNB: ContractConfig<null>;
-    delegationManager: ContractConfig<null>;
+    delegationManager: UpgradableContractConfig<null>;
     feeVault: UpgradableContractConfig<null>;
     stakePool: UpgradableContractConfig<StakePoolInit>;
 
     constructor(config: IConfig) {
         this.mnemonic = config.mnemonic;
         this.etherscanApiKey = config.etherscanApiKey;
+        this.rpcURL = config.rpcURL;
         this.botAddr = config.botAddr;
         this.numConfirmBlocks = config.numConfirmBlocks;
         this.postDeploySetup = config.postDeploySetup;

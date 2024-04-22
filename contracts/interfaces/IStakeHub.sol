@@ -48,6 +48,8 @@ interface IStakeHub {
     function getValidatorCommission(
         address operatorAddress
     ) external view returns (Commission memory);
+    function redelegateFeeRate() external view returns (uint256);
+    function REDELEGATE_FEE_RATE_BASE() external view returns (uint256);
 
     /**
      *

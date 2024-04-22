@@ -121,11 +121,15 @@
                         "config": {
                             "type": "object",
                             "properties": {
-                                "bscStakingWallet": {
+                                "bcStakingWallet_deprecated": {
                                     "type": "string",
                                     "minLength": 1
                                 },
                                 "minDelegationAmount": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "transferOutTimeout_deprecated": {
                                     "type": "string",
                                     "minLength": 1
                                 },
@@ -158,8 +162,9 @@
                                 }
                             },
                             "required": [
-                                "bscStakingWallet",
+                                "bcStakingWallet_deprecated",
                                 "minDelegationAmount",
+                                "transferOutTimeout_deprecated",
                                 "minBNBDeposit",
                                 "minTokenWithdrawal",
                                 "cooldownPeriod",
@@ -176,6 +181,7 @@
     "required": [
         "mnemonic",
         "etherscanApiKey",
+        "rpcURL",
         "botAddr",
         "numConfirmBlocks",
         "postDeploySetup",

@@ -40,7 +40,6 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
     error InvalidSharesAmount();
     error RedelegationFailed(address srcValidator, address dstValidator, uint256 shares);
     error StakeAmountMismatch(uint256 value, uint256 stakes);
-    error InsufficientDelegationAmount(uint256 delegationAmount);
     error UndelegationFailed(address validator, uint256 shares);
     error ClaimFailed();
 
@@ -95,7 +94,7 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
     }
 
     /**
-     * @dev Called by the Validator credit contract when undelegated funds are claimed by
+     * @dev Called by the StakeHub contract when undelegated funds are claimed by
      * bot by calling unbondingFinished() on StakePool. At the same time, can also be used by
      * anyone to send any amount to this contract, which can be both a use as well as a misuse.
      * So, should be handled properly.
@@ -157,17 +156,11 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
      * Requirements:
      * - The caller must be the StakePool contract.
      */
-    function redelegateBnbShares(
+    function redelegateBNBShares(
         address srcValidator,
         address dstValidator,
-        uint256 shares,
-        bool delegateVotePower
+        uint256 shares
     ) external payable override onlyStakePool {
-        uint256 srcShares = _getShares(srcValidator);
-        if (shares == 0 || shares > srcShares) {
-            revert InvalidSharesAmount();
-        }
-
         // Calls StakeHub.redelegate() on BSC Native Staking Module
         (bool redelegated /* bytes memory data */, ) = _STAKE_HUB.call(
             abi.encodeWithSelector(
@@ -175,7 +168,7 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
                 srcValidator,
                 dstValidator,
                 shares,
-                delegateVotePower
+                false
             )
         );
 
@@ -191,19 +184,14 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
      *
      * Requirements:
      * - The caller must be the StakePool contract.
-     *
-     * @return The undelegation requests will be sent to the StakeHub Contract
      */
     function undelegateBNBtoUnbond(
         address[] calldata operators,
-        uint256[] calldata shares,
-        uint256[] calldata bnbUnbonds
-    ) external override onlyStakePool returns (uint256) {
-        uint256 totalBNBUnbonding = 0;
+        uint256[] calldata shares
+    ) external override onlyStakePool {
         for (uint256 i = 0; i < operators.length; i++) {
             address operator = operators[i];
             uint256 share = shares[i];
-            uint256 bnbUnbond = bnbUnbonds[i];
 
             (bool undelegated /* bytes memory data */, ) = _STAKE_HUB.call(
                 abi.encodeWithSelector(IStakeHub.undelegate.selector, operator, share)
@@ -211,17 +199,13 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
 
             if (!undelegated) {
                 revert UndelegationFailed(operator, share);
-            } else {
-                totalBNBUnbonding += bnbUnbond;
             }
         }
-
-        return totalBNBUnbonding;
     }
 
     /**
-     * @dev Called by the StakePool contract to withdraw the undelegated funds. It sends at max
-     * the bnbUnbonding to StakePool. Funds will be available to claim only after 7 days waiting period
+     * @dev Called by the StakePool contract to claim the undelegated BNB from StakeHub.
+     * Funds will be available to claim only after 7 days waiting period in BSC Native Staking
      *
      * Requirements:
      * - The caller must be the StakePool contract.
@@ -238,6 +222,13 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
         }
     }
 
+    /**
+     * @dev Called by the StakePool contract to withdraw the claimed BNB from this contract.
+     * The exact amount sent to the StakePool Contract will be bnbUnbonding.
+     *
+     * Requirements:
+     * - The caller must be the StakePool contract.
+     */
     function withdrawClaimedBNB() external override onlyStakePool returns (uint256) {
         // the current balance can be more than what the StakePool contract needs based on bnbUnbonding. It might happen
         // if someone makes an unexpected donation to this contract. The person making the donation could be us, trying

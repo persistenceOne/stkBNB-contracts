@@ -53,11 +53,10 @@ interface IDelegationManager {
      * - The caller must be the StakePool contract.
      *
      */
-    function redelegateBnbShares(
+    function redelegateBNBShares(
         address srcValidator,
         address dstValidator,
-        uint256 shares,
-        bool delegateVotePower
+        uint256 shares
     ) external payable;
 
     /**
@@ -66,23 +65,27 @@ interface IDelegationManager {
      *
      * Requirements:
      * - The caller must be the StakePool contract.
-     *
-     * @return The undelegation requests will be sent to the StakeHub Contract
      */
     function undelegateBNBtoUnbond(
         address[] calldata operators,
-        uint256[] calldata shares,
-        uint256[] calldata bnbAmounts
-    ) external returns (uint256);
+        uint256[] calldata shares
+    ) external;
 
     /**
-     * @dev Called by the StakePool contract to withdraw the undelegated funds. It sends all its
-     * funds to StakePool.
+     * @dev Called by the StakePool contract to claim the undelegated BNB from StakeHub.
+     * Funds will be available to claim only after 7 days waiting period in BSC Native Staking
      *
      * Requirements:
      * - The caller must be the StakePool contract.
      */
     function claimUnbondedBNB(address operator) external;
 
+    /**
+     * @dev Called by the StakePool contract to withdraw the claimed BNB from this contract.
+     * The exact amount sent to the StakePool Contract will be bnbUnbonding.
+     *
+     * Requirements:
+     * - The caller must be the StakePool contract.
+     */
     function withdrawClaimedBNB() external returns (uint256);
 }

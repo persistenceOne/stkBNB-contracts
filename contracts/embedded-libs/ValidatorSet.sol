@@ -5,7 +5,9 @@ pragma solidity ^0.8.7;
 library ValidatorSet {
     error ZeroAddress(string tag, address account);
     error ValidatorInactive(address operator);
+    error ValidatorDoesNotExist(address operator);
     error ValidatorAlreadyActive();
+    error ValidatorAlreadyInactive(Status currStatus);
     error NonZeroValue(string tag, uint256 value);
     error InvalidParam(string tag, uint256 param);
     error SelfRedelegationNotAllowed();
@@ -65,17 +67,22 @@ library ValidatorSet {
     }
 
     function _activate(Info storage self) internal {
-        if (self.status == Status.Inactive || self.status == Status.Jailed) {
-            self.status = Status.Active;
-        } else {
+        if (self.status == Status.Active) {
             revert ValidatorAlreadyActive();
+        } else {
+            self.status = Status.Active;
         }
     }
 
     function _deactivate(Info storage self, Status newStatus) internal {
-        if (self.status == Status.Active && newStatus != Status.Active) {
-            self.status = newStatus;
+        if (self.status != Status.Active) {
+            revert ValidatorAlreadyInactive(self.status);
         }
+        if (newStatus == Status.Active) {
+            revert InvalidParam("Status cannot be Active", uint256(Status.Active));
+        }
+
+        self.status = newStatus;
     }
 
     function _delegate(Info storage self, uint256 newStakes) internal {
@@ -100,8 +107,8 @@ library ValidatorSet {
     }
 
     function _checkUndelegate(Info storage self, uint256 newUnstakes) internal view {
-        if (!self._isActiveValidator()) {
-            revert ValidatorInactive(self.operator);
+        if (!self._exists()) {
+            revert ValidatorDoesNotExist(self.operator);
         }
         if (newUnstakes == 0) {
             revert InvalidParam("newUnstakes == 0", newUnstakes);

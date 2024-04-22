@@ -5,6 +5,7 @@ import '@nomicfoundation/hardhat-verify';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-contract-sizer';
+import 'hardhat-gas-reporter';
 import { HardhatNetworkHDAccountsConfig } from 'hardhat/src/types/config.ts';
 import { CONFIG } from './scripts/types/config.ts';
 import 'hardhat-forta'; // forta
@@ -45,39 +46,36 @@ task(
 // * https://docs.openzeppelin.com/upgrades-plugins/1.x/api-hardhat-upgrades#verify
 // * https://hardhat.org/hardhat-runner/plugins/nomiclabs-hardhat-etherscan#using-programmatically
 task('verify-all', 'Verifies all contracts on Etherscan', async (taskArgs, hre) => {
-    // AddressStore
-    await hre.run('verify:verify', {
-        address: CONFIG.addressStore.address,
-        constructorArguments: [],
-    });
+    // // AddressStore
+    // await hre.run('verify:verify', {
+    //     address: CONFIG.addressStore.address,
+    //     constructorArguments: [],
+    // });
 
-    // TimelockedAdmin
-    await hre.run('verify:verify', {
-        address: CONFIG.timelockedAdmin.address,
-        constructorArguments: [
-            CONFIG.timelockedAdmin.init.minDelay,
-            [],
-            [ethers.constants.AddressZero],
-        ],
-        contract: 'contracts/TimelockedAdmin.sol:TimelockedAdmin',
-    });
+    // // TimelockedAdmin
+    // await hre.run('verify:verify', {
+    //     address: CONFIG.timelockedAdmin.address,
+    //     constructorArguments: [
+    //         CONFIG.timelockedAdmin.init.minDelay,
+    //         [],
+    //         [ethers.constants.AddressZero],
+    //     ],
+    //     contract: 'contracts/TimelockedAdmin.sol:TimelockedAdmin',
+    // });
 
-    // stkBNB
-    await hre.run('verify:verify', {
-        address: CONFIG.stkBNB.address,
-        constructorArguments: [CONFIG.addressStore.address],
-    });
-
-    // delegationManager
-    await hre.run('verify:verify', {
-        address: CONFIG.delegationManager.address,
-        constructorArguments: [CONFIG.addressStore.address],
-    });
+    // // stkBNB
+    // await hre.run('verify:verify', {
+    //     address: CONFIG.stkBNB.address,
+    //     constructorArguments: [CONFIG.addressStore.address],
+    // });
 
     // proxy contracts: no constructor args here, they have initializers. Also,
     // can't use `verify:verify` as suggested in Etherscan plugin doc for programmatic verification,
     // as the openzeppelin upgrades plugin overrides only the `verify` task for proxies.
     // yarn hardhat verify --network <NETWORK> PROXY_CONTRACT_ADDR
+    await hre.run('verify:verify', {
+        address: CONFIG.delegationManager.address, // delegationManager
+    });
     await hre.run('verify:verify', { address: CONFIG.feeVault.address }); // FeeVault
     await hre.run('verify:verify', { address: CONFIG.stakePool.address }); // StakePool
 });
@@ -90,8 +88,11 @@ task('verify-all', 'Verifies all contracts on Etherscan', async (taskArgs, hre) 
  */
 export default {
     gasReporter: {
-        token: 'BNB',
-        gasPriceApi: 'https://api.bscscan.com/api?module=proxy&action=eth_gasPrice',
+        enabled: true,
+        curreny: 'USD',
+        L1: 'binance',
+        coinmarketcap: '3fc0ac89-5b7a-4728-8ec4-49cd96443360',
+        gasPrice: 1,
     },
     contractSizer: {
         alphaSort: false,
@@ -110,8 +111,32 @@ export default {
     },
     defaultNetwork: 'hardhat',
     networks: {
+        // hardhat: {
+        //     forking: {
+        //         url: 'https://cold-soft-sea.bsc-testnet.quiknode.pro/310d00fd36884aada2e0d2c9131b740c366dcce2/',
+        //     },
+        //     chains: {
+        //         97: {
+        //             hardforkHistory: {
+        //                 london: 35682300,
+        //             },
+        //         },
+        //     },
+        //     blockGasLimit: 50000000,
+        // },
         hardhat: {
-            blockGasLimit: 40000000,
+            forking: {
+                url: CONFIG.rpcURL,
+                blockNumber: 38061600,
+            },
+            chains: {
+                56: {
+                    hardforkHistory: {
+                        london: 12965000,
+                    },
+                },
+            },
+            blockGasLimit: 50000000,
         },
         // This is the network created by `hardhat node`.
         localhost: {
@@ -122,24 +147,24 @@ export default {
         testnet: {
             // url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
             // https://rpc.ankr.com/bsc_testnet_chapel
-            url: 'https://cold-soft-sea.bsc-testnet.quiknode.pro/310d00fd36884aada2e0d2c9131b740c366dcce2/',
+            url: CONFIG.rpcURL,
             chainId: 97,
-            gasPrice: 20000000000,
+            gasPrice: 20000000000, // 20 Gwei
             blockGasLimit: 40000000,
             accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
         mainnet: {
             // https://bsc-dataseed.binance.org/
-            url: 'https://greatest-polished-field.bsc.quiknode.pro/2d02def20c37eafa051b760a91e9292eed512cd9/',
+            url: CONFIG.rpcURL,
             chainId: 56,
-            gasPrice: 20000000000,
+            gasPrice: 1000000000, // 1 Gwei
             blockGasLimit: 40000000,
             accounts: { mnemonic: CONFIG.mnemonic } as HardhatNetworkHDAccountsConfig,
         },
     },
     etherscan: {
         enabled: true,
-        apiKey: { bscTestnet: CONFIG.etherscanApiKey },
+        apiKey: { bscTestnet: CONFIG.etherscanApiKey, bsc: CONFIG.etherscanApiKey },
     },
     sourcify: {
         enabled: false,
