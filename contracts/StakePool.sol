@@ -778,7 +778,7 @@ contract StakePool is
             revert ValidatorDoesNotExist();
         }
 
-        if (!getValidator(dstOperator_)._exists()) {
+        if (!getValidator(dstOperator_)._isActiveValidator()) {
             _createValidator(dstOperator_);
         }
 
@@ -898,22 +898,10 @@ contract StakePool is
 
     /**
      * @dev It is called by the DelegationManager as part of claimUnbondedBNB() during the unbondingFinished() call.
-     * or called by the bot to rebalance the fee losses to this contract. If called by any other address it will
-     * revert !!!
-     *
      */
     receive() external payable whenNotPaused {
-        bool isBot = hasRole(BOT_ROLE, _msgSender());
-        if (_msgSender() != _getDelegationManager() && !isBot) {
+        if (_msgSender() != _getDelegationManager()) {
             revert UnknownSender();
-        }
-
-        if (isBot) {
-            // rebalancing will happen here, by increasing the exchangeRate.
-            // This will compensate the protocol fee loses to the users.
-            // pStake's bot can only make rebalances.
-            exchangeRate._update(ExchangeRate.Data(msg.value, 0), ExchangeRate.UpdateOp.Add);
-            emit Rebalancing_Success(msg.value);
         }
 
         // When called by DelegationManager
