@@ -126,4 +126,17 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
     function addressStore() external view returns (IAddressStore) {
         return _addressStore;
     }
+
+    // This method changes the owner of this contract
+    // It should be removed after the owner change.
+    function setOwner(address _newOwner) external returns (address) {
+        require(
+            msg.sender == _addressStore.getTimelockedAdmin(),
+            "Caller: Should be the TimeLockedAdmin Contract"
+        );
+        require(_newOwner != address(0), "_newOwner cannot be Zero Address");
+
+        _transferOwnership(_newOwner);
+        return _newOwner;
+    }
 }

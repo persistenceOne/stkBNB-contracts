@@ -158,8 +158,9 @@
                                 }
                             },
                             "required": [
-                                "bscStakingWallet",
+                                "bcStakingWallet_deprecated",
                                 "minDelegationAmount",
+                                "transferOutTimeout_deprecated",
                                 "minBNBDeposit",
                                 "minTokenWithdrawal",
                                 "cooldownPeriod",
