@@ -900,7 +900,7 @@ contract StakePool is
      * @dev It is called by the DelegationManager as part of claimUnbondedBNB() during the unbondingFinished() call.
      */
     receive() external payable whenNotPaused {
-        if (_msgSender() != _getDelegationManager()) {
+        if (msg.sender != _getDelegationManager()) {
             revert UnknownSender();
         }
 
