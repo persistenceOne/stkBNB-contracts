@@ -9,6 +9,9 @@
         "etherscanApiKey": {
             "type": "string"
         },
+        "rpcURL": {
+            "type": "string"
+        },
         "botAddr": {
             "type": "string"
         },
@@ -121,11 +124,15 @@
                         "config": {
                             "type": "object",
                             "properties": {
-                                "bscStakingWallet": {
+                                "bcStakingWallet_deprecated": {
                                     "type": "string",
                                     "minLength": 1
                                 },
                                 "minDelegationAmount": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "transferOutTimeout_deprecated": {
                                     "type": "string",
                                     "minLength": 1
                                 },
@@ -177,6 +184,7 @@
     "required": [
         "mnemonic",
         "etherscanApiKey",
+        "rpcURL",
         "botAddr",
         "numConfirmBlocks",
         "postDeploySetup",

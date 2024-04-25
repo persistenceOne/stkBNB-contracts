@@ -12,6 +12,9 @@ async function main() {
         case 'deploy':
             await Contracts.deploy(CONFIG);
             break;
+        case 'verify':
+            await Contracts.verify(CONFIG);
+            break;
         case 'upgrade':
             await Contracts.upgrade(CONFIG);
             break;
