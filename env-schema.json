@@ -9,6 +9,9 @@
         "etherscanApiKey": {
             "type": "string"
         },
+        "rpcURL": {
+            "type": "string"
+        },
         "botAddr": {
             "type": "string"
         },

@@ -312,4 +312,27 @@ describe('StakePool Bot Functionality Test', function () {
         const claimReserve = await contracts.stakePool.claimReserve();
         expect(claimReserve).to.equal(totalBNB);
     });
+
+    it('Should be able to receive Funds from DelegationManager', async function () {
+        const delegationManager = await ethers.getImpersonatedSigner(
+            contracts.delegationManager.address,
+        );
+
+        await signers[0].sendTransaction({
+            to: delegationManager.address,
+            value: ethers.utils.parseEther('1000'),
+        });
+
+        const excessBNBBefore = await contracts.stakePool.getDeposits();
+
+        const crossChainAmount = ethers.utils.parseEther('95');
+        await delegationManager.sendTransaction({
+            to: contracts.stakePool.address,
+            value: crossChainAmount,
+        });
+
+        const excessBNBAfter = await contracts.stakePool.getDeposits();
+
+        expect(excessBNBAfter.sub(excessBNBBefore)).to.equal(crossChainAmount);
+    });
 });

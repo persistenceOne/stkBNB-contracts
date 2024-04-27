@@ -25,8 +25,9 @@ export interface Fee {
 }
 
 export interface StakePoolConfig {
-    bscStakingWallet: string;
+    bcStakingWallet_deprecated: string;
     minDelegationAmount: BigNumber;
+    transferOutTimeout_deprecated: BigNumber;
     minBNBDeposit: BigNumber;
     minTokenWithdrawal: BigNumber;
     cooldownPeriod: BigNumber;
