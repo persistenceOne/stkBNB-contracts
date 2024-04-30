@@ -127,7 +127,7 @@ export default {
         hardhat: {
             forking: {
                 url: CONFIG.rpcURL,
-                blockNumber: 38144135,
+                blockNumber: 38306656,
             },
             chains: {
                 56: {

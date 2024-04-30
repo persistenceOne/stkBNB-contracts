@@ -14,7 +14,7 @@ const { singletons } = require('@openzeppelin/test-helpers');
 // will not work. Although, claiming one by one will still work.
 // Also, claiming this many number of requests at once is possible only if the claimAll tx is the
 // only tx in the block, as it will consume all the blockGasLimit.
-const MAX_CLAIMS_PER_USER = 3089;
+const MAX_CLAIMS_PER_USER = 100; // 3089 is the Max value here
 
 describe('StakePool Claims', function () {
     let deployerAddr: string, contract: Contract;
@@ -35,10 +35,10 @@ describe('StakePool Claims', function () {
             {
                 bcStakingWallet_deprecated: ethers.constants.AddressZero,
                 minDelegationAmount: ethers.constants.One,
-                transferOutTimeout_deprecated: ethers.constants.One,
+                transferOutTimeout_deprecated: ethers.constants.Zero,
                 minBNBDeposit: ethers.constants.Zero,
                 minTokenWithdrawal: ethers.constants.Zero,
-                cooldownPeriod: ethers.constants.Zero,
+                cooldownPeriod: BigNumber.from(8).mul(86400), // 8 Days
                 fee: {
                     reward: ethers.constants.Zero,
                     deposit: ethers.constants.Zero,

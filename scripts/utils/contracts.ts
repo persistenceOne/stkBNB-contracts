@@ -416,12 +416,14 @@ export class Contracts {
         ]);
         console.log('Transferred AddressStore ownership from deployer to TimelockedAdmin');
 
-        // ProxyAdmin: Transfer ownership to TimelockedAdmin
-        // should be transferred back when needed for upgrade
-        await executeTx(await contracts.proxyAdmin(), 'transferOwnership', [
-            config.timelockedAdmin.address,
-        ]);
-        console.log('Transferred ProxyAdmin ownership from deployer to TimelockedAdmin');
+        if (!isLocalNetwork(getNetwork())) {
+            // ProxyAdmin: Transfer ownership to TimelockedAdmin
+            // should be transferred back when needed for upgrade
+            await executeTx(await contracts.proxyAdmin(), 'transferOwnership', [
+                config.timelockedAdmin.address,
+            ]);
+            console.log('Transferred ProxyAdmin ownership from deployer to TimelockedAdmin');
+        }
     }
 
     public static async updateStakePoolConfig(config: Config) {
@@ -471,10 +473,10 @@ export class Contracts {
 
         console.log('\n\n');
 
-        const uh: Contract = this.delegationManager;
+        const dm: Contract = this.delegationManager;
         console.log('=== DelegationManager ===');
-        console.log('Address: ', uh.address);
-        console.log(`Balance: ${formatEther(await ethers.provider.getBalance(uh.address))} BNB`);
+        console.log('Address: ', dm.address);
+        console.log(`Balance: ${formatEther(await ethers.provider.getBalance(dm.address))} BNB`);
 
         console.log('\n\n');
 
