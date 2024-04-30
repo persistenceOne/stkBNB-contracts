@@ -1,6 +1,6 @@
 using FeeVault as feeVault
 using StakedBNBTokenHarness as stakedBNBContract
-using UndelegationHolder as delegationHolder
+using DelegationManager as delegationHolder
 using StakePool as stakePoolContract
 using TimelockedAdmin as timelockedAdminContract
 

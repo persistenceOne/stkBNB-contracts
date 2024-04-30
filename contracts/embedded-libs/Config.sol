@@ -15,7 +15,7 @@ library Config {
     struct Data {
         // This variable is used to prevent storage collisions while proxy upgrades
         /// @custom:oz-renamed-from bscStakingWallet
-        address bscStakingWallet_deprecated;
+        address bcStakingWallet_deprecated;
         // @dev The minimum amount of BNB required to make delegation on BSC Native Staking Module.
         // This should be at least minDelegationBNBChange in the StakeHub Contract.
         // Ideally, this should be set to a value such that the protocol revenue from this value is more than the fee

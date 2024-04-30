@@ -133,9 +133,9 @@ export class Contracts {
 
         // deploy DelegationManager
         if (config.delegationManager.deploy) {
-            contracts.delegationManager = await factories.DelegationManager.deploy(
+            contracts.delegationManager = await upgrades.deployProxy(factories.DelegationManager, [
                 contracts.addressStore.address,
-            );
+            ]);
             await contracts.delegationManager.deployed();
 
             console.log(`DelegationManager deployed: ${contracts.delegationManager.address}`);
@@ -146,31 +146,64 @@ export class Contracts {
             console.log(`DelegationManager attached: ${contracts.delegationManager.address}`);
         }
 
-        // deploy fee vault
-        if (config.feeVault.deploy) {
-            contracts.feeVault = await upgrades.deployProxy(factories.FeeVault, [
-                contracts.addressStore.address,
-            ]);
-            await contracts.feeVault.deployed();
+        if (isLocalNetwork(getNetwork())) {
+            // deploy fee vault
+            if (config.feeVault.deploy) {
+                contracts.feeVault = await upgrades.deployProxy(factories.FeeVault, [
+                    contracts.addressStore.address,
+                ]);
+                await contracts.feeVault.deployed();
 
-            console.log(`FeeVault deployed: ${contracts.feeVault.address}`);
+                console.log(`FeeVault deployed: ${contracts.feeVault.address}`);
+            } else {
+                contracts.feeVault = factories.FeeVault.attach(config.feeVault.address);
+                console.log(`FeeVault attached: ${contracts.feeVault.address}`);
+            }
+
+            // deploy stakePool
+            if (config.stakePool.deploy) {
+                contracts.stakePool = await upgrades.deployProxy(factories.StakePool, [
+                    contracts.addressStore.address,
+                    config.stakePool.init.config,
+                ]);
+                await contracts.stakePool.deployed();
+
+                console.log(`StakePool deployed: ${contracts.stakePool.address}`);
+            } else {
+                contracts.stakePool = factories.StakePool.attach(config.stakePool.address);
+                console.log(`StakePool attached: ${contracts.stakePool.address}`);
+            }
         } else {
-            contracts.feeVault = factories.FeeVault.attach(config.feeVault.address);
-            console.log(`FeeVault attached: ${contracts.feeVault.address}`);
-        }
-
-        // deploy stakePool
-        if (config.stakePool.deploy) {
-            contracts.stakePool = await upgrades.deployProxy(factories.StakePool, [
-                contracts.addressStore.address,
-                config.stakePool.init.config,
-            ]);
-            await contracts.stakePool.deployed();
-
-            console.log(`StakePool deployed: ${contracts.stakePool.address}`);
-        } else {
-            contracts.stakePool = factories.StakePool.attach(config.stakePool.address);
-            console.log(`StakePool attached: ${contracts.stakePool.address}`);
+            // deploy fee vault v2
+            if (config.feeVault.deploy) {
+                const feeVaultV2 = await upgrades.prepareUpgrade(
+                    config.feeVault.address,
+                    factories.FeeVault,
+                    {
+                        kind: 'transparent',
+                        unsafeAllowRenames: true,
+                    },
+                );
+                console.log(`FeeVault deployed: ${feeVaultV2}`);
+            } else {
+                contracts.feeVault = factories.FeeVault.attach(config.feeVault.address);
+                console.log(`FeeVault attached: ${contracts.feeVault.address}`);
+            }
+            // deploy stakePool v2
+            if (config.stakePool.deploy) {
+                const stakePoolV2 = await upgrades.prepareUpgrade(
+                    config.stakePool.address,
+                    factories.StakePool,
+                    {
+                        kind: 'transparent',
+                        unsafeAllowRenames: true,
+                    },
+                );
+                console.log(`StakePool deployed: ${stakePoolV2}`);
+            } else {
+                contracts.stakePool = factories.StakePool.attach(config.stakePool.address);
+                console.log(`StakePool attached: ${contracts.stakePool.address}`);
+            }
         }
 
         // setup the whole system
@@ -195,7 +228,7 @@ export class Contracts {
 
             // setup DelegationManager
             if (config.delegationManager.deploy) {
-                await executeTx(contracts.addressStore, 'setDelegationManager', [
+                await executeTx(contracts.addressStore, 'setUndelegationHolder', [
                     contracts.delegationManager.address,
                 ]);
                 console.log('AddressStore updated with DelegationManager');
@@ -243,12 +276,38 @@ export class Contracts {
         return contracts;
     }
 
+    public static async verify(config: Config) {
+        const factories = await Contracts.factories();
+
+        // Verify FeeVault V2
+        await upgrades.validateUpgrade(config.feeVault.address, factories.FeeVault, {
+            kind: 'transparent',
+            unsafeAllowRenames: true,
+        });
+
+        // Verify StakePool V2
+        await upgrades.validateUpgrade(config.stakePool.address, factories.StakePool, {
+            kind: 'transparent',
+            unsafeAllowRenames: true,
+        });
+    }
+
     public static async upgrade(config: Config): Promise<Contracts> {
         const factories = await Contracts.factories();
         const contracts = await Contracts.new(new Array<Contract>(Contracts.NUM_CONTRACTS));
 
         const deployerAddr = await logDeployerInfo();
         const initialDeployerBalance = await ethers.provider.getBalance(deployerAddr);
+
+        // DelegationManager
+        if (config.delegationManager.upgrade) {
+            contracts.delegationManager = await upgrades.upgradeProxy(
+                config.delegationManager.address,
+                factories.DelegationManager,
+            );
+            await contracts.feeVault.deployed();
+            console.log('DelegationManager Upgraded!');
+        }
 
         // FeeVault
         if (config.feeVault.upgrade) {
@@ -357,12 +416,14 @@ export class Contracts {
         ]);
         console.log('Transferred AddressStore ownership from deployer to TimelockedAdmin');
 
-        // ProxyAdmin: Transfer ownership to TimelockedAdmin
-        // should be transferred back when needed for upgrade
-        await executeTx(await contracts.proxyAdmin(), 'transferOwnership', [
-            config.timelockedAdmin.address,
-        ]);
-        console.log('Transferred ProxyAdmin ownership from deployer to TimelockedAdmin');
+        if (!isLocalNetwork(getNetwork())) {
+            // ProxyAdmin: Transfer ownership to TimelockedAdmin
+            // should be transferred back when needed for upgrade
+            await executeTx(await contracts.proxyAdmin(), 'transferOwnership', [
+                config.timelockedAdmin.address,
+            ]);
+            console.log('Transferred ProxyAdmin ownership from deployer to TimelockedAdmin');
+        }
     }
 
     public static async updateStakePoolConfig(config: Config) {
@@ -412,10 +473,10 @@ export class Contracts {
 
         console.log('\n\n');
 
-        const uh: Contract = this.delegationManager;
+        const dm: Contract = this.delegationManager;
         console.log('=== DelegationManager ===');
-        console.log('Address: ', uh.address);
-        console.log(`Balance: ${formatEther(await ethers.provider.getBalance(uh.address))} BNB`);
+        console.log('Address: ', dm.address);
+        console.log(`Balance: ${formatEther(await ethers.provider.getBalance(dm.address))} BNB`);
 
         console.log('\n\n');
 
