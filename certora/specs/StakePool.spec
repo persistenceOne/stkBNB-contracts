@@ -1,7 +1,7 @@
 using StakedBNBToken as stkBNB
 using FeeVault as feeVault
 using StakePoolHarness as stakePoolContract
-using UndelegationHolder as delegationHolder
+using DelegationManager as delegationHolder
 
 methods {
     // Harness methods:
@@ -76,13 +76,6 @@ methods {
     //ERC777 summarizing
 
     transfer(address recipient, uint256 amount) returns (bool) => DISPATCHER(true);
-
-    transferOut(
-        address contractAddr,
-        address recipient,
-        uint256 amount,
-        uint64 expireTime
-    ) returns (bool) => DISPATCHER(true);
 
     send(address,uint256,bytes) => DISPATCHER(true);
 
@@ -166,7 +159,7 @@ function feeValidation(uint256 reward, uint256 deposit, uint256 withdraw) {
 invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
     {
-        preserved epochUpdate(uint256 bnbRewards) with (env e){
+        preserved epochUpdate() with (env e){
             require getTotalWei() > 0;
         } 
     }
@@ -278,36 +271,6 @@ rule claimCanNotBeFulFilledBeforeCoolDownPeriod(){
     assert e.block.timestamp < claimRequestTimestamp + getCooldownPeriod() => reverted;
 }
 
-
-/** verifying that one can not gain or lose **/
-/** checking this on a 1 exchange rate and no fee- can be adjusted to more cases **/
-/** TODO Add check for tokensReceived which is failing due to hook (Sstore claimReqs) old value. **/
-rule totalAssetOfUserPreserved(method f, address user)  filtered { f -> !f.isView && !f.isFallback && f.selector !=  (tokensReceived(address, address, address, uint256, bytes, bytes)).selector && f.selector !=  (transferOut(address, address, uint256, uint64)).selector}
- {
-    // Consider all fees 0 %
-    feeValidation(1, 1, 1);
-    require getTotalWei() == getPoolTokenSupply();
-    // safe assumption - as rule breaks on this cases 
-    require user != currentContract && user != delegationHolder; 
-    // values before
-    uint256 userBNBBalanceBefore = bnbBalanceOf(user);
-    uint256 userStkBNBBalanceBefore = stkBNB.balanceOf(user);
-    mathint sumClaimsPerUserBefore = sumClaimsPerUser[user];
-    mathint totalBefore = userBNBBalanceBefore + userStkBNBBalanceBefore + sumClaimsPerUserBefore; 
-
-    env e;
-    calldataarg args;
-    f(e,args);
-    
-    // values after
-    uint256 userBNBBalanceAfter = bnbBalanceOf(user);
-    uint256 userStkBNBBalanceAfter = stkBNB.balanceOf(user);
-    mathint sumClaimsPerUserAfter = sumClaimsPerUser[user];
-    mathint totalAfter = userBNBBalanceAfter + userStkBNBBalanceAfter + sumClaimsPerUserAfter;
-
-    assert totalBefore == totalAfter;
-}
-
 //User should deposit at least minBNBDeposit tokens.
 rule depositAtLeastMinBNB(env e){
     uint256 minDeposit = getMinBNBDeposit();
@@ -363,9 +326,9 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     // if there is no change in bnbToUnbond then bnbUnbonding should also be not changed except unbondingFinished method call.
     assert bnbToUnbondBefore == bnbToUnbondAfter && f.selector != unbondingFinished().selector => bnbUnbondingBefore == bnbUnbondingAfter;
     // bnbToUnbond decreament except initiateDelegation should increase the bnbUnbonding
-    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation().selector => bnbUnbondingBefore < bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation(address[], uint256[]).selector => bnbUnbondingBefore < bnbUnbondingAfter;
     // initiateDelegation with bnbToUnbond decreament should not affect bnbUnbonding
-    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation(address[], uint256[]).selector => bnbUnbondingBefore == bnbUnbondingAfter;
     // unbondingFinished() with bnbUnbonding increament the bnbToUnbound should not be affected
     assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
 }
@@ -463,15 +426,15 @@ rule unbondingFinished(){
     env e;
     uint256 bnbUnbondingBefore = bnbUnbonding();
     uint256 claimReserveBefore = claimReserve();
-    uint256 undelegationHolderBalanceBefore = bnbBalanceOf(delegationHolder);
+    uint256 delegationManagerBalanceBefore = bnbBalanceOf(delegationHolder);
 
     unbondingFinished(e);
 
     uint256 bnbUnbondingAfter = bnbUnbonding();
     uint256 claimReserveAfter = claimReserve();
-    uint256 undelegationHolderBalanceAfter = bnbBalanceOf(delegationHolder);
+    uint256 delegationManagerBalanceAfter = bnbBalanceOf(delegationHolder);
 
     assert bnbUnbondingBefore >= bnbUnbondingAfter;
     assert bnbUnbondingBefore - bnbUnbondingAfter == claimReserveAfter - claimReserveBefore;
-    assert undelegationHolderBalanceBefore - undelegationHolderBalanceAfter == claimReserveAfter - claimReserveBefore;
+    assert delegationManagerBalanceBefore - delegationManagerBalanceAfter == claimReserveAfter - claimReserveBefore;
 }

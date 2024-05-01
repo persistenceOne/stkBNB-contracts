@@ -47,7 +47,7 @@ library ExchangeRate {
         if (numerator < denominator || denominator == 0) {
             return 0;
         }
-        // TODO: later also take remainder into consideration
+
         return numerator / denominator;
     }
 }

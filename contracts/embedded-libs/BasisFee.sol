@@ -17,9 +17,6 @@ library BasisFee {
     uint256 internal constant _BASIS = 1e11;
 
     function _checkValid(uint256 self) internal pure {
-        if (self > _BASIS) {
-            revert NumeratorMoreThanBasis();
-        }
         if (self > (_BASIS / 100) * 30) {
             revert CantSetMoreThan30PercentFee();
         }

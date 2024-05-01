@@ -9,53 +9,58 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "./embedded-libs/BasisFee.sol";
 import "./embedded-libs/Config.sol";
 import "./embedded-libs/ExchangeRate.sol";
+import "./embedded-libs/ValidatorSet.sol";
 import "./interfaces/IAddressStore.sol";
 import "./interfaces/IStakedBNBToken.sol";
 import "./interfaces/IStakePoolBot.sol";
-import "./interfaces/ITokenHub.sol";
-import "./interfaces/IUndelegationHolder.sol";
+import "./interfaces/IStakeHub.sol";
+import "./interfaces/IStakeCredit.sol";
+import "./interfaces/IDelegationManager.sol";
 
-// TODO:
-// * Tests
 contract StakePool is
     IStakePoolBot,
     IERC777RecipientUpgradeable,
     Initializable,
     AccessControlEnumerableUpgradeable
 {
-    /*********************
+    /**
+     *
      * LIB USAGES
-     ********************/
-
+     *
+     */
     using Config for Config.Data;
+    using ValidatorSet for ValidatorSet.Info;
     using ExchangeRate for ExchangeRate.Data;
     using BasisFee for uint256;
     using SafeCastUpgradeable for uint256;
 
-    /*********************
+    /**
+     *
      * STRUCTS
-     ********************/
-
+     *
+     */
     struct ClaimRequest {
         uint256 weiToReturn; // amount of wei that should be returned to user on claim
         uint256 createdAt; // block timestamp when this request was created
     }
 
-    /*********************
+    /**
+     *
      * RBAC ROLES
-     ********************/
-
+     *
+     */
     bytes32 public constant BOT_ROLE = keccak256("BOT_ROLE"); // Bots can be added/removed through AccessControl
 
-    /*********************
+    /**
+     *
      * CONSTANTS
-     ********************/
-
+     *
+     */
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
         IERC1820RegistryUpgradeable(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
     address private constant _ZERO_ADDR = 0x0000000000000000000000000000000000000000;
-    ITokenHub private constant _TOKEN_HUB = ITokenHub(0x0000000000000000000000000000000000001004);
+    address private constant _STAKE_HUB = 0x0000000000000000000000000000000000002002;
 
     // Booleans are more expensive than uint256 or any type that takes up a full
     // word because each write operation emits an extra SLOAD to first read the
@@ -71,10 +76,11 @@ contract StakePool is
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
 
-    /*********************
+    /**
+     *
      * STATE VARIABLES
-     ********************/
-
+     *
+     */
     IAddressStore internal _addressStore; // Used to fetch addresses of the other contracts in the system.
     Config.Data public config; // the contract configuration
 
@@ -132,36 +138,59 @@ contract StakePool is
      */
     mapping(address => ClaimRequest[]) public claimReqs;
 
-    /*********************
+    // The below state variables are part of V2 Implementation of this contract
+    // They are kept in the bottom slots to avoid storage conflicts after upgrades
+
+    /**
+     * @dev maps operator address -> a struct of Validator
+     * and has an array to Keep Track of Validators Operator
+     * Address in a dynamic array
+     */
+    ValidatorSet.Store private _validatorStore;
+
+    /**
+     *
      * EVENTS
-     ********************/
+     *
+     */
     event ConfigUpdated(); // emitted when config is updated
+    event ValidatorCreated(address indexed operator, uint256 indexed totalValidators); // emitted when validator is created
     event Deposit(
         address indexed user,
-        uint256 bnbAmount,
-        uint256 poolTokenAmount,
+        uint256 indexed bnbAmount,
+        uint256 indexed poolTokenAmount,
         uint256 timestamp
     );
     event Withdraw(
         address indexed user,
-        uint256 poolTokenAmount,
-        uint256 bnbAmount,
+        uint256 indexed poolTokenAmount,
+        uint256 indexed bnbAmount,
         uint256 timestamp
     );
-    event Claim(address indexed user, ClaimRequest req, uint256 timestamp);
-    event InitiateDelegation_TransferOut(uint256 transferOutAmount); // emitted during initiateDelegation
-    event InitiateDelegation_ShortCircuit(uint256 shortCircuitAmount); // emitted during initiateDelegation
+    event Claim(address indexed user, ClaimRequest indexed req, uint256 indexed timestamp);
+    event EpochUpdate(string indexed tag, uint256 indexed bnbEarnings, uint256 indexed feeTokens); // emitted on epochUpdate
+    event InitiateDelegation_Transfered(uint256 indexed transferAmount); // emitted during initiateDelegation
+    event InitiateDelegation_ShortCircuit(uint256 indexed shortCircuitAmount); // emitted during initiateDelegation short circuit
     event InitiateDelegation_Success(); // emitted during initiateDelegation
-    event EpochUpdate(uint256 bnbRewards, uint256 feeTokens); // emitted on epochUpdate
-    event UnbondingInitiated(uint256 bnbUnbonding); // emitted on unbondingInitiated
-    event UnbondingFinished(uint256 unbondedAmount); // emitted on unbondingFinished
-    event Paused(address account); // emitted when the pause is triggered by `account`.
-    event Unpaused(address account); // emitted when the pause is lifted by `account`.
+    event Redelegation_Success(
+        address indexed srcValidator,
+        address indexed dstValidator,
+        uint256 indexed restakes
+    ); // emitted after a successfull redelegation
+    event UnbondingInitiated(uint256 indexed bnbUnbonding); // emitted on unbondingInitiated
+    event UnbondingFinished(uint256 indexed unbondedAmount); // emitted on unbondingFinished
+    event Rebalancing_Success(uint256 indexed rebalancedAmount); // emitted when rebalancing
+    event Paused(address indexed account); // emitted when the pause is triggered by `account`.
+    event Unpaused(address indexed account); // emitted when the pause is lifted by `account`.
 
-    /*********************
+    /**
+     *
      * ERRORS
-     ********************/
-
+     *
+     */
+    error ZeroAddress();
+    error NoRewardsAccured(string tag);
+    error InvalidRestakeAmount(uint256 restakes);
     error UnknownSender();
     error LessThanMinimum(string tag, uint256 expected, uint256 got);
     error DustNotAllowed(uint256 dust);
@@ -177,11 +206,17 @@ contract StakePool is
     error PausablePaused();
     error PausableNotPaused();
     error ReentrancyGuardReentrantCall();
-    error TransferOutFailed();
+    error DepositsDelegationFailed(uint256 amount);
+    error ArgumentsLengthMismatch();
+    error ValidatorAlreadyExists(address validator);
+    error ValidatorDoesNotExist();
+    error ValidatorCreationFailed();
 
-    /*********************
+    /**
+     *
      * MODIFIERS
-     ********************/
+     *
+     */
 
     /**
      * @dev Checks that gotVal is at least minVal. Otherwise, reverts with the given tag.
@@ -233,16 +268,17 @@ contract StakePool is
         _nonReentrantPost();
     }
 
-    /*********************
+    /**
+     *
      * MODIFIERS FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev A modifier is replaced by all the code in its definition. This leads to increase in compiled contract size.
      * Creating functions for the code inside a modifier, helps reduce the contract size as now the modifier will be
      * replaced by just the function call, instead of all the lines in these functions.
      */
-
     function _checkMinAndDust(string memory tag, uint256 minVal, uint256 gotVal) private pure {
         if (gotVal < minVal) {
             revert LessThanMinimum(tag, minVal, gotVal);
@@ -266,7 +302,7 @@ contract StakePool is
     }
 
     function _nonReentrantPre() private {
-        // On the first call to nonReentrant, _notEntered will be true
+        // On the first call to nonReentrant, _status will be _NOT_ENTERED (1)
         if (_status == _ENTERED) {
             revert ReentrancyGuardReentrantCall();
         }
@@ -281,9 +317,11 @@ contract StakePool is
         _status = _NOT_ENTERED;
     }
 
-    /*********************
+    /**
+     *
      * INIT FUNCTIONS
-     ********************/
+     *
+     */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -303,7 +341,7 @@ contract StakePool is
     ) internal onlyInitializing {
         // Need to call initializers for each parent without calling anything twice.
         // So, we need to individually see each parent's initializer and not call the initializer's that have already been called.
-        //      1. __AccessControlEnumerable_init => This is empty in the current openzeppelin v0.4.6
+        __AccessControlEnumerable_init();
 
         // Finally, initialize this contract.
         __StakePool_init_unchained(addressStore_, config_);
@@ -331,12 +369,14 @@ contract StakePool is
         );
 
         // Make the deployer the default admin, deployer will later transfer this role to a multi-sig.
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
-    /*********************
+    /**
+     *
      * ADMIN FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev pause: Used by admin to pause the contract.
@@ -348,7 +388,7 @@ contract StakePool is
      */
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
         _paused = true;
-        emit Paused(msg.sender);
+        emit Paused(_msgSender());
     }
 
     /**
@@ -361,7 +401,7 @@ contract StakePool is
      */
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) whenPaused {
         _paused = false;
-        emit Unpaused(msg.sender);
+        emit Unpaused(_msgSender());
     }
 
     /**
@@ -377,9 +417,11 @@ contract StakePool is
         emit ConfigUpdated();
     }
 
-    /*********************
+    /**
+     *
      * USER FUNCTIONS
-     ********************/
+     *
+     */
 
     /**
      * @dev deposit: Called by a user to deposit BNB to the contract in exchange for stkBNB.
@@ -391,8 +433,8 @@ contract StakePool is
     function deposit()
         external
         payable
-        whenNotPaused
         nonReentrant
+        whenNotPaused
         checkMinAndDust("Deposit", config.minBNBDeposit, msg.value)
     {
         uint256 userWei = msg.value;
@@ -408,12 +450,12 @@ contract StakePool is
 
         // mint the tokens for appropriate accounts
         IStakedBNBToken stkBNB = IStakedBNBToken(_addressStore.getStkBNB());
-        stkBNB.mint(msg.sender, poolTokensUser, "", "");
+        stkBNB.mint(_msgSender(), poolTokensUser, "", "");
         if (poolTokensDepositFee > 0) {
             stkBNB.mint(_addressStore.getFeeVault(), poolTokensDepositFee, "", "");
         }
 
-        emit Deposit(msg.sender, msg.value, poolTokensUser, block.timestamp);
+        emit Deposit(_msgSender(), msg.value, poolTokensUser, block.timestamp);
     }
 
     /**
@@ -447,12 +489,12 @@ contract StakePool is
     )
         external
         override
-        whenNotPaused
         nonReentrant
+        whenNotPaused
         checkMinAndDust("Withdrawal", config.minTokenWithdrawal, amount)
     {
         // checks
-        if (msg.sender != _addressStore.getStkBNB()) {
+        if (_msgSender() != _addressStore.getStkBNB()) {
             revert UnknownSender();
         }
         if (from == address(0)) {
@@ -475,8 +517,8 @@ contract StakePool is
      *
      * - The contract must not be paused.
      */
-    function claimAll() external whenNotPaused nonReentrant {
-        uint256 claimRequestCount = claimReqs[msg.sender].length;
+    function claimAll() external nonReentrant whenNotPaused {
+        uint256 claimRequestCount = claimReqs[_msgSender()].length;
         uint256 i = 0;
 
         while (i < claimRequestCount) {
@@ -497,57 +539,188 @@ contract StakePool is
      *
      * @param index: The index of the ClaimRequest which is to be claimed.
      */
-    function claim(uint256 index) external whenNotPaused nonReentrant {
+    function claim(uint256 index) external nonReentrant whenNotPaused {
         if (!_claim(index)) {
             revert CantClaimBeforeDeadline();
         }
     }
 
-    /*********************
-     * BOT FUNCTIONS
-     ********************/
-
     /**
-     * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
-     * staking address on BBC.
+     * @dev epochUpdate: Accessible to any user and can be invoked multiple times daily to adjust the
+     * exchange rate. The adjustment is based on the total rewards accumulated by all validators,
+     * ensuring that the rate reflects the latest reward dynamics and accordingly mint fee tokens.
+     *
+     * Requirements:
+     *
+     * - Can only be called once per day
+     *
      * Call frequency:
      *      Mainnet: Daily
      *      Testnet: Daily
      */
-    function initiateDelegation() external override whenNotPaused onlyRole(BOT_ROLE) {
-        // contract will always have at least the _claimReserve, so this should never overflow.
-        uint256 excessBNB = address(this).balance - _claimReserve;
-        // token hub expects only 8 decimals in the cross-chain transfer value to avoid any precision loss
-        // so, remove the insignificant 10 decimals
-        uint256 transferOutValue = excessBNB - (excessBNB % 1e10);
-        uint256 miniRelayFee = _TOKEN_HUB.getMiniRelayFee(); // usually 0.01 BNB
+    function epochUpdate() external override nonReentrant whenNotPaused {
+        int256 cumulativeEarnings = _getUpdatedEarnings();
 
-        // Initiate a cross-chain transfer only if we have enough amount.
-        if (transferOutValue >= miniRelayFee + config.minCrossChainTransfer) {
-            // this would always be at least config.minCrossChainTransfer
-            uint256 transferOutAmount = transferOutValue - miniRelayFee;
-            // We are charging the relay fee from the user funds. Similarly, any other fees on the BBC would be
-            // paid from user funds. This will eventually lead to the total BNB with the protocol to be less than what
-            // is accounted in the exchangeRate. This might lead to claims not working in case of a black swan event.
-            // So, we must pay back the fee losses to the protocol to ensure the protocol correctness.
-            // For this, we will monitor the fee losses, and pay them back to the protocol periodically.
+        if (cumulativeEarnings == 0) {
+            revert NoRewardsAccured("Cannot perform rateSync with 0 BNB as Rewards");
+        } else if (cumulativeEarnings > 0) {
+            uint256 rewardAmount = uint256(cumulativeEarnings);
+            // calculate fee
+            uint256 feeWei = config.fee.reward._apply(rewardAmount);
+            uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) /
+                (exchangeRate.totalWei + rewardAmount - feeWei);
+
+            // update exchange rate
+            exchangeRate._update(
+                ExchangeRate.Data(rewardAmount, feeTokens),
+                ExchangeRate.UpdateOp.Add
+            );
+
+            // mint the fee tokens to FeeVault
+            IStakedBNBToken(_addressStore.getStkBNB()).mint(
+                _addressStore.getFeeVault(),
+                feeTokens,
+                "",
+                ""
+            );
+
+            // emit the ack event
+            emit EpochUpdate("Rewarded", rewardAmount, feeTokens);
+        } else {
+            uint256 slashAmount = uint256(-cumulativeEarnings);
+            // update exchange rate
+            exchangeRate._update(ExchangeRate.Data(slashAmount, 0), ExchangeRate.UpdateOp.Subtract);
+
+            // emit the ack event
+            emit EpochUpdate("Slashed", slashAmount, 0);
+        }
+    }
+
+    /**
+     *
+     * BOT FUNCTIONS
+     *
+     */
+
+    /**
+     * @dev createValidator: Called by the Bot to add a new validator to the validator set.
+     * It is allowed to create validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function createValidator(address operator_) external override onlyRole(BOT_ROLE) {
+        if (!_createValidator(operator_)) {
+            revert ValidatorCreationFailed();
+        }
+        emit ValidatorCreated(operator_, getTotalValidators());
+    }
+
+    /**
+     * @dev _createValidator: handles validator creation logic
+     */
+    function _createValidator(address operator_) private returns (bool) {
+        address stCred_ = IStakeHub(_STAKE_HUB).getValidatorCreditContract(operator_);
+
+        ValidatorSet.Info memory validator = getValidator(operator_);
+
+        if (validator._exists()) {
+            revert ValidatorAlreadyExists(operator_);
+        } else {
+            // Establishes a new Validator and upgrades their previous Stakes.
+            uint256 prevStake = IStakeCredit(stCred_).getPooledBNB(_getDelegationManager());
+
+            ValidatorSet.Info memory newValidator;
+            newValidator.operator = operator_;
+            newValidator.stCred = stCred_;
+            newValidator.status = ValidatorSet.Status.Active;
+            newValidator.delegation.stakes = prevStake > 0 ? prevStake : 0;
+
+            _validatorStore.validators[operator_]._create(newValidator);
+            _validatorStore.operatorsList.push(operator_);
+        }
+
+        return true;
+    }
+
+    /**
+     * @dev enableValidator: Called by the Bot to reactivate the disabled Validator.
+     * It is allowed to activate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function enableValidator(address operator_) external override onlyRole(BOT_ROLE) {
+        ValidatorSet.Info storage validator = _validatorStore.validators[operator_];
+        validator._activate();
+    }
+
+    /**
+     * @dev disableValidator: Called by the Bot to deactivate the Validator.
+     * It is allowed to deactivate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function disableValidator(
+        address operator_,
+        ValidatorSet.Status status_
+    ) external override onlyRole(BOT_ROLE) {
+        ValidatorSet.Info storage validator = _validatorStore.validators[operator_];
+        validator._deactivate(status_);
+    }
+
+    /**
+     * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
+     * stakehub contract on BSC Native Staking Module.
+     *
+     * Call frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
+     *
+     * @param operators_  : A list of Validator Operators to delegate to.
+     * @param bnbAmounts_ : A list of bnb delegation amounts given by the bot.
+     *
+     */
+    function initiateDelegation(
+        address[] calldata operators_,
+        uint256[] calldata bnbAmounts_
+    ) external override whenNotPaused onlyRole(BOT_ROLE) {
+        if (operators_.length != bnbAmounts_.length) {
+            revert ArgumentsLengthMismatch();
+        }
+        // contract will always have at least the _claimReserve, so this should never overflow.
+        uint256 excessBNB = getDeposits();
+
+        // Initiate a delegate only if deposited BNB > 1.1 BNB
+        if (excessBNB >= config.minDelegationAmount) {
             // Note that the probability of a black swan event is very low. On top of that, as time passes, we will be
             // accumulating some stkBNB as rewards in FeeVault. This implies that our share of BNB in the pool will
             // keep increasing over time. As long as this share is more than the total fee spent till that time, we need
             // not worry about paying back the fee losses. Also, for us to be economically successful, we must set
             // protocol fee rates in a way so that the rewards we earn via FeeVault are significantly more than the fee
             // we are paying for the protocol operations.
-            bool success = _TOKEN_HUB.transferOut{ value: transferOutValue }(
-                _ZERO_ADDR,
-                config.bcStakingWallet,
-                transferOutAmount,
-                uint64(block.timestamp + config.transferOutTimeout)
-            );
-            if (!success) {
-                revert TransferOutFailed();
+            bool delegated = IDelegationManager(payable(_getDelegationManager()))
+                .delegateDepositedBNB{ value: excessBNB }(operators_, bnbAmounts_);
+
+            if (!delegated) {
+                revert DepositsDelegationFailed(excessBNB);
             }
 
-            emit InitiateDelegation_TransferOut(transferOutAmount);
+            for (uint256 i = 0; i < operators_.length; ++i) {
+                ValidatorSet.Info storage validator = _validatorStore.validators[operators_[i]];
+
+                uint256 newStake = IStakeCredit(validator.stCred).getPooledBNB(
+                    _getDelegationManager()
+                );
+
+                validator._delegate(newStake);
+            }
+
+            emit InitiateDelegation_Transfered(excessBNB);
         } else if (excessBNB > 0 && _bnbToUnbond > 0) {
             // if the excess amount is so small that it can't be moved to BBC and there is _bnbToUnbond, short-circuit
             // the bot process and directly update the _claimReserve. This way, we will still be able to satisfy claims
@@ -583,87 +756,177 @@ contract StakePool is
     }
 
     /**
-     * @dev Called by the bot to update the exchange rate in contract based on the rewards
-     * obtained in the BBC staking address and accordingly mint fee tokens.
-     * Call frequency:
-     *      Mainnet: Daily
-     *      Testnet: Daily
+     * @dev This is called by the bot in order to redelegate BNB from one Validator
+     * to another Validator provided that the new validator exists
      *
-     * @param bnbRewards: The amount of BNB which were received as staking rewards.
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
+     * @param srcOperator_  : Source Validator Operator to undelegate from
+     * @param dstOperator_  : Destination Validator Operator to delegate to
+     * @param srcRestakes_  : Total stakes of Source Validator to redelegate
+     *
      */
-    function epochUpdate(uint256 bnbRewards) external override whenNotPaused onlyRole(BOT_ROLE) {
-        // calculate fee
-        uint256 feeWei = config.fee.reward._apply(bnbRewards);
-        uint256 feeTokens = (feeWei * exchangeRate.poolTokenSupply) /
-            (exchangeRate.totalWei + bnbRewards - feeWei);
+    function initiateRedelegation(
+        address srcOperator_,
+        address dstOperator_,
+        uint256 srcRestakes_
+    ) external override whenNotPaused onlyRole(BOT_ROLE) {
+        if (!getValidator(srcOperator_)._isActiveValidator()) {
+            revert ValidatorDoesNotExist();
+        }
 
-        // update exchange rate
-        exchangeRate._update(ExchangeRate.Data(bnbRewards, feeTokens), ExchangeRate.UpdateOp.Add);
+        if (!getValidator(dstOperator_)._exists()) {
+            _createValidator(dstOperator_);
+        }
 
-        // mint the fee tokens to FeeVault
-        IStakedBNBToken(_addressStore.getStkBNB()).mint(
-            _addressStore.getFeeVault(),
-            feeTokens,
-            "",
-            ""
-        );
+        ValidatorSet.Info storage srcValidator = _validatorStore.validators[srcOperator_];
+        ValidatorSet.Info storage dstValidator = _validatorStore.validators[dstOperator_];
 
-        // emit the ack event
-        emit EpochUpdate(bnbRewards, feeTokens);
+        if (srcRestakes_ == 0 || srcRestakes_ > srcValidator.delegation.stakes) {
+            revert InvalidRestakeAmount(srcRestakes_);
+        } else {
+            uint256 srcRestakeShares = _getValidatorShares(srcOperator_, srcRestakes_);
+
+            // 0.002 % of redelegated BNB would be rewarded to dstValidator Pool.
+            uint256 redelegationFeeWei = _calculateFee(srcRestakes_);
+            // update exchange rate
+            exchangeRate._update(
+                ExchangeRate.Data(redelegationFeeWei, 0),
+                ExchangeRate.UpdateOp.Subtract
+            );
+
+            IDelegationManager(payable(_getDelegationManager())).redelegateBNBShares(
+                srcOperator_,
+                dstOperator_,
+                srcRestakeShares
+            );
+
+            uint256 dstStakes = IStakeCredit(dstValidator.stCred).getPooledBNB(
+                _getDelegationManager()
+            );
+
+            // update stakes in ValidatorStore
+            dstValidator._redelegate(srcValidator, dstStakes, srcRestakes_);
+        }
+
+        emit Redelegation_Success(srcOperator_, dstOperator_, srcRestakes_);
     }
 
     /**
-     * @dev This is called by the bot after it has executed the unbond transaction on BBC.
+     * @dev This is called by the bot to undelegate 'bnbToUnbond' funds from the BSC Native Staking Module.
+     *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param bnbUnbonding_: The amount of BNB for which unbonding was initiated on BBC.
-     *                       It can be more than bnbToUnbond, but within a factor of min undelegation amount.
+     * @param operators_       : The list of validators to undelegate from.
+     * @param bnbUnbondValues_ : The list contains bnb unbonding amounts from the respective validators.
+     *                           It will be calculated by the bot.
+     *                           It can be more than bnbToUnbond in total, but within a factor of minUndelegation amount (1 BNB).
      */
     function unbondingInitiated(
-        uint256 bnbUnbonding_
+        address[] calldata operators_,
+        uint256[] calldata bnbUnbondValues_
     ) external override whenNotPaused onlyRole(BOT_ROLE) {
-        _bnbToUnbond -= bnbUnbonding_.toInt256();
-        _bnbUnbonding += bnbUnbonding_;
+        if (operators_.length != bnbUnbondValues_.length) {
+            revert ArgumentsLengthMismatch();
+        }
 
-        emit UnbondingInitiated(bnbUnbonding_);
+        uint256 totalBNBUnbonding;
+        uint256[] memory sharesToUnbond = new uint256[](bnbUnbondValues_.length);
+        for (uint256 i = 0; i < operators_.length; ++i) {
+            sharesToUnbond[i] = _getValidatorShares(operators_[i], bnbUnbondValues_[i]);
+            totalBNBUnbonding += bnbUnbondValues_[i];
+
+            ValidatorSet.Info storage validator = _validatorStore.validators[operators_[i]];
+            validator._undelegate(bnbUnbondValues_[i]);
+        }
+
+        IDelegationManager(payable(_getDelegationManager())).undelegateBNBtoUnbond(
+            operators_,
+            sharesToUnbond
+        );
+
+        _bnbToUnbond -= totalBNBUnbonding.toInt256();
+        _bnbUnbonding += totalBNBUnbonding;
+
+        emit UnbondingInitiated(totalBNBUnbonding);
     }
 
     /**
-     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BBC
-     * and has been transferred to the UndelegationHolder contract on BSC.
-     * It calls UndelegationHolder.withdrawUnbondedBNB() to fetch the unbonded BNB to itself and
+     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in Validator Credit Contract
+     * It calls StakeHub.claimBatch() to fetch the unbonded BNB to itself from the above contract and
      * update `bnbUnbonding` and `claimReserve`.
+     *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
+     *
      */
     function unbondingFinished() external override whenNotPaused onlyRole(BOT_ROLE) {
-        // the unbondedAmount can never be more than _bnbUnbonding. UndelegationHolder takes care of that.
-        // So, no need to worry about arithmetic overflows.
-        uint256 unbondedAmount = IUndelegationHolder(payable(_addressStore.getUndelegationHolder()))
-            .withdrawUnbondedBNB();
-        _bnbUnbonding -= unbondedAmount;
-        _claimReserve += unbondedAmount;
+        ValidatorSet.Info[] memory allValidators = getValidators();
 
-        emit UnbondingFinished(unbondedAmount);
+        for (uint256 i = 0; i < allValidators.length; ++i) {
+            IStakeCredit validatorCredit = IStakeCredit(allValidators[i].stCred);
+            uint256 claimRequests = validatorCredit.claimableUnbondRequest(_getDelegationManager());
+
+            if (claimRequests > 0) {
+                // the sum of claimes can never be more than _bnbUnbonding. DelegationManager takes care of that.
+                // So, no need to worry about arithmetic overflows.
+                IDelegationManager(payable(_getDelegationManager())).claimUnbondedBNB(
+                    allValidators[i].operator
+                );
+            }
+        }
+
+        uint256 claimedAmount = IDelegationManager(payable(_getDelegationManager()))
+            .withdrawClaimedBNB();
+
+        _bnbUnbonding -= claimedAmount;
+        _claimReserve += claimedAmount;
+
+        emit UnbondingFinished(claimedAmount);
     }
 
     /**
-     * @dev It is called by the UndelegationHolder as part of withdrawUnbondedBNB() during the unbondingFinished() call.
+     * @dev It is called by the DelegationManager as part of claimUnbondedBNB() during the unbondingFinished() call.
+     * or called by the bot to rebalance the fee losses to this contract. If called by any other address it will
+     * revert !!!
+     *
      */
     receive() external payable whenNotPaused {
-        if (msg.sender != _addressStore.getUndelegationHolder()) {
+        bool isBot = hasRole(BOT_ROLE, _msgSender());
+        if (_msgSender() != _getDelegationManager() && !isBot) {
             revert UnknownSender();
         }
-        // do nothing
+
+        if (isBot) {
+            // rebalancing will happen here, by increasing the exchangeRate.
+            // This will compensate the protocol fee loses to the users.
+            // pStake's bot can only make rebalances.
+            exchangeRate._update(ExchangeRate.Data(msg.value, 0), ExchangeRate.UpdateOp.Add);
+            emit Rebalancing_Success(msg.value);
+        }
+
+        // When called by DelegationManager
         // Any necessary events for recording the balance change are emitted in unbondingFinished().
     }
 
-    /*********************
+    /**
+     *
      * VIEWS
-     ********************/
+     *
+     */
 
     /**
      * @return the address store
@@ -698,6 +961,47 @@ contract StakePool is
      */
     function claimReserve() external view override returns (uint256) {
         return _claimReserve;
+    }
+
+    /**
+     * @dev Returns the Available BNB for Deposit in this Contract
+     * @return excessBNB
+     */
+    function getDeposits() public view override returns (uint256) {
+        uint256 excessBNB = address(this).balance - _claimReserve;
+        return excessBNB;
+    }
+
+    /**
+     * @dev Returns a list of all Validators
+     */
+    function getValidators() public view override returns (ValidatorSet.Info[] memory) {
+        uint256 totalValidatorCount = getTotalValidators();
+        ValidatorSet.Info[] memory allValidators = new ValidatorSet.Info[](totalValidatorCount);
+
+        for (uint256 i = 0; i < totalValidatorCount; ++i) {
+            address operator = _validatorStore.operatorsList[i];
+            allValidators[i] = getValidator(operator);
+        }
+
+        return allValidators;
+    }
+
+    /**
+     * @dev Returns a specific Validator
+     */
+    function getValidator(
+        address operator
+    ) public view override returns (ValidatorSet.Info memory) {
+        ValidatorSet.Info memory validator = _validatorStore.validators[operator];
+        return validator;
+    }
+
+    /**
+     * @dev Returns the total number of validators
+     */
+    function getTotalValidators() public view override returns (uint256) {
+        return _validatorStore.operatorsList.length;
     }
 
     /**
@@ -739,10 +1043,11 @@ contract StakePool is
         return paginatedClaimRequests;
     }
 
-    /*********************
+    /**
+     *
      * INTERNAL FUNCTIONS
-     ********************/
-
+     *
+     */
     function _withdraw(address from, uint256 amount) internal {
         uint256 poolTokensFee = config.fee.withdraw._apply(amount);
         uint256 poolTokensToBurn = amount - poolTokensFee;
@@ -781,12 +1086,12 @@ contract StakePool is
      * @return true if the request can be claimed, false otherwise.
      */
     function _claim(uint256 index) internal returns (bool) {
-        if (index >= claimReqs[msg.sender].length) {
+        if (index >= claimReqs[_msgSender()].length) {
             revert IndexOutOfBounds(index);
         }
 
         // find the requested claim
-        ClaimRequest memory req = claimReqs[msg.sender][index];
+        ClaimRequest memory req = claimReqs[_msgSender()][index];
 
         if (!_canBeClaimed(req)) {
             return false;
@@ -804,16 +1109,46 @@ contract StakePool is
         _claimReserve -= req.weiToReturn;
 
         // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
-        claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
-        claimReqs[msg.sender].pop();
+        claimReqs[_msgSender()][index] = claimReqs[_msgSender()][
+            claimReqs[_msgSender()].length - 1
+        ];
+        claimReqs[_msgSender()].pop();
 
         // return BNB back to user (which can be anyone: EOA or a contract)
-        (bool sent /*memory data*/, ) = msg.sender.call{ value: req.weiToReturn }("");
+        (bool sent /*memory data*/, ) = _msgSender().call{ value: req.weiToReturn }("");
         if (!sent) {
             revert BNBTransferToUserFailed();
         }
-        emit Claim(msg.sender, req, block.timestamp);
+        emit Claim(_msgSender(), req, block.timestamp);
         return true;
+    }
+
+    /**
+     * @dev _getUpdatedEarnings: Helper function to get the daily rewards earned.
+     * It aslo updates the Validator stakes with it's rewards in the Validator Store.
+     *
+     * @return cumulativeEarnings Returns the extra rewards/slash accured.
+     */
+    function _getUpdatedEarnings() internal returns (int256) {
+        int256 cumulativeEarnings;
+        for (uint256 i = 0; i < getTotalValidators(); ++i) {
+            ValidatorSet.Info storage validator = _validatorStore.validators[
+                _validatorStore.operatorsList[i]
+            ];
+            IStakeCredit validatorCred = IStakeCredit(validator.stCred);
+
+            uint256 currStakes = validatorCred.getPooledBNB(_getDelegationManager());
+
+            // Rewards/Slashes accured by a validator on a specific day
+            int256 validatorEarnings = int256(currStakes) - int256(validator.delegation.stakes);
+
+            cumulativeEarnings += validatorEarnings;
+            unchecked {
+                validator.delegation.stakes += uint256(validatorEarnings);
+            }
+        }
+
+        return cumulativeEarnings;
     }
 
     /**
@@ -825,5 +1160,48 @@ contract StakePool is
      */
     function _canBeClaimed(ClaimRequest memory req) internal view returns (bool) {
         return block.timestamp > (req.createdAt + config.cooldownPeriod);
+    }
+
+    /**
+     * @dev _getValidatorShares: Helper Function for Retrieving stCred Token
+     * holdings with Validation for Specified BNB Amount
+     *
+     * @return shares Returns the shares with the specified Validator
+     */
+    function _getValidatorShares(
+        address _operator,
+        uint256 _bnbAmount
+    ) internal view returns (uint256) {
+        ValidatorSet.Info memory validator = getValidator(_operator);
+
+        if (!validator._isActiveValidator()) revert ValidatorDoesNotExist();
+        uint256 shares = IStakeCredit(validator.stCred).getSharesByPooledBNB(_bnbAmount);
+
+        return shares;
+    }
+
+    /**
+     * @dev _getDelegationManager: Helper Function for Accessing DelegationManager's Address
+     * Since the AddressStore is a non-upgradeable contract, we must set the
+     * UndelegationHolder's Address to the DelegationManager's Address following the
+     * deployment of the V2 contracts.
+     *
+     * @return Returns the address of the DelegationManager's Proxy Contract
+     */
+    function _getDelegationManager() internal view returns (address) {
+        return _addressStore.getUndelegationHolder();
+    }
+
+    /**
+     * @dev _calculateFee: Helper Function for Calculating Fraction of a Value
+     *
+     * @return Returns the redelegation fees from the stakeHub
+     */
+    function _calculateFee(uint256 _value) internal view returns (uint256) {
+        IStakeHub stakeHub = IStakeHub(_STAKE_HUB);
+        uint256 feeWei = (_value * stakeHub.redelegateFeeRate()) /
+            stakeHub.REDELEGATE_FEE_RATE_BASE();
+
+        return feeWei;
     }
 }

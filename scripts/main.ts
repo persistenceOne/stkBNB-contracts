@@ -3,14 +3,17 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { Contracts } from './utils/contracts';
-import { CONFIG } from './types/config';
+import { Contracts } from './utils/contracts.ts';
+import { CONFIG } from './types/config.ts';
 
 async function main() {
     console.log(`Executing task: ${process.env.TASK}`);
     switch (process.env.TASK) {
         case 'deploy':
             await Contracts.deploy(CONFIG);
+            break;
+        case 'verify':
+            await Contracts.verify(CONFIG);
             break;
         case 'upgrade':
             await Contracts.upgrade(CONFIG);

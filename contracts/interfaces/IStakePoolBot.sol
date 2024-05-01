@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.7;
 
+import "../embedded-libs/ValidatorSet.sol";
+
 /**
  * @title StakePool Bot
  * @dev The functionalities required from the StakePool contract by the bot. This contract should
@@ -50,44 +52,153 @@ interface IStakePoolBot {
     function claimReserve() external view returns (uint256);
 
     /**
+     * @dev The quantity of BNB within the stakepool contract, designated for delegation to the
+     * BSC Native Staking Module by the bot, at the commencement of the subsequent Epoch.
+     *
+     * Increase frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
+     *
+     * Decrease frequency: anytime
+     */
+    function getDeposits() external view returns (uint256);
+
+    /**
+     * @dev Returns a specific Validator
+     */
+    function getValidator(address operator) external view returns (ValidatorSet.Info memory);
+
+    /**
+     * @dev Returns a list of all Validators
+     */
+    function getValidators() external view returns (ValidatorSet.Info[] memory);
+
+    /**
+     * @dev Returns the total number of validators
+     */
+    function getTotalValidators() external view returns (uint256);
+
+    /**
+     *
+     * BOT FUNCTIONS
+     *
+     */
+
+    /**
+     * @dev epochUpdate: Accessible to any user and can be invoked once daily to adjust the exchange rate.
+     * The adjustment is based on the total rewards accumulated by all validators, ensuring that
+     * the rate reflects the latest reward dynamics and accordingly mint fee tokens.
+     *
+     * Requirements:
+     *
+     * - Can only be called once per day
+     *
+     * Call frequency:
+     *      Mainnet: Daily
+     *      Testnet: Daily
+     */
+    function epochUpdate() external;
+
+    /**
+     * @dev createValidator: Called by the Bot to add a new validator to the validator set.
+     * It is allowed to create validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function createValidator(address operator_) external;
+
+    /**
+     * @dev enableValidator: Called by the Bot to reactivate the disabled Validator.
+     * It is allowed to activate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function enableValidator(address operator_) external;
+
+    /**
+     * @dev disableValidator: Called by the Bot to deactivate the Validator.
+     * It is allowed to deactivate validator even when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The caller must have the BOT_ROLE.
+     */
+    function disableValidator(address operator_, ValidatorSet.Status status_) external;
+
+    /**
      * @dev This is called by the bot in order to transfer the stakable BNB from contract to the
-     * staking address on BC.
-     * Call frequency:
-     *      Mainnet: Daily
-     *      Testnet: Daily
-     */
-    function initiateDelegation() external;
-
-    /**
-     * @dev Called by the bot to update the exchange rate in contract based on the rewards
-     * obtained in the BC staking address and accordingly mint fee tokens.
+     * stakehub contract on BSC Native Staking Module.
+     *
      * Call frequency:
      *      Mainnet: Daily
      *      Testnet: Daily
      *
-     * @param bnbRewards: The amount of BNB which were received as staking rewards.
+     * @param operators_  : A list of Validator Operators to delegate to.
+     * @param bnbAmounts_ : A list of bnb delegation amounts given by the bot
+     *
      */
-    function epochUpdate(uint256 bnbRewards) external;
+    function initiateDelegation(
+        address[] calldata operators_,
+        uint256[] calldata bnbAmounts_
+    ) external;
 
     /**
-     * @dev This is called by the bot after it has executed the unbond transaction on BBC.
+     * @dev This is called by the bot in order to redelegate BNB from one Validator
+     * to another Validator provided that the new validator exists
+     *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
+     * @param srcOperator_  : Source Validator Operator to undelegate from
+     * @param dstOperator_  : Destination Validator Operator to delegate to
+     * @param srcRestakes_  : Total stakes to redelegate
+     *
+     */
+    function initiateRedelegation(
+        address srcOperator_,
+        address dstOperator_,
+        uint256 srcRestakes_
+    ) external;
+
+    /**
+     * @dev This is called by the bot to undelegate 'bnbToUnbond' funds from the BSC Native Staking Module.
+     *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
      *
-     * @param bnbUnbonding: The amount of BNB for which unbonding was initiated on BC.
-     *                      It can be more than bnbToUnbond, but within a factor of min undelegation amount.
+     * @param operators_       : The list of validators to undelegate from.
+     * @param bnbUnbondValues_ : The list contains bnb unbonding amounts from the respective validators.
+     *                           It will be calculated by the bot.
+     *                           It can be more than bnbToUnbond in total, but within a factor of minUndelegation amount (1 BNB).
      */
-    function unbondingInitiated(uint256 bnbUnbonding) external;
+    function unbondingInitiated(
+        address[] calldata operators_,
+        uint256[] calldata bnbUnbondValues_
+    ) external;
 
     /**
-     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in BBC
-     * and has been transferred to the UndelegationHolder contract on BSC.
-     * It calls UndelegationHolder.withdrawUnbondedBNB() to fetch the unbonded BNB to itself and
+     * @dev Called by the bot after the unbonded amount for claim fulfilment is received in Validator Credit Contract
+     * It calls StakeHub.claimBatch() to fetch the unbonded BNB to itself from the above contract and
      * update `bnbUnbonding` and `claimReserve`.
+     *
+     * Requirements:
+     *
+     * - The caller must be bot.
+     *
      * Call frequency:
      *      Mainnet: Weekly
      *      Testnet: Daily
+     *
      */
     function unbondingFinished() external;
 }

@@ -45,10 +45,6 @@ contract StakePoolHarness is StakePool {
         return config.cooldownPeriod;
     }
 
-    function getbcStakingWallet() public view returns (address) {
-        return config.bcStakingWallet;
-    }
-
     function getMinBNBDeposit() public view returns (uint256) {
         return config.minBNBDeposit;
     }
@@ -68,17 +64,5 @@ contract StakePoolHarness is StakePool {
     function canBeClaimed(uint256 index) public view returns (bool) {
         ClaimRequest memory req = claimReqs[msg.sender][index];
         return _canBeClaimed(req);
-    }
-
-    /*
-        transferOut is a mock function that replaces the unreachable external contract function call.
-    */
-    function transferOut(
-        address contractAddr,
-        address recipient,
-        uint256 amount,
-        uint64 expireTime
-    ) external payable returns (bool) {
-        return true;
     }
 }
