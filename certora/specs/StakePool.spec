@@ -159,7 +159,7 @@ function feeValidation(uint256 reward, uint256 deposit, uint256 withdraw) {
 invariant weiZeroTokensZero()
     getTotalWei() == 0 =>  getPoolTokenSupply() == 0
     {
-        preserved epochUpdate(uint256 bnbRewards) with (env e){
+        preserved epochUpdate() with (env e){
             require getTotalWei() > 0;
         } 
     }
@@ -326,9 +326,9 @@ rule bnbToUnbondAndBnbUnboundingCorrelation(method f, address user)filtered {f->
     // if there is no change in bnbToUnbond then bnbUnbonding should also be not changed except unbondingFinished method call.
     assert bnbToUnbondBefore == bnbToUnbondAfter && f.selector != unbondingFinished().selector => bnbUnbondingBefore == bnbUnbondingAfter;
     // bnbToUnbond decreament except initiateDelegation should increase the bnbUnbonding
-    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation().selector => bnbUnbondingBefore < bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector != initiateDelegation(address[], uint256[]).selector => bnbUnbondingBefore < bnbUnbondingAfter;
     // initiateDelegation with bnbToUnbond decreament should not affect bnbUnbonding
-    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation().selector => bnbUnbondingBefore == bnbUnbondingAfter;
+    assert bnbToUnbondBefore > bnbToUnbondAfter && f.selector == initiateDelegation(address[], uint256[]).selector => bnbUnbondingBefore == bnbUnbondingAfter;
     // unbondingFinished() with bnbUnbonding increament the bnbToUnbound should not be affected
     assert bnbUnbondingBefore < bnbUnbondingAfter && f.selector == unbondingFinished().selector=> bnbToUnbondBefore == bnbToUnbondAfter;
 }

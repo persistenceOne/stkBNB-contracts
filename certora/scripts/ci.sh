@@ -8,7 +8,6 @@ certoraRun  certora/harness/StakePoolHarness.sol \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
 --loop_iter 3 \
---staging master \
 --rule_sanity \
 --settings -assumeUnwindCond,-enableStorageAnalysis=true,-ciMode=true,-optimisticFallback=true \
 --msg "pstake"
@@ -23,7 +22,6 @@ certoraRun  certora/harness/StakedBNBTokenHarness.sol \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \
 --loop_iter 3 \
---staging master \
 --rule_sanity \
 --settings -assumeUnwindCond,-enableStorageAnalysis=true,-ciMode=true,-optimisticFallback=true \
 --msg "stkBNB"
