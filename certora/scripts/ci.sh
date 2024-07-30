@@ -2,7 +2,7 @@ certoraRun  certora/harness/StakePoolHarness.sol \
             contracts/AddressStore.sol \
             contracts/FeeVault.sol \
             contracts/StakedBNBToken.sol \
-            contracts/UndelegationHolder.sol \
+            contracts/DelegationManager.sol \
 --link  StakePoolHarness:_addressStore=AddressStore \
 --verify StakePoolHarness:certora/specs/StakePool.spec \
 --packages @openzeppelin=node_modules/@openzeppelin \
@@ -18,7 +18,7 @@ certoraRun  certora/harness/StakedBNBTokenHarness.sol \
             contracts/FeeVault.sol \
             contracts/StakePool.sol \
             contracts/TimelockedAdmin.sol \
-            contracts/UndelegationHolder.sol  --link  StakedBNBTokenHarness:_addressStore=AddressStore \
+            contracts/DelegationManager.sol  --link  StakedBNBTokenHarness:_addressStore=AddressStore \
 --verify StakedBNBTokenHarness:certora/specs/StkBNB.spec \
 --packages @openzeppelin=node_modules/@openzeppelin \
 --path . \

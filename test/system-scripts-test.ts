@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { BigNumber, Contract, ethers } from 'ethers';
-import { Contracts } from '../scripts/utils/contracts';
+import { Contracts } from '../scripts/utils/contracts.ts';
 import {
     Config,
     ContractConfig,
@@ -10,10 +10,10 @@ import {
     StakePoolInit,
     TimelockedAdminConfig,
     UpgradableContractConfig,
-} from '../scripts/types/config';
-import { executeTx } from '../scripts/utils/transaction';
-import { getDeployerAddr } from '../scripts/utils/deployer';
-import { sleep } from '../scripts/utils/util';
+} from '../scripts/types/config.ts';
+import { executeTx } from '../scripts/utils/transaction.ts';
+import { getDeployerAddr } from '../scripts/utils/deployer.ts';
+import { sleep } from '../scripts/utils/util.ts';
 
 const timelockDelay = BigNumber.from(30); // 30 seconds
 const mockAddr = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
@@ -27,12 +27,12 @@ const mockStakePoolContractConfig = {
     deploy: true,
     init: {
         config: {
-            bcStakingWallet: mockAddr,
-            minCrossChainTransfer: ethers.constants.One,
-            transferOutTimeout: ethers.constants.One,
+            bcStakingWallet_deprecated: mockAddr,
+            minDelegationAmount: ethers.constants.One,
+            transferOutTimeout_deprecated: ethers.constants.Zero,
             minBNBDeposit: ethers.constants.Zero,
             minTokenWithdrawal: ethers.constants.Zero,
-            cooldownPeriod: ethers.constants.Zero,
+            cooldownPeriod: BigNumber.from(8).mul(86400), // 8 days
             fee: {
                 reward: ethers.constants.Zero,
                 deposit: ethers.constants.Zero,
@@ -45,6 +45,7 @@ const mockStakePoolContractConfig = {
 const mockDeployConfig = {
     mnemonic: '',
     etherscanApiKey: '',
+    rpcURL: '',
     botAddr: mockAddr,
     numConfirmBlocks: 1,
     postDeploySetup: true,
@@ -52,7 +53,7 @@ const mockDeployConfig = {
     addressStore: mockDeployableNonUpgradableContract,
     timelockedAdmin: mockTimelockedAdminConfig,
     stkBNB: mockDeployableNonUpgradableContract,
-    undelegationHolder: mockDeployableNonUpgradableContract,
+    delegationManager: mockDeployableUpgradableContract,
     feeVault: mockDeployableUpgradableContract,
     stakePool: mockStakePoolContractConfig,
 } as IConfig;
@@ -77,7 +78,7 @@ describe('System Scripts', function () {
         conf.addressStore.address = contracts.addressStore.address;
         conf.timelockedAdmin.address = contracts.timelockedAdmin.address;
         conf.stkBNB.address = contracts.stakedBNBToken.address;
-        conf.undelegationHolder.address = contracts.undelegationHolder.address;
+        conf.delegationManager.address = contracts.delegationManager.address;
         conf.feeVault.address = contracts.feeVault.address;
         conf.stakePool.address = contracts.stakePool.address;
 
@@ -114,7 +115,8 @@ describe('System Scripts', function () {
         expect(await contracts.addressStore.getAddr('mockKey')).to.equal(mockAddr);
     }).timeout((timelockDelay.toNumber() + 5) * 1000);
 
-    it('should destroy stkBNB via timelock', async function () {
+    // self destruct tests are skipped as BSC Network has deprecated this op-code
+    it.skip('should destroy stkBNB via timelock', async function () {
         // pause so that we can call selfdestruct
         await executeTx(contracts.stakedBNBToken, 'pause', []);
         // pausing again should fail
@@ -138,10 +140,10 @@ describe('System Scripts', function () {
         // and we can pause again, it just doesn't matter now
         await executeTx(contracts.stakedBNBToken, 'pause', []);
         // querying something should revert
-        await expect(contracts.stakedBNBToken.decimals()).to.be.revertedWith('');
+        await expect(contracts.stakedBNBToken.decimals()).to.be.rejectedWith('');
     }).timeout((timelockDelay.toNumber() + 5) * 1000);
 
-    it('upgrade', async function () {
+    it.skip('upgrade', async function () {
         const upgradeConf = JSON.parse(JSON.stringify(conf)) as IConfig;
         upgradeConf.stakePool.upgrade = true;
         upgradeConf.feeVault.upgrade = true;

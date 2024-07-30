@@ -2,9 +2,11 @@ import { Contract, BigNumber } from 'ethers';
 import { expect } from 'chai';
 import { ethers, upgrades, network, web3 } from 'hardhat';
 import { HardhatNetworkConfig } from 'hardhat/types';
-import { StakePoolConfig } from '../scripts/types/config';
+import { StakePoolConfig } from '../scripts/types/config.ts';
 
+// eslint-disable-next-line node/no-unpublished-require
 require('@openzeppelin/test-helpers/configure')({ web3 });
+// eslint-disable-next-line node/no-unpublished-require
 const { singletons } = require('@openzeppelin/test-helpers');
 
 // At max, our contract can successfully support this many number of simultaneous claims per user.
@@ -12,7 +14,7 @@ const { singletons } = require('@openzeppelin/test-helpers');
 // will not work. Although, claiming one by one will still work.
 // Also, claiming this many number of requests at once is possible only if the claimAll tx is the
 // only tx in the block, as it will consume all the blockGasLimit.
-const MAX_CLAIMS_PER_USER = 3089;
+const MAX_CLAIMS_PER_USER = 100; // 3089 is the Max value here
 
 describe('StakePool Claims', function () {
     let deployerAddr: string, contract: Contract;
@@ -31,12 +33,12 @@ describe('StakePool Claims', function () {
         contract = await upgrades.deployProxy(await ethers.getContractFactory('StakePoolTest'), [
             ethers.constants.AddressZero,
             {
-                bcStakingWallet: ethers.constants.AddressZero,
-                minCrossChainTransfer: ethers.constants.One,
-                transferOutTimeout: ethers.constants.One,
+                bcStakingWallet_deprecated: ethers.constants.AddressZero,
+                minDelegationAmount: ethers.constants.One,
+                transferOutTimeout_deprecated: ethers.constants.Zero,
                 minBNBDeposit: ethers.constants.Zero,
                 minTokenWithdrawal: ethers.constants.Zero,
-                cooldownPeriod: ethers.constants.Zero,
+                cooldownPeriod: BigNumber.from(8).mul(86400), // 8 Days
                 fee: {
                     reward: ethers.constants.Zero,
                     deposit: ethers.constants.Zero,

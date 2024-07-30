@@ -1,7 +1,7 @@
 using StakedBNBToken as stkBNB
 using FeeVault as feeVault
 using StakePoolHarness as stakePoolContract
-using UndelegationHolder as delegationHolder
+using DelegationManager as delegationHolder
 
 methods {
     // Harness methods:
@@ -76,13 +76,6 @@ methods {
     //ERC777 summarizing
 
     transfer(address recipient, uint256 amount) returns (bool) => DISPATCHER(true);
-
-    transferOut(
-        address contractAddr,
-        address recipient,
-        uint256 amount,
-        uint64 expireTime
-    ) returns (bool) => DISPATCHER(true);
 
     send(address,uint256,bytes) => DISPATCHER(true);
 
@@ -463,15 +456,15 @@ rule unbondingFinished(){
     env e;
     uint256 bnbUnbondingBefore = bnbUnbonding();
     uint256 claimReserveBefore = claimReserve();
-    uint256 undelegationHolderBalanceBefore = bnbBalanceOf(delegationHolder);
+    uint256 delegationManagerBalanceBefore = bnbBalanceOf(delegationHolder);
 
     unbondingFinished(e);
 
     uint256 bnbUnbondingAfter = bnbUnbonding();
     uint256 claimReserveAfter = claimReserve();
-    uint256 undelegationHolderBalanceAfter = bnbBalanceOf(delegationHolder);
+    uint256 delegationManagerBalanceAfter = bnbBalanceOf(delegationHolder);
 
     assert bnbUnbondingBefore >= bnbUnbondingAfter;
     assert bnbUnbondingBefore - bnbUnbondingAfter == claimReserveAfter - claimReserveBefore;
-    assert undelegationHolderBalanceBefore - undelegationHolderBalanceAfter == claimReserveAfter - claimReserveBefore;
+    assert delegationManagerBalanceBefore - delegationManagerBalanceAfter == claimReserveAfter - claimReserveBefore;
 }

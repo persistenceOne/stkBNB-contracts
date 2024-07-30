@@ -13,33 +13,40 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
     IERC1820RegistryUpgradeable private constant _ERC1820_REGISTRY =
         IERC1820RegistryUpgradeable(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
-    /*********************
+    /**
+     *
      * STATE VARIABLES
-     ********************/
+     *
+     */
 
     /**
      * @dev addressStore: The Address Store. Used to fetch addresses of the other contracts in the system.
      */
     IAddressStore private _addressStore;
 
-    /*********************
+    /**
+     *
      * EVENTS
-     ********************/
+     *
+     */
+    event Deposit(address indexed from, uint256 indexed amount); // emitted when stkBNB is sent to this contract
+    event Withdraw(address indexed from, address indexed to, uint256 indexed amount); // emitted when stkBNB is claimed from this contract
 
-    event Deposit(address from, uint256 amount); // emitted when stkBNB is sent to this contract
-    event Withdraw(address from, address to, uint256 amount); // emitted when stkBNB is claimed from this contract
-
-    /*********************
+    /**
+     *
      * ERRORS
-     ********************/
+     *
+     */
     error UnstakingFeeTokensIsntSupported();
     error ReceivedUnknownToken();
     error UnexpectedSender(address from);
     error UnexpectedlyReceivedTokensForSomeoneElse(address to);
 
-    /*********************
+    /**
+     *
      * INIT FUNCTIONS
-     ********************/
+     *
+     */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -52,8 +59,8 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
 
     function __FeeVault_init(IAddressStore addressStore_) internal onlyInitializing {
         // Need to call initializers for each parent without calling anything twice.
-        __Context_init_unchained();
-        __Ownable_init_unchained();
+        __Context_init();
+        __Ownable_init();
         // Finally, initialize this contract.
         __FeeVault_init_unchained(addressStore_);
     }
@@ -118,5 +125,18 @@ contract FeeVault is IFeeVault, IERC777RecipientUpgradeable, Initializable, Owna
      */
     function addressStore() external view returns (IAddressStore) {
         return _addressStore;
+    }
+
+    // This method changes the owner of this contract
+    // It should be removed after the owner change.
+    function setOwner(address _newOwner) external returns (address) {
+        require(
+            msg.sender == _addressStore.getTimelockedAdmin(),
+            "Caller: Should be the TimeLockedAdmin Contract"
+        );
+        require(_newOwner != address(0), "_newOwner cannot be Zero Address");
+
+        _transferOwnership(_newOwner);
+        return _newOwner;
     }
 }
