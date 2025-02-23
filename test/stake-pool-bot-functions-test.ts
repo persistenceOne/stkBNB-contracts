@@ -37,7 +37,6 @@ describe('StakePool Bot Functionality Test', function () {
         }
 
         const depositBNB: BigNumber = await ethers.provider.getBalance(contracts.stakePool.address);
-        console.log(`Total User Deposits = ${ethers.utils.formatEther(depositBNB)} BNB`);
 
         expect(ethers.utils.parseEther(totalDeposits.toString())).to.equal(depositBNB);
     });
@@ -56,7 +55,6 @@ describe('StakePool Bot Functionality Test', function () {
 
             const validatorCredit = await stakeHub.getValidatorCreditContract(operator);
             const validator = await contracts.stakePool.getValidator(operator);
-            console.log('Validator Created:', validator.operator);
 
             expect(validator.stCred).to.equal(validatorCredit);
         }
@@ -89,7 +87,6 @@ describe('StakePool Bot Functionality Test', function () {
             const stake = await stCredit.getPooledBNB(contracts.delegationManager.address);
             const validStake = validator.delegation.stakes;
 
-            console.log(`${validator.operator}'s stake = ${ethers.utils.formatEther(stake)}`);
 
             expect(validStake).to.equal(stake);
         }
@@ -105,7 +102,6 @@ describe('StakePool Bot Functionality Test', function () {
         }
 
         const depositBNB: BigNumber = await ethers.provider.getBalance(contracts.stakePool.address);
-        console.log(`Total User Deposits = ${ethers.utils.formatEther(depositBNB)} BNB`);
 
         expect(ethers.utils.parseEther(totalDeposits.toString())).to.equal(depositBNB);
     });
@@ -124,8 +120,6 @@ describe('StakePool Bot Functionality Test', function () {
             stCredit = await ethers.getContractAt('IStakeCredit', validator.stCred);
             const stake = await stCredit.getPooledBNB(contracts.delegationManager.address);
             const validStake = validator.delegation.stakes;
-
-            console.log(`${validator.operator}'s stake = ${ethers.utils.formatEther(stake)}`);
 
             expect(validStake).to.equal(stake);
         }
@@ -149,20 +143,6 @@ describe('StakePool Bot Functionality Test', function () {
         const dstStakes = dstValidator.delegation.stakes;
 
         const validators = await contracts.stakePool.getValidators();
-
-        console.log(
-            `srcValidator's stake before redelegation = ${ethers.utils.formatEther(srcStakes)}`,
-        );
-        console.log(
-            `srcValidator's stake after redelegation = ${ethers.utils.formatEther(
-                validators[0].delegation.stakes,
-            )}`,
-        );
-        console.log(
-            `dstValidator's stake after redelegation = ${ethers.utils.formatEther(
-                validators[validators.length - 1].delegation.stakes,
-            )}`,
-        );
 
         expect(dstStakes.add(BigNumber.from('2'))).to.equal(srcRestakes.sub(redelegationFee));
     });
@@ -191,18 +171,6 @@ describe('StakePool Bot Functionality Test', function () {
             .mul(dstValidator.delegation.stakes)
             .div(dstTotalPooledBNB);
 
-        console.log(
-            `srcValidator's stake before redelegation = ${ethers.utils.formatEther(srcRestakes)}`,
-        );
-        console.log(
-            `srcValidator's stake after redelegation = ${ethers.utils.formatEther(
-                validators[0].delegation.stakes,
-            )}`,
-        );
-        console.log(
-            `dstValidator's stake after redelegation = ${ethers.utils.formatEther(dstStakes)}`,
-        );
-
         expect(
             dstStakes
                 .sub(dstValidator.delegation.stakes)
@@ -222,10 +190,6 @@ describe('StakePool Bot Functionality Test', function () {
             validators[5].delegation.stakes.div(2),
         ];
 
-        unStakes.forEach(unstake => {
-            console.log('Unstake:', ethers.utils.formatEther(unstake));
-        });
-
         await contracts.stakePool.unbondingInitiated(
             [
                 validators[0].operator,
@@ -243,8 +207,6 @@ describe('StakePool Bot Functionality Test', function () {
         for (const validator of validators) {
             stCredit = await ethers.getContractAt('IStakeCredit', validator.stCred);
             const lockedBNBs = await stCredit.lockedBNBs(contracts.delegationManager.address, 0);
-
-            console.log('lockedBNBs:', ethers.utils.formatEther(lockedBNBs));
 
             expect(lockedBNBs).to.equal(unStakes[i].sub(1));
             ++i;
@@ -265,10 +227,6 @@ describe('StakePool Bot Functionality Test', function () {
             validators[0].delegation.stakes.div(2),
             validators[1].delegation.stakes.div(2),
         ];
-
-        unStakes.forEach(unstake => {
-            console.log('Unstake:', ethers.utils.formatEther(unstake));
-        });
 
         await contracts.stakePool.unbondingInitiated(
             [validators[0].operator, validators[1].operator],
@@ -334,5 +292,50 @@ describe('StakePool Bot Functionality Test', function () {
         const excessBNBAfter = await contracts.stakePool.getDeposits();
 
         expect(excessBNBAfter.sub(excessBNBBefore)).to.equal(crossChainAmount);
+    });
+
+    // Admin Multi-Sig Functionality Tests
+
+    it('Should be able to call StakePool.triggerRebalance()', async function () {
+        const bnbToUnbondBefore = await contracts.stakePool.bnbToUnbond();
+        const claimReserveBefore = await contracts.stakePool.claimReserve();
+
+        const delegationManagerBNB = await ethers.provider.getBalance(contracts.delegationManager.address);
+
+        await contracts.stakePool.triggerRebalance();
+
+        const bnbToUnbondAfter = await contracts.stakePool.bnbToUnbond();
+        const claimReserveAfter = await contracts.stakePool.claimReserve();
+
+        expect(bnbToUnbondAfter).to.equal(bnbToUnbondBefore.sub(delegationManagerBNB));
+        expect(claimReserveAfter).to.equal(claimReserveBefore.add(delegationManagerBNB));
+    });
+
+    it('Should be able to withdraw leftover BNB after stkBNB deprecation', async function () {
+        await signers[0].sendTransaction({
+            to: contracts.delegationManager.address,
+            value: ethers.utils.parseEther('45'),
+        });
+        
+        await contracts.stakePool.triggerRebalance();
+        await contracts.stakePool.pause();
+
+        const initialContractBalance = await ethers.provider.getBalance(contracts.stakePool.address);
+        const initialReceiverBalance = await ethers.provider.getBalance(signers[2].address);
+
+        await contracts.stakePool.withdrawBNB(signers[2].address);
+
+        const finalContractBalance = await ethers.provider.getBalance(contracts.stakePool.address);
+        const finalReceiverBalance = await ethers.provider.getBalance(signers[2].address);
+
+        expect(finalContractBalance).to.equal(0);
+        expect(finalReceiverBalance).to.equal(initialReceiverBalance.add(initialContractBalance));
+
+        expect(await contracts.stakePool.bnbToUnbond()).to.equal(0);
+        expect(await contracts.stakePool.bnbUnbonding()).to.equal(0);
+        expect(await contracts.stakePool.claimReserve()).to.equal(0);
+
+        await expect(contracts.stakePool.withdrawBNB(signers[2].address))
+            .to.be.revertedWithCustomError(contracts.stakePool, "InsufficientFundsToSatisfyClaim");
     });
 });
