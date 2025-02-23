@@ -84,5 +84,17 @@ interface IDelegationManager {
      */
     function claimUnbondedBNB(address operator) external;
 
+    /**
+     * @dev Called by the StakePool contract to withdraw claimed BNB from the DelegationManager.
+     * Transfers all claimed BNB to the StakePool contract.
+     * @return amount The amount of BNB withdrawn
+     */
     function withdrawClaimedBNB() external returns (uint256);
+
+    /**
+     * @dev Called to rebalance BNB locked BNB within this contract. This function helps 
+     * to fill the claimReserve of the StakePool contract.
+     * @return lockedBNB The amount of BNB rebalanced
+     */
+    function rebalanceBNB() external returns (uint256);
 }
