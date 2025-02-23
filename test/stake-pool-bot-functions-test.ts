@@ -87,7 +87,6 @@ describe('StakePool Bot Functionality Test', function () {
             const stake = await stCredit.getPooledBNB(contracts.delegationManager.address);
             const validStake = validator.delegation.stakes;
 
-
             expect(validStake).to.equal(stake);
         }
     });
@@ -300,7 +299,9 @@ describe('StakePool Bot Functionality Test', function () {
         const bnbToUnbondBefore = await contracts.stakePool.bnbToUnbond();
         const claimReserveBefore = await contracts.stakePool.claimReserve();
 
-        const delegationManagerBNB = await ethers.provider.getBalance(contracts.delegationManager.address);
+        const delegationManagerBNB = await ethers.provider.getBalance(
+            contracts.delegationManager.address,
+        );
 
         await contracts.stakePool.triggerRebalance();
 
@@ -316,11 +317,13 @@ describe('StakePool Bot Functionality Test', function () {
             to: contracts.delegationManager.address,
             value: ethers.utils.parseEther('45'),
         });
-        
+
         await contracts.stakePool.triggerRebalance();
         await contracts.stakePool.pause();
 
-        const initialContractBalance = await ethers.provider.getBalance(contracts.stakePool.address);
+        const initialContractBalance = await ethers.provider.getBalance(
+            contracts.stakePool.address,
+        );
         const initialReceiverBalance = await ethers.provider.getBalance(signers[2].address);
 
         await contracts.stakePool.withdrawBNB(signers[2].address);
@@ -335,7 +338,8 @@ describe('StakePool Bot Functionality Test', function () {
         expect(await contracts.stakePool.bnbUnbonding()).to.equal(0);
         expect(await contracts.stakePool.claimReserve()).to.equal(0);
 
-        await expect(contracts.stakePool.withdrawBNB(signers[2].address))
-            .to.be.revertedWithCustomError(contracts.stakePool, "InsufficientFundsToSatisfyClaim");
+        await expect(
+            contracts.stakePool.withdrawBNB(signers[2].address),
+        ).to.be.revertedWithCustomError(contracts.stakePool, 'InsufficientFundsToSatisfyClaim');
     });
 });

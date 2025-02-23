@@ -54,18 +54,13 @@ describe('StakePool User Functionality Test', function () {
     });
 
     it('Should be able to claim BNB by yet to claim users', async function () {
-        // deposit BNB 
+        // deposit BNB
         contracts.stakePool.deposit({ value: ethers.utils.parseEther('3.45') });
         const stkBNBBalance: BigNumber = await contracts.stakedBNBToken.balanceOf(deployerAddr);
         const timestamp = (await ethers.provider.getBlock('latest')).timestamp;
 
         // Create withdrawal request manually
-        await setClaimRequest(
-            contracts.stakePool.address,
-            deployerAddr,
-            stkBNBBalance,
-            timestamp
-        );
+        await setClaimRequest(contracts.stakePool.address, deployerAddr, stkBNBBalance, timestamp);
         await setClaimReserve(contracts.stakePool.address, stkBNBBalance);
 
         const deployerBalTi = await ethers.provider.getBalance(deployerAddr);
@@ -99,7 +94,7 @@ describe('StakePool User Functionality Test', function () {
             userAddr,
             stkBNBBalance.div(withdrawalCount),
             timestamp,
-            withdrawalCount
+            withdrawalCount,
         );
         await setClaimReserve(contracts.stakePool.address, stkBNBBalance);
 

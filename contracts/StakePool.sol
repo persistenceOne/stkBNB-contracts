@@ -892,14 +892,14 @@ contract StakePool is
 
     /**
      * @notice Recovers BNB locked in the DelegationManager contract and updates StakePool's state
-     * @dev This is a one-time function to be called by admin to recover BNB that accumulated 
+     * @dev This is a one-time function to be called by admin to recover BNB that accumulated
      * in the DelegationManager contract. After this function is called:
      * 1. All BNB will be moved from DelegationManager to StakePool
      * 2. _claimReserve will be increased by the recovered amount
      * 3. _bnbToUnbond will be decreased by the recovered amount
      *
      * @dev Emits a {Rebalancing_Success} event with the amount of BNB recovered
-     * 
+     *
      * Requirements:
      * - The caller must have the DEFAULT_ADMIN_ROLE
      * - The contract must not be paused
@@ -930,14 +930,13 @@ contract StakePool is
 
         uint256 balance = address(this).balance;
         if (balance == 0) revert InsufficientFundsToSatisfyClaim();
-        
 
         // Reset the state variables
         _bnbToUnbond = 0;
         _bnbUnbonding = 0;
         _claimReserve = 0;
 
-        (bool sent, ) = to.call{value: balance}("");
+        (bool sent, ) = to.call{ value: balance }("");
         if (!sent) revert BNBTransferToUserFailed();
 
         emit BNBWithdrawn(to, balance);

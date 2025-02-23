@@ -92,7 +92,7 @@ interface IDelegationManager {
     function withdrawClaimedBNB() external returns (uint256);
 
     /**
-     * @dev Called to rebalance BNB locked BNB within this contract. This function helps 
+     * @dev Called to rebalance BNB locked BNB within this contract. This function helps
      * to fill the claimReserve of the StakePool contract.
      * @return lockedBNB The amount of BNB rebalanced
      */
