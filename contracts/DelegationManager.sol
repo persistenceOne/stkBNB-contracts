@@ -13,6 +13,20 @@ import "./interfaces/IStakeCredit.sol";
 contract DelegationManager is IDelegationManager, Initializable, ContextUpgradeable {
     /**
      *
+     * ERRORS
+     *
+     */
+    error Rebalancing_Failed();
+
+    /**
+     *
+     * EVENTS
+     *
+     */
+    event Rebalancing_Success(address to, uint256 amount);
+
+    /**
+     *
      * CONSTANTS
      *
      */
@@ -258,6 +272,33 @@ contract DelegationManager is IDelegationManager, Initializable, ContextUpgradea
         }
 
         return amountToSend;
+    }
+
+    /**
+     * @notice Transfers all BNB from DelegationManager to StakePool
+     * @dev This function is called by StakePool's triggerRebalance() to recover locked BNB.
+     * The function transfers the entire balance of this contract to StakePool.
+     *
+     * @dev Emits a {Rebalancing_Success} event with:
+     * - to: address of the StakePool contract
+     * - amount: total BNB transferred
+     *
+     * Requirements:
+     * - The caller must be the StakePool contract (enforced by onlyStakePool modifier)
+     * - The BNB transfer must succeed
+     *
+     * @return lockedBNB The amount of BNB transferred to StakePool
+     */
+    function rebalanceBNB() external override onlyStakePool returns (uint256) {
+        uint256 lockedBNB = address(this).balance;
+
+        (bool success, ) = _msgSender().call{ value: lockedBNB }("");
+
+        if (!success) revert Rebalancing_Failed();
+
+        emit Rebalancing_Success(_msgSender(), lockedBNB);
+
+        return lockedBNB;
     }
 
     /**

@@ -182,6 +182,7 @@ contract StakePool is
     event Rebalancing_Success(uint256 indexed rebalancedAmount); // emitted when rebalancing
     event Paused(address indexed account); // emitted when the pause is triggered by `account`.
     event Unpaused(address indexed account); // emitted when the pause is lifted by `account`.
+    event BNBWithdrawn(address indexed to, uint256 indexed amount);
 
     /**
      *
@@ -200,6 +201,7 @@ contract StakePool is
     error CantClaimBeforeDeadline();
     error InsufficientFundsToSatisfyClaim();
     error InsufficientClaimReserve();
+    error ClaimAllFailed();
     error BNBTransferToUserFailed();
     error IndexOutOfBounds(uint256 index);
     error ToIndexMustBeGreaterThanFromIndex(uint256 from, uint256 to);
@@ -509,6 +511,7 @@ contract StakePool is
         }
 
         _withdraw(from, amount);
+        _claimAll(from);
     }
 
     /**
@@ -519,16 +522,7 @@ contract StakePool is
      * - The contract must not be paused.
      */
     function claimAll() external nonReentrant whenNotPaused {
-        uint256 claimRequestCount = claimReqs[msg.sender].length;
-        uint256 i = 0;
-
-        while (i < claimRequestCount) {
-            if (_claim(i)) {
-                --claimRequestCount;
-                continue;
-            }
-            ++i;
-        }
+        if (!_claimAll(msg.sender)) revert ClaimAllFailed();
     }
 
     /**
@@ -541,7 +535,7 @@ contract StakePool is
      * @param index: The index of the ClaimRequest which is to be claimed.
      */
     function claim(uint256 index) external nonReentrant whenNotPaused {
-        if (!_claim(index)) {
+        if (!_claim(msg.sender, index)) {
             revert CantClaimBeforeDeadline();
         }
     }
@@ -897,6 +891,62 @@ contract StakePool is
     }
 
     /**
+     * @notice Recovers BNB locked in the DelegationManager contract and updates StakePool's state
+     * @dev This is a one-time function to be called by admin to recover BNB that accumulated
+     * in the DelegationManager contract. After this function is called:
+     * 1. All BNB will be moved from DelegationManager to StakePool
+     * 2. _claimReserve will be increased by the recovered amount
+     * 3. _bnbToUnbond will be decreased by the recovered amount
+     *
+     * @dev Emits a {Rebalancing_Success} event with the amount of BNB recovered
+     *
+     * Requirements:
+     * - The caller must have the DEFAULT_ADMIN_ROLE
+     * - The contract must not be paused
+     */
+    function triggerRebalance() external whenNotPaused onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 rebalancedBNB = IDelegationManager(payable(_getDelegationManager())).rebalanceBNB();
+
+        _bnbToUnbond -= rebalancedBNB.toInt256();
+        _claimReserve += rebalancedBNB;
+
+        emit Rebalancing_Success(rebalancedBNB);
+    }
+
+    /**
+     * @notice Withdraws any leftover BNB after contract deprecation
+     * @dev This function should only be called after the contract is deprecated and all user claims are processed.
+     * It allows the admin to recover any remaining BNB that might have been left in the contract.
+     *
+     * Requirements:
+     * - The caller must have the DEFAULT_ADMIN_ROLE
+     * - The contract must be paused
+     * - There must be BNB balance in the contract
+     *
+     * @param to The address to send the leftover BNB to
+     */
+    function withdrawBNB(address payable to) external whenPaused onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (to == address(0)) revert ZeroAddress();
+
+        uint256 balance = address(this).balance;
+        if (balance == 0) revert InsufficientFundsToSatisfyClaim();
+
+        // Reset the state variables
+        _bnbToUnbond = 0;
+        _bnbUnbonding = 0;
+        _claimReserve = 0;
+
+        (bool sent, ) = to.call{ value: balance }("");
+        if (!sent) revert BNBTransferToUserFailed();
+
+        emit BNBWithdrawn(to, balance);
+    }
+
+    // TODO: After stkBNB V3 Update
+    // In updateConfig(), we should update the `cooldownPeriod` to 0 days.
+    // As we have all the funds in the contract, we don't need unstake.
+
+    /**
      * @dev It is called by the DelegationManager as part of claimUnbondedBNB() during the unbondingFinished() call.
      */
     receive() external payable whenNotPaused {
@@ -1067,25 +1117,23 @@ contract StakePool is
     /**
      * @dev _claim: Claim BNB after cooldown has finished.
      *
+     * @param from: The address of the user who requested the claim.
      * @param index: The index of the ClaimRequest which is to be claimed.
      *
      * @return true if the request can be claimed, false otherwise.
      */
-    function _claim(uint256 index) internal returns (bool) {
-        if (index >= claimReqs[msg.sender].length) {
+    function _claim(address from, uint256 index) internal returns (bool) {
+        if (index >= claimReqs[from].length) {
             revert IndexOutOfBounds(index);
         }
-
         // find the requested claim
-        ClaimRequest memory req = claimReqs[msg.sender][index];
+        ClaimRequest memory req = claimReqs[from][index];
 
-        if (!_canBeClaimed(req)) {
-            return false;
-        }
         // the contract should have at least as much balance as needed to fulfil the request
         if (address(this).balance < req.weiToReturn) {
             revert InsufficientFundsToSatisfyClaim();
         }
+
         // the _claimReserve should also be at least as much as needed to fulfil the request
         if (_claimReserve < req.weiToReturn) {
             revert InsufficientClaimReserve();
@@ -1095,15 +1143,40 @@ contract StakePool is
         _claimReserve -= req.weiToReturn;
 
         // delete the req, as it has been fulfilled (swap deletion for O(1) compute)
-        claimReqs[msg.sender][index] = claimReqs[msg.sender][claimReqs[msg.sender].length - 1];
-        claimReqs[msg.sender].pop();
+        claimReqs[from][index] = claimReqs[from][claimReqs[from].length - 1];
+        claimReqs[from].pop();
 
         // return BNB back to user (which can be anyone: EOA or a contract)
-        (bool sent /*memory data*/, ) = msg.sender.call{ value: req.weiToReturn }("");
+        (bool sent /*memory data*/, ) = from.call{ value: req.weiToReturn }("");
         if (!sent) {
             revert BNBTransferToUserFailed();
         }
-        emit Claim(msg.sender, req, block.timestamp);
+
+        emit Claim(from, req, block.timestamp);
+        return true;
+    }
+
+    /**
+     * @dev _claimAll: Processes all claimable BNB requests for a user.
+     * It attempts to claim each request in order.
+     * Requests that are successfully claimed are removed from the user's claim list.
+     *
+     * @param from: The address of the user who requested the claims.
+     *
+     * @return true if the iteration through all claims completed successfully, regardless of whether individual claims were processed.
+     */
+    function _claimAll(address from) internal returns (bool) {
+        uint256 claimRequestCount = claimReqs[from].length;
+        uint256 i = 0;
+
+        while (i < claimRequestCount) {
+            if (_claim(from, i)) {
+                --claimRequestCount;
+                continue;
+            }
+            ++i;
+        }
+
         return true;
     }
 
